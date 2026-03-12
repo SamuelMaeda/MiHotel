@@ -1,0 +1,101 @@
+﻿@model MiHotel.Models.InicioSesion
+
+@{
+    ViewData["Title"] = "Iniciar Sesión";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login - Hotel Casa Antigua</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <style>
+        body {
+            background-color: #E6D3D0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .contenedor-login {
+            background-color: #DEDEDE;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            padding: 30px;
+            width: 100%;
+            max-width: 420px;
+        }
+
+        .titulo-login {
+            color: #824B44;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .btn-login {
+            background-color: #824B44;
+            border-color: #824B44;
+            color: white;
+        }
+
+        .btn-login:hover {
+            background-color: #6d3d37;
+            border-color: #6d3d37;
+            color: white;
+        }
+
+        .mensaje-error {
+            color: red;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .logo-login {
+            display: block;
+            margin: 0 auto 20px auto;
+            max-width: 220px;
+            width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="contenedor-login">
+        <img src="~/images/logo-completo.jpeg" alt="Hotel Casa Antigua" class="logo-login" />
+
+        <h2 class="titulo-login">Iniciar Sesión</h2>
+
+        @if (ViewBag.Mensaje != null)
+        {
+            <div class="mensaje-error">
+                @ViewBag.Mensaje
+            </div>
+        }
+
+        <form asp-action="Login" asp-controller="Acceso" method="post">
+            <div class="mb-3">
+                <label asp-for="Correo" class="form-label">Correo</label>
+                <input asp-for="Correo" class="form-control" />
+                <span asp-validation-for="Correo" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Clave" class="form-label">Clave</label>
+                <input asp-for="Clave" class="form-control" type="password" />
+                <span asp-validation-for="Clave" class="text-danger"></span>
+            </div>
+
+            <div class="d-grid">
+                <button type="submit" class="btn btn-login">Ingresar</button>
+            </div>
+        </form>
+    </div>
+
+    <partial name="_ValidationScriptsPartial" />
+</body>
+</html>

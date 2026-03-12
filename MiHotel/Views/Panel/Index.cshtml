@@ -1,0 +1,58 @@
+﻿@{
+    ViewData["Title"] = "Panel Principal";
+}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Panel Principal - Hotel Casa Antigua</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <style>
+        body {
+            background-color: #E6D3D0;
+            margin: 0;
+            padding: 0;
+        }
+
+        .encabezado {
+            background-color: #824B44;
+            color: white;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icono {
+            height: 45px;
+            width: auto;
+        }
+
+        .contenido {
+            padding: 30px;
+        }
+
+        .tarjeta-bienvenida {
+            background-color: #DEDEDE;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+        }
+    </style>
+</head>
+<body>
+    <div class="encabezado">
+        <img src="~/images/Hotel LOGOTIPO ICONO.png" alt="Logo Hotel" class="logo-icono" />
+        <h4 class="m-0">Hotel Casa Antigua</h4>
+    </div>
+
+    <div class="contenido">
+        <div class="tarjeta-bienvenida">
+            <h2>Bienvenido al sistema</h2>
+            <p>Inicio de sesión exitoso.</p>
+        </div>
+    </div>
+</body>
+</html> 
