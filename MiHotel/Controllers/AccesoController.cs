@@ -1,6 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿// ===============================
+// CONTROLADOR DE ACCESO
+// ===============================
+
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using MiHotel.Data;
 using MiHotel.Models;
+using MiHotel.Models.Configuracion;
 using MiHotel.Utilidades;
 using MySql.Data.MySqlClient;
 
@@ -9,11 +15,29 @@ namespace MiHotel.Controllers
     public class AccesoController : Controller
     {
         private readonly ConexionBD _conexionBD;
+        private readonly ConfigSistema _configSistema;
 
-        public AccesoController(ConexionBD conexionBD)
+        public AccesoController(
+            ConexionBD conexionBD,
+            IOptions<ConfigSistema> opcionesConfig)
         {
             _conexionBD = conexionBD;
+            _configSistema = opcionesConfig.Value;
         }
+
+        // ===============================
+        // CARGA DE DATOS DE CONFIGURACION
+        // ===============================
+
+        private void CargarDatosConfiguracion()
+        {
+            ViewBag.EmpresaNombre = _configSistema.Empresa.Nombre;
+            ViewBag.EmpresaLogo = _configSistema.Empresa.Logo;
+        }
+
+        // ===============================
+        // VISTA DE LOGIN
+        // ===============================
 
         [HttpGet]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
@@ -24,13 +48,21 @@ namespace MiHotel.Controllers
                 return RedirectToAction("Index", "Panel");
             }
 
+            CargarDatosConfiguracion();
+
             return View();
         }
+
+        // ===============================
+        // VALIDACION DE LOGIN
+        // ===============================
 
         [HttpPost]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public IActionResult Login(InicioSesion modelo)
         {
+            CargarDatosConfiguracion();
+
             if (!ModelState.IsValid)
             {
                 return View(modelo);
@@ -62,12 +94,12 @@ namespace MiHotel.Controllers
 
                 if (lector.Read())
                 {
-                    string claveBD = lector["clave"].ToString() ?? "";
-                    string estado = lector["estado"].ToString() ?? "";
-                    string nombreUsuario = lector["nombre_usuario"].ToString() ?? "";
-                    string idUsuario = lector["id_usuario"].ToString() ?? "";
-                    string idRol = lector["id_rol"].ToString() ?? "";
-                    string nombreRol = lector["nombre_rol"].ToString() ?? "";
+                    string claveBD = lector["clave"]?.ToString() ?? "";
+                    string estado = lector["estado"]?.ToString() ?? "";
+                    string nombreUsuario = lector["nombre_usuario"]?.ToString() ?? "";
+                    string idUsuario = lector["id_usuario"]?.ToString() ?? "";
+                    string idRol = lector["id_rol"]?.ToString() ?? "";
+                    string nombreRol = lector["nombre_rol"]?.ToString() ?? "";
 
                     if (estado.ToLower() != "activo")
                     {
@@ -102,6 +134,10 @@ namespace MiHotel.Controllers
                 return View(modelo);
             }
         }
+
+        // ===============================
+        // CIERRE DE SESION
+        // ===============================
 
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public IActionResult CerrarSesion()

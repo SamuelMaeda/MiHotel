@@ -1,49 +1,120 @@
-﻿<!DOCTYPE html>
-<html lang="en">
+﻿@using Microsoft.AspNetCore.Http
+@inject Microsoft.Extensions.Options.IOptions<MiHotel.Models.Configuracion.ConfigSistema> Configuracion
+
+@{
+    var empresaNombre = Configuracion.Value.Empresa.Nombre;
+    var empresaLogo = Configuracion.Value.Empresa.Logo;
+
+    string nombreUsuario = Context.Session.GetString("NombreUsuario") ?? "Usuario";
+    string nombreRol = Context.Session.GetString("NombreRol") ?? "Sin rol";
+}
+
+<!DOCTYPE html>
+<html lang="es">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - MiHotel</title>
+    <title>@ViewData["Title"] - @empresaNombre</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/MiHotel.styles.css" asp-append-version="true" />
+
+    <style>
+        body {
+            background-color: #E6D3D0;
+            margin: 0;
+            padding: 0;
+        }
+
+        .encabezado-sistema {
+            background-color: #824B44;
+            color: white;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .encabezado-izquierda {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icono {
+            height: 45px;
+            width: auto;
+        }
+
+        .encabezado-derecha {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .btn-cerrar {
+            background-color: #363636;
+            color: white;
+            text-decoration: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+
+            .btn-cerrar:hover {
+                background-color: #1f1f1f;
+                color: white;
+            }
+
+        .contenido-principal {
+            padding: 30px;
+        }
+
+        .footer-sistema {
+            border-top: 1px solid #d4c3c0;
+            color: #6b6b6b;
+            padding: 15px 30px;
+            margin-top: 30px;
+        }
+    </style>
 </head>
 <body>
     <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">MiHotel</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-                        </li>
-                    </ul>
-                </div>
+        <div class="encabezado-sistema">
+            <div class="encabezado-izquierda">
+                <img src="~/images/@empresaLogo" alt="@empresaNombre" class="logo-icono" />
+                <h4 class="m-0">@empresaNombre</h4>
             </div>
-        </nav>
+
+            <div class="encabezado-derecha">
+                @if (Context.Session.GetString("NombreUsuario") != null)
+                {
+                    <span><strong>@nombreUsuario</strong> - @nombreRol</span>
+                    <a asp-controller="Acceso" asp-action="CerrarSesion" class="btn-cerrar">Cerrar sesión</a>
+                }
+            </div>
+        </div>
     </header>
-    <div class="container">
-        <main role="main" class="pb-3">
+
+    <div class="contenido-principal">
+        <main role="main">
             @RenderBody()
         </main>
     </div>
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2026 - MiHotel - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+    <footer class="footer-sistema">
+        <div>
+            &copy; @DateTime.Now.Year - @empresaNombre
         </div>
     </footer>
+
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

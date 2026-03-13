@@ -3,6 +3,9 @@
 @{
     ViewData["Title"] = "Iniciar Sesión";
     Layout = null;
+
+    string nombreEmpresa = ViewBag.EmpresaNombre ?? "MiHotel";
+    string logoEmpresa = ViewBag.EmpresaLogo ?? "logo.png";
 }
 
 <!DOCTYPE html>
@@ -10,7 +13,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Login - Hotel Casa Antigua</title>
+    <title>Login - @nombreEmpresa</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <style>
         body {
@@ -43,11 +46,11 @@
             color: white;
         }
 
-        .btn-login:hover {
-            background-color: #6d3d37;
-            border-color: #6d3d37;
-            color: white;
-        }
+            .btn-login:hover {
+                background-color: #6d3d37;
+                border-color: #6d3d37;
+                color: white;
+            }
 
         .mensaje-error {
             color: red;
@@ -66,7 +69,7 @@
 </head>
 <body>
     <div class="contenedor-login">
-        <img src="~/images/logo-completo.jpeg" alt="Hotel Casa Antigua" class="logo-login" />
+        <img src="~/images/@logoEmpresa" alt="@nombreEmpresa" class="logo-login" />
 
         <h2 class="titulo-login">Iniciar Sesión</h2>
 
