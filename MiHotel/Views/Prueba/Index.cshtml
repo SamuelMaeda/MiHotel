@@ -1,7 +1,160 @@
 ﻿@{
-    ViewData["Title"] = "Prueba de Conexion";
+    ViewData["Title"] = "Panel Principal";
+
+    string nombreUsuario = ViewBag.NombreUsuario ?? "Usuario";
+    string nombreRol = ViewBag.NombreRol ?? "Sin rol";
 }
 
-<h2>Prueba de Conexion</h2>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Panel Principal - Hotel Casa Antigua</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <style>
+        body {
+            background-color: #E6D3D0;
+            margin: 0;
+            padding: 0;
+        }
 
-<p>@ViewBag.Mensaje</p>
+        .encabezado {
+            background-color: #824B44;
+            color: white;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .encabezado-izquierda {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icono {
+            height: 45px;
+            width: auto;
+        }
+
+        .encabezado-derecha {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .contenido {
+            padding: 30px;
+        }
+
+        .tarjeta-bienvenida {
+            background-color: #DEDEDE;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+            margin-bottom: 20px;
+        }
+
+        .menu-rol {
+            background-color: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.10);
+        }
+
+        .opcion-menu {
+            background-color: #464482;
+            color: white;
+            padding: 12px 18px;
+            border-radius: 10px;
+            text-decoration: none;
+            display: inline-block;
+            margin: 8px 8px 0 0;
+        }
+
+            .opcion-menu:hover {
+                background-color: #36366b;
+                color: white;
+            }
+
+        .btn-cerrar {
+            background-color: #363636;
+            color: white;
+            text-decoration: none;
+            padding: 10px 14px;
+            border-radius: 8px;
+        }
+
+            .btn-cerrar:hover {
+                color: white;
+                background-color: #1f1f1f;
+            }
+    </style>
+</head>
+<body>
+    <div class="encabezado">
+        <div class="encabezado-izquierda">
+            <img src="~/images/Hotel LOGOTIPO ICONO.png" alt="Logo Hotel" class="logo-icono" />
+            <h4 class="m-0">Hotel Casa Antigua</h4>
+        </div>
+
+        <div class="encabezado-derecha">
+            <span><strong>@nombreUsuario</strong> - @nombreRol</span>
+            <a asp-controller="Acceso" asp-action="CerrarSesion" class="btn-cerrar">Cerrar sesión</a>
+        </div>
+    </div>
+
+    <div class="contenido">
+        <div class="tarjeta-bienvenida">
+            <h2>Bienvenido al sistema</h2>
+            <p>Has iniciado sesión correctamente.</p>
+        </div>
+
+        <div class="menu-rol">
+            <h4>Opciones disponibles</h4>
+
+            @if (nombreRol.ToLower() == "admin")
+            {
+                <a href="#" class="opcion-menu">Usuarios</a>
+                <a href="#" class="opcion-menu">Roles</a>
+                <a href="#" class="opcion-menu">Permisos</a>
+                <a href="#" class="opcion-menu">Inventario</a>
+                <a href="#" class="opcion-menu">Reservas</a>
+                <a href="#" class="opcion-menu">Punto de Venta</a>
+                <a href="#" class="opcion-menu">Cuentas por Cobrar</a>
+                <a href="#" class="opcion-menu">Cuentas por Pagar</a>
+                <a href="#" class="opcion-menu">Reportes</a>
+            }
+            else if (nombreRol.ToLower() == "recepcionista")
+            {
+                <a href="#" class="opcion-menu">Reservas</a>
+                <a href="#" class="opcion-menu">Check-In</a>
+                <a href="#" class="opcion-menu">Check-Out</a>
+                <a href="#" class="opcion-menu">Habitaciones</a>
+                <a href="#" class="opcion-menu">Clientes</a>
+            }
+            else if (nombreRol.ToLower() == "camarero")
+            {
+                <a href="#" class="opcion-menu">Punto de Venta</a>
+                <a href="#" class="opcion-menu">Restaurante</a>
+                <a href="#" class="opcion-menu">Consumos</a>
+            }
+            else if (nombreRol.ToLower() == "cliente")
+            {
+                <a href="#" class="opcion-menu">Mis Reservas</a>
+                <a href="#" class="opcion-menu">Nueva Reserva</a>
+                <a href="#" class="opcion-menu">Mis Pagos</a>
+            }
+            else
+            {
+                <p>No hay opciones configuradas para este rol.</p>
+            }
+        </div>
+    </div>
+</body>
+</html>

@@ -16,12 +16,19 @@ namespace MiHotel.Controllers
         }
 
         [HttpGet]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public IActionResult Login()
         {
+            if (HttpContext.Session.GetString("IdUsuario") != null)
+            {
+                return RedirectToAction("Index", "Panel");
+            }
+
             return View();
         }
 
         [HttpPost]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public IActionResult Login(InicioSesion modelo)
         {
             if (!ModelState.IsValid)
@@ -34,10 +41,19 @@ namespace MiHotel.Controllers
                 using var conexion = _conexionBD.ObtenerConexion();
                 conexion.Open();
 
-                string consulta = @"SELECT id_usuario, nombre_usuario, correo, clave, estado, id_rol
-                                    FROM usuario
-                                    WHERE correo = @correo
-                                    LIMIT 1;";
+                string consulta = @"
+                    SELECT 
+                        u.id_usuario,
+                        u.nombre_usuario,
+                        u.correo,
+                        u.clave,
+                        u.estado,
+                        u.id_rol,
+                        r.nombre_rol
+                    FROM usuario u
+                    INNER JOIN rol r ON u.id_rol = r.id_rol
+                    WHERE u.correo = @correo
+                    LIMIT 1;";
 
                 using var comando = new MySqlCommand(consulta, conexion);
                 comando.Parameters.AddWithValue("@correo", modelo.Correo);
@@ -48,6 +64,10 @@ namespace MiHotel.Controllers
                 {
                     string claveBD = lector["clave"].ToString() ?? "";
                     string estado = lector["estado"].ToString() ?? "";
+                    string nombreUsuario = lector["nombre_usuario"].ToString() ?? "";
+                    string idUsuario = lector["id_usuario"].ToString() ?? "";
+                    string idRol = lector["id_rol"].ToString() ?? "";
+                    string nombreRol = lector["nombre_rol"].ToString() ?? "";
 
                     if (estado.ToLower() != "activo")
                     {
@@ -63,6 +83,11 @@ namespace MiHotel.Controllers
                         return View(modelo);
                     }
 
+                    HttpContext.Session.SetString("IdUsuario", idUsuario);
+                    HttpContext.Session.SetString("NombreUsuario", nombreUsuario);
+                    HttpContext.Session.SetString("IdRol", idRol);
+                    HttpContext.Session.SetString("NombreRol", nombreRol);
+
                     return RedirectToAction("Index", "Panel");
                 }
                 else
@@ -76,6 +101,13 @@ namespace MiHotel.Controllers
                 ViewBag.Mensaje = "Ocurrió un error al iniciar sesión: " + ex.Message;
                 return View(modelo);
             }
+        }
+
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        public IActionResult CerrarSesion()
+        {
+            HttpContext.Session.Clear();
+            return RedirectToAction("Login", "Acceso");
         }
     }
 }

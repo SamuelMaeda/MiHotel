@@ -8,6 +8,14 @@ builder.Services.AddControllersWithViews();
 // Registrar la conexión a la base de datos
 builder.Services.AddScoped<ConexionBD>();
 
+// Habilitar sesión
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -21,6 +29,9 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
+
+// Habilitar sesión
+app.UseSession();
 
 app.UseAuthorization();
 
