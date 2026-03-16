@@ -1,19 +1,26 @@
 ﻿// ===============================
-// MODELO DE REGISTRO DE CLIENTE
+// MODELO DE EDICION DE USUARIO
 // ===============================
 
 using System.ComponentModel.DataAnnotations;
 
 namespace MiHotel.Models
 {
-    public class RegistroCliente
+    public class EditarUsuario
     {
         // ===============================
-        // NOMBRE DEL CLIENTE
+        // ID DEL USUARIO
+        // ===============================
+
+        [Required]
+        public int IdUsuario { get; set; }
+
+        // ===============================
+        // NOMBRE DEL USUARIO
         // ===============================
 
         [Required(ErrorMessage = "El nombre es obligatorio.")]
-        [StringLength(100)]
+        [StringLength(100, ErrorMessage = "El nombre no debe exceder los 100 caracteres.")]
         public string Nombre { get; set; } = string.Empty;
 
         // ===============================
@@ -33,21 +40,18 @@ namespace MiHotel.Models
         public string Telefono { get; set; } = string.Empty;
 
         // ===============================
-        // CONTRASEÑA
+        // ROL
         // ===============================
 
-        [Required(ErrorMessage = "La contraseña es obligatoria.")]
-        [MinLength(6, ErrorMessage = "La contraseña debe tener al menos 6 caracteres.")]
-        [DataType(DataType.Password)]
-        public string Clave { get; set; } = string.Empty;
+        [Required(ErrorMessage = "Debe seleccionar un rol.")]
+        [Range(1, int.MaxValue, ErrorMessage = "Debe seleccionar un rol válido.")]
+        public int IdRol { get; set; }
 
         // ===============================
-        // CONFIRMACION DE CONTRASEÑA
+        // ESTADO
         // ===============================
 
-        [Required(ErrorMessage = "Debe confirmar la contraseña.")]
-        [Compare("Clave", ErrorMessage = "Las contraseñas no coinciden.")]
-        [DataType(DataType.Password)]
-        public string ConfirmarClave { get; set; } = string.Empty;
+        [Required(ErrorMessage = "Debe seleccionar un estado.")]
+        public string Estado { get; set; } = "activo";
     }
 }

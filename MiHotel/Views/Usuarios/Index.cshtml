@@ -1,0 +1,333 @@
+﻿@model System.Data.DataTable
+
+@{
+    ViewData["Title"] = "Usuarios";
+
+    string busqueda = ViewBag.Busqueda ?? "";
+    string columna = ViewBag.Columna ?? "id";
+    string direccion = ViewBag.Direccion ?? "asc";
+    string vista = ViewBag.Vista ?? "activos";
+    int paginaActual = ViewBag.PaginaActual ?? 1;
+    int totalPaginas = ViewBag.TotalPaginas ?? 1;
+    int totalRegistros = ViewBag.TotalRegistros ?? 0;
+
+    string FormatearTelefono(object? telefonoObj)
+    {
+        string telefono = telefonoObj?.ToString() ?? "";
+
+        if (telefono.Length == 8)
+        {
+            return telefono.Substring(0, 4) + " " + telefono.Substring(4, 4);
+        }
+
+        return telefono;
+    }
+}
+
+<style>
+    .tarjeta-contenido {
+        background-color: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.10);
+    }
+
+    .btn-crear {
+        background-color: #464482;
+        color: white;
+        padding: 10px 16px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+        .btn-crear:hover {
+            background-color: #36366b;
+            color: white;
+        }
+
+    .estado-activo {
+        color: green;
+        font-weight: bold;
+    }
+
+    .estado-inactivo {
+        color: red;
+        font-weight: bold;
+    }
+
+    .acciones-contenedor {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .btn-accion {
+        padding: 6px 12px;
+        border-radius: 8px;
+        text-decoration: none;
+        border: none;
+        color: white;
+        font-size: 14px;
+    }
+
+    .btn-editar {
+        background-color: #824B44;
+    }
+
+    .btn-resetear {
+        background-color: #464482;
+    }
+
+    .btn-estado {
+        background-color: #363636;
+    }
+
+    .btn-accion:hover {
+        opacity: 0.90;
+        color: white;
+    }
+
+    .form-estado {
+        display: inline;
+    }
+
+    .tabs-vista {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+
+    .tab-vista {
+        text-decoration: none;
+        padding: 10px 14px;
+        border-radius: 8px;
+        background-color: #E6D3D0;
+        color: #363636;
+        font-weight: 500;
+    }
+
+        .tab-vista.activa {
+            background-color: #824B44;
+            color: white;
+        }
+
+    .paginacion {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 20px;
+    }
+
+    .pagina-link {
+        padding: 8px 12px;
+        border-radius: 8px;
+        text-decoration: none;
+        background-color: #E6D3D0;
+        color: #363636;
+    }
+
+        .pagina-link.activa {
+            background-color: #464482;
+            color: white;
+            font-weight: bold;
+        }
+</style>
+
+<div class="tarjeta-contenido">
+
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h3 class="m-0">Gestión de Usuarios</h3>
+
+        <a asp-controller="Usuarios" asp-action="Crear" class="btn-crear">
+            Nuevo Usuario
+        </a>
+    </div>
+
+    <div class="tabs-vista">
+        <a asp-controller="Usuarios"
+           asp-action="Index"
+           asp-route-vista="activos"
+           asp-route-busqueda="@busqueda"
+           asp-route-columna="@columna"
+           asp-route-direccion="@direccion"
+           class="tab-vista @(vista == "activos" ? "activa" : "")">
+            Activos
+        </a>
+
+        <a asp-controller="Usuarios"
+           asp-action="Index"
+           asp-route-vista="inactivos"
+           asp-route-busqueda="@busqueda"
+           asp-route-columna="@columna"
+           asp-route-direccion="@direccion"
+           class="tab-vista @(vista == "inactivos" ? "activa" : "")">
+            Inactivos
+        </a>
+    </div>
+
+    @if (TempData["Exito"] != null)
+    {
+        <div class="alert alert-success">
+            @TempData["Exito"]
+        </div>
+    }
+
+    @if (TempData["Mensaje"] != null)
+    {
+        <div class="alert alert-danger">
+            @TempData["Mensaje"]
+        </div>
+    }
+
+    @if (ViewBag.Mensaje != null)
+    {
+        <div class="alert alert-danger">
+            @ViewBag.Mensaje
+        </div>
+    }
+
+    <form asp-controller="Usuarios" asp-action="Index" method="get" class="row g-3 mb-4">
+        <input type="hidden" name="vista" value="@vista" />
+
+        <div class="col-md-4">
+            <label class="form-label">Buscar</label>
+            <input type="text" name="busqueda" value="@busqueda" class="form-control" placeholder="Ingrese texto a buscar" />
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label">Columna</label>
+            <select name="columna" class="form-select">
+                <option value="id" selected="@(columna == "id")">ID</option>
+                <option value="nombre" selected="@(columna == "nombre")">Nombre</option>
+                <option value="correo" selected="@(columna == "correo")">Correo</option>
+                <option value="rol" selected="@(columna == "rol")">Rol</option>
+            </select>
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label">Orden</label>
+            <select name="direccion" class="form-select">
+                <option value="asc" selected="@(direccion == "asc")">Ascendente</option>
+                <option value="desc" selected="@(direccion == "desc")">Descendente</option>
+            </select>
+        </div>
+
+        <div class="col-md-2 d-flex align-items-end">
+            <button type="submit" class="btn btn-dark w-100">Aplicar</button>
+        </div>
+    </form>
+
+    <div class="mb-3">
+        <strong>Total de registros:</strong> @totalRegistros
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped">
+            <thead class="table-dark">
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Correo</th>
+                    <th>Teléfono</th>
+                    <th>Rol</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @if (Model.Rows.Count == 0)
+                {
+                    <tr>
+                        <td colspan="7" class="text-center">
+                            No hay usuarios registrados en esta vista.
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    foreach (System.Data.DataRow fila in Model.Rows)
+                    {
+                        string estado = fila["estado"]?.ToString()?.ToLower() ?? "";
+                        string textoBotonEstado = estado == "activo" ? "Desactivar" : "Activar";
+
+                        <tr>
+                            <td>@fila["id_usuario"]</td>
+                            <td>@fila["nombre_usuario"]</td>
+                            <td>@fila["correo"]</td>
+                            <td>@FormatearTelefono(fila["telefono"])</td>
+                            <td>@fila["nombre_rol"]</td>
+
+                            <td>
+                                @if (estado == "activo")
+                                {
+                                    <span class="estado-activo">Activo</span>
+                                }
+                                else
+                                {
+                                    <span class="estado-inactivo">Inactivo</span>
+                                }
+                            </td>
+
+                            <td>
+                                <div class="acciones-contenedor">
+                                    <a asp-controller="Usuarios"
+                                       asp-action="Editar"
+                                       asp-route-id="@fila["id_usuario"]"
+                                       class="btn-accion btn-editar">
+                                        Editar
+                                    </a>
+
+                                    <a asp-controller="Usuarios"
+                                       asp-action="ResetearClave"
+                                       asp-route-id="@fila["id_usuario"]"
+                                       class="btn-accion btn-resetear">
+                                        Resetear clave
+                                    </a>
+
+                                    <form asp-controller="Usuarios"
+                                          asp-action="CambiarEstado"
+                                          asp-route-id="@fila["id_usuario"]"
+                                          method="post"
+                                          class="form-estado">
+                                        <input type="hidden" name="busqueda" value="@busqueda" />
+                                        <input type="hidden" name="columna" value="@columna" />
+                                        <input type="hidden" name="direccion" value="@direccion" />
+                                        <input type="hidden" name="vista" value="@vista" />
+                                        <input type="hidden" name="pagina" value="@paginaActual" />
+
+                                        <button type="submit" class="btn-accion btn-estado">
+                                            @textoBotonEstado
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (totalPaginas > 1)
+    {
+        <div class="paginacion">
+            @for (int i = 1; i <= totalPaginas; i++)
+            {
+                <a asp-controller="Usuarios"
+                   asp-action="Index"
+                   asp-route-busqueda="@busqueda"
+                   asp-route-columna="@columna"
+                   asp-route-direccion="@direccion"
+                   asp-route-vista="@vista"
+                   asp-route-pagina="@i"
+                   class="pagina-link @(i == paginaActual ? "activa" : "")">
+                    @i
+                </a>
+            }
+        </div>
+    }
+
+</div>

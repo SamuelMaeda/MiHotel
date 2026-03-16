@@ -47,6 +47,31 @@ namespace MiHotel.Controllers
         }
 
         // ===============================
+        // NORMALIZAR TELEFONO
+        // ===============================
+
+        private string NormalizarTelefono(string telefono)
+        {
+            return telefono.Replace(" ", "").Trim();
+        }
+
+        // ===============================
+        // FORMATEAR TELEFONO
+        // ===============================
+
+        private string FormatearTelefono(string telefono)
+        {
+            string telefonoLimpio = NormalizarTelefono(telefono);
+
+            if (telefonoLimpio.Length == 8)
+            {
+                return telefonoLimpio.Substring(0, 4) + " " + telefonoLimpio.Substring(4, 4);
+            }
+
+            return telefono;
+        }
+
+        // ===============================
         // VISTA DE LOGIN
         // ===============================
 
@@ -302,6 +327,12 @@ namespace MiHotel.Controllers
 
             try
             {
+                // ===============================
+                // NORMALIZAR TELEFONO ANTES DE GUARDAR
+                // ===============================
+
+                modelo.Telefono = NormalizarTelefono(modelo.Telefono);
+
                 using var conexion = _conexionBD.ObtenerConexion();
                 conexion.Open();
 
@@ -318,6 +349,7 @@ namespace MiHotel.Controllers
                 if (existe > 0)
                 {
                     ViewBag.Mensaje = "El correo ya está registrado.";
+                    modelo.Telefono = FormatearTelefono(modelo.Telefono);
                     return View(modelo);
                 }
 
@@ -333,6 +365,7 @@ namespace MiHotel.Controllers
                 if (resultadoRol == null)
                 {
                     ViewBag.Mensaje = "No se encontró el rol de cliente en la base de datos.";
+                    modelo.Telefono = FormatearTelefono(modelo.Telefono);
                     return View(modelo);
                 }
 
@@ -376,6 +409,7 @@ namespace MiHotel.Controllers
             catch (Exception ex)
             {
                 ViewBag.Mensaje = "Error al registrar cliente: " + ex.Message;
+                modelo.Telefono = FormatearTelefono(modelo.Telefono);
                 return View(modelo);
             }
         }
@@ -400,10 +434,10 @@ namespace MiHotel.Controllers
                         conexion.Open();
 
                         string limpiarToken = @"
-                    UPDATE usuario
-                    SET token_recordarme = NULL,
-                        fecha_expiracion_recordarme = NULL
-                    WHERE id_usuario = @id_usuario;";
+                            UPDATE usuario
+                            SET token_recordarme = NULL,
+                                fecha_expiracion_recordarme = NULL
+                            WHERE id_usuario = @id_usuario;";
 
                         using var comandoLimpiar = new MySqlCommand(limpiarToken, conexion);
                         comandoLimpiar.Parameters.AddWithValue("@id_usuario", idUsuario);

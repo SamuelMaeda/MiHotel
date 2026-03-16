@@ -121,7 +121,11 @@
 
             <div class="mb-3">
                 <label asp-for="Telefono" class="form-label">Teléfono</label>
-                <input asp-for="Telefono" class="form-control" />
+                <input asp-for="Telefono"
+                       class="form-control"
+                       id="Telefono"
+                       maxlength="9"
+                       placeholder="1234 5678" />
                 <span asp-validation-for="Telefono" class="text-danger"></span>
             </div>
 
@@ -145,5 +149,21 @@
     </div>
 
     <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        function formatearTelefonoGuatemala(input) {
+            input.addEventListener("input", function () {
+                let valor = input.value.replace(/\D/g, "").substring(0, 8);
+
+                if (valor.length > 4) {
+                    valor = valor.substring(0, 4) + " " + valor.substring(4);
+                }
+
+                input.value = valor;
+            });
+        }
+
+        formatearTelefonoGuatemala(document.getElementById("Telefono"));
+    </script>
 </body>
 </html>

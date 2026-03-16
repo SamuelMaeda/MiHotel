@@ -1,19 +1,19 @@
 ﻿// ===============================
-// MODELO DE REGISTRO DE CLIENTE
+// MODELO DE REGISTRO ADMINISTRATIVO DE USUARIO
 // ===============================
 
 using System.ComponentModel.DataAnnotations;
 
 namespace MiHotel.Models
 {
-    public class RegistroCliente
+    public class UsuarioAdmin
     {
         // ===============================
-        // NOMBRE DEL CLIENTE
+        // NOMBRE DEL USUARIO
         // ===============================
 
         [Required(ErrorMessage = "El nombre es obligatorio.")]
-        [StringLength(100)]
+        [StringLength(100, ErrorMessage = "El nombre no debe exceder los 100 caracteres.")]
         public string Nombre { get; set; } = string.Empty;
 
         // ===============================
@@ -49,5 +49,20 @@ namespace MiHotel.Models
         [Compare("Clave", ErrorMessage = "Las contraseñas no coinciden.")]
         [DataType(DataType.Password)]
         public string ConfirmarClave { get; set; } = string.Empty;
+
+        // ===============================
+        // ROL
+        // ===============================
+
+        [Required(ErrorMessage = "Debe seleccionar un rol.")]
+        [Range(1, int.MaxValue, ErrorMessage = "Debe seleccionar un rol válido.")]
+        public int IdRol { get; set; }
+
+        // ===============================
+        // ESTADO
+        // ===============================
+
+        [Required(ErrorMessage = "Debe seleccionar un estado.")]
+        public string Estado { get; set; } = "activo";
     }
 }

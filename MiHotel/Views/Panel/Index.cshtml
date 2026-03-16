@@ -47,7 +47,8 @@
 
     @if (nombreRol.ToLower() == "admin")
     {
-        <a href="#" class="opcion-menu">Usuarios</a>
+        
+        <a asp-controller="Usuarios" asp-action="Index" class="opcion-menu">Usuarios</a>
         <a href="#" class="opcion-menu">Roles</a>
         <a href="#" class="opcion-menu">Permisos</a>
         <a href="#" class="opcion-menu">Inventario</a>

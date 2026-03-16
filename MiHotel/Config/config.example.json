@@ -1,9 +1,9 @@
-﻿// Esto es un ejemplo de como debe quedar el "config.json" 
+﻿// Esto es un ejemplo de como debe quedar el "config.json"
 
 {
   "Empresa": {
     "Nit": "CF",
-    "Nombre": "Nombre de la empresa",
+    "Nombre": "Hotel Casa Antigua",
     "Direccion": "Dirección de la empresa",
     "Logo": "logo.png"
   },
@@ -16,5 +16,12 @@
     "Llave": "AQUI_LA_LLAVE",
     "Token": "AQUI_EL_TOKEN",
     "Usuario": "AQUI_EL_USUARIO"
+  },
+  "Correo": {
+    "Servidor": "smtp.gmail.com",
+    "Puerto": 587,
+    "Remitente": "tu_correo@gmail.com",
+    "ClaveAplicacion": "tu_clave_de_aplicacion",
+    "UsarSsl": true
   }
 }
