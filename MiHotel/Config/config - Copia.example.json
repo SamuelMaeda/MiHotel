@@ -1,6 +1,4 @@
-﻿// Esto es un ejemplo de como debe quedar el "config.json" 
-
-{
+﻿{
   "Empresa": {
     "Nit": "CF",
     "Nombre": "Nombre de la empresa",

@@ -17,7 +17,7 @@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <style>
         body {
-            background-color: #E6D3D0;
+            background-color: #693D2F;
             min-height: 100vh;
             display: flex;
             justify-content: center;
@@ -60,10 +60,29 @@
 
         .logo-login {
             display: block;
-            margin: 0 auto 20px auto;
-            max-width: 220px;
+            margin: 0 auto 15px auto;
+            max-width: 140px;
             width: 100%;
             height: auto;
+        }
+
+        .enlace-registro {
+            text-align: center;
+            margin-top: 18px;
+        }
+
+            .enlace-registro a {
+                color: #464482;
+                font-weight: 600;
+                text-decoration: none;
+            }
+
+                .enlace-registro a:hover {
+                    text-decoration: underline;
+                }
+
+        .contenedor-recordarme {
+            margin-bottom: 15px;
         }
     </style>
 </head>
@@ -93,10 +112,20 @@
                 <span asp-validation-for="Clave" class="text-danger"></span>
             </div>
 
+            <div class="form-check contenedor-recordarme">
+                <input asp-for="Recordarme" class="form-check-input" />
+                <label asp-for="Recordarme" class="form-check-label">Recordarme</label>
+            </div>
+
             <div class="d-grid">
                 <button type="submit" class="btn btn-login">Ingresar</button>
             </div>
         </form>
+
+        <div class="enlace-registro">
+            <span>¿No tienes cuenta? </span>
+            <a asp-controller="Acceso" asp-action="Registro">Crear cuenta</a>
+        </div>
     </div>
 
     <partial name="_ValidationScriptsPartial" />
