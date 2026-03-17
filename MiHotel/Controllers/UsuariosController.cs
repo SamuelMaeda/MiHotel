@@ -100,10 +100,9 @@ namespace MiHotel.Controllers
         {
             return columna.ToLower() switch
             {
-                "nombre" => "u.nombre_usuario",
                 "correo" => "u.correo",
                 "rol" => "r.nombre_rol",
-                _ => "u.id_usuario"
+                _ => "u.nombre_usuario"
             };
         }
 
@@ -114,7 +113,7 @@ namespace MiHotel.Controllers
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public IActionResult Index(
             string busqueda = "",
-            string columna = "id",
+            string ordenarPor = "nombre",
             string direccion = "asc",
             string vista = "activos",
             int pagina = 1)
@@ -133,7 +132,7 @@ namespace MiHotel.Controllers
                 conexion.Open();
 
                 string vistaNormalizada = vista.Trim().ToLower() == "inactivos" ? "inactivos" : "activos";
-                string columnaOrden = ObtenerColumnaOrden(columna);
+                string columnaOrden = ObtenerColumnaOrden(ordenarPor);
                 string direccionOrden = direccion.Trim().ToLower() == "desc" ? "DESC" : "ASC";
 
                 if (pagina < 1)
@@ -149,15 +148,12 @@ namespace MiHotel.Controllers
 
                 if (!string.IsNullOrWhiteSpace(busqueda))
                 {
-                    string columnaBusqueda = columna.Trim().ToLower() switch
-                    {
-                        "nombre" => "u.nombre_usuario",
-                        "correo" => "u.correo",
-                        "rol" => "r.nombre_rol",
-                        _ => "CAST(u.id_usuario AS CHAR)"
-                    };
-
-                    condicionBusqueda = $" AND {columnaBusqueda} LIKE @busqueda ";
+                    condicionBusqueda = @"
+                        AND (
+                            u.nombre_usuario LIKE @busqueda
+                            OR u.correo LIKE @busqueda
+                            OR r.nombre_rol LIKE @busqueda
+                        ) ";
                 }
 
                 string consultaConteo = $@"
@@ -218,7 +214,7 @@ namespace MiHotel.Controllers
                 adaptador.Fill(tablaUsuarios);
 
                 ViewBag.Busqueda = busqueda;
-                ViewBag.Columna = columna;
+                ViewBag.OrdenarPor = ordenarPor;
                 ViewBag.Direccion = direccionOrden.ToLower();
                 ViewBag.Vista = vistaNormalizada;
                 ViewBag.PaginaActual = pagina;
@@ -233,10 +229,6 @@ namespace MiHotel.Controllers
             return View(tablaUsuarios);
         }
 
-        // ===============================
-        // VISTA DE CREAR USUARIO
-        // ===============================
-
         [HttpGet]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public IActionResult Crear()
@@ -250,10 +242,6 @@ namespace MiHotel.Controllers
             CargarRoles();
             return View();
         }
-
-        // ===============================
-        // GUARDAR NUEVO USUARIO
-        // ===============================
 
         [HttpPost]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
@@ -339,10 +327,6 @@ namespace MiHotel.Controllers
             }
         }
 
-        // ===============================
-        // VISTA DE EDITAR USUARIO
-        // ===============================
-
         [HttpGet]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public IActionResult Editar(int id)
@@ -401,10 +385,6 @@ namespace MiHotel.Controllers
                 return RedirectToAction("Index");
             }
         }
-
-        // ===============================
-        // GUARDAR EDICION DE USUARIO
-        // ===============================
 
         [HttpPost]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
@@ -479,16 +459,12 @@ namespace MiHotel.Controllers
             }
         }
 
-        // ===============================
-        // CAMBIAR ESTADO DE USUARIO
-        // ===============================
-
         [HttpPost]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public IActionResult CambiarEstado(
             int id,
             string busqueda = "",
-            string columna = "id",
+            string ordenarPor = "nombre",
             string direccion = "asc",
             string vista = "activos",
             int pagina = 1)
@@ -518,7 +494,7 @@ namespace MiHotel.Controllers
                 if (resultadoEstado == null)
                 {
                     TempData["Mensaje"] = "No se encontró el usuario solicitado.";
-                    return RedirectToAction("Index", new { busqueda, columna, direccion, vista, pagina });
+                    return RedirectToAction("Index", new { busqueda, ordenarPor, direccion, vista, pagina });
                 }
 
                 string estadoActual = resultadoEstado.ToString()?.Trim().ToLower() ?? "inactivo";
@@ -536,18 +512,14 @@ namespace MiHotel.Controllers
                 comandoActualizar.ExecuteNonQuery();
 
                 TempData["Exito"] = "Estado del usuario actualizado correctamente.";
-                return RedirectToAction("Index", new { busqueda, columna, direccion, vista, pagina });
+                return RedirectToAction("Index", new { busqueda, ordenarPor, direccion, vista, pagina });
             }
             catch (Exception ex)
             {
                 TempData["Mensaje"] = "Ocurrió un error al cambiar el estado: " + ex.Message;
-                return RedirectToAction("Index", new { busqueda, columna, direccion, vista, pagina });
+                return RedirectToAction("Index", new { busqueda, ordenarPor, direccion, vista, pagina });
             }
         }
-
-        // ===============================
-        // VISTA DE RESETEO DE CLAVE
-        // ===============================
 
         [HttpGet]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
@@ -595,10 +567,6 @@ namespace MiHotel.Controllers
                 return RedirectToAction("Index");
             }
         }
-
-        // ===============================
-        // GUARDAR NUEVA CLAVE
-        // ===============================
 
         [HttpPost]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
@@ -665,6 +633,7 @@ namespace MiHotel.Controllers
                 string consulta = @"
                     SELECT id_rol, nombre_rol
                     FROM rol
+                    WHERE estado = 'activo'
                     ORDER BY nombre_rol;";
 
                 using var comando = new MySqlCommand(consulta, conexion);
@@ -681,8 +650,6 @@ namespace MiHotel.Controllers
             }
             catch
             {
-                // Si ocurre un error cargando roles,
-                // la vista simplemente mostrará la lista vacía.
             }
 
             ViewBag.Roles = listaRoles;

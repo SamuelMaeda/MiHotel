@@ -1,0 +1,105 @@
+﻿@model MiHotel.Models.RestablecerClave
+
+@{
+    ViewData["Title"] = "Restablecer Contraseña";
+    Layout = null;
+
+    string nombreEmpresa = ViewBag.EmpresaNombre ?? "MiHotel";
+    string logoEmpresa = ViewBag.EmpresaLogo ?? "logo.png";
+}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Restablecer Contraseña - @nombreEmpresa</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <style>
+        body {
+            background-color: #4D2F26;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 30px 15px;
+        }
+
+        .contenedor {
+            background-color: #DEDEDE;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            padding: 30px;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .logo {
+            display: block;
+            margin: 0 auto 15px auto;
+            max-width: 140px;
+            width: 100%;
+            height: auto;
+        }
+
+        .titulo {
+            color: #824B44;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .btn-principal {
+            background-color: #824B44;
+            border-color: #824B44;
+            color: white;
+        }
+
+            .btn-principal:hover {
+                background-color: #6d3d37;
+                border-color: #6d3d37;
+                color: white;
+            }
+
+        .mensaje-error {
+            color: red;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="contenedor">
+        <img src="~/images/@logoEmpresa" alt="@nombreEmpresa" class="logo" />
+
+        <h2 class="titulo">Restablecer Contraseña</h2>
+
+        @if (ViewBag.Mensaje != null)
+        {
+            <div class="mensaje-error">@ViewBag.Mensaje</div>
+        }
+
+        <form asp-action="RestablecerClave" asp-controller="Acceso" method="post">
+            <input asp-for="Token" type="hidden" />
+
+            <div class="mb-3">
+                <label asp-for="NuevaClave" class="form-label">Nueva contraseña</label>
+                <input asp-for="NuevaClave" class="form-control" type="password" />
+                <span asp-validation-for="NuevaClave" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="ConfirmarNuevaClave" class="form-label">Confirmar nueva contraseña</label>
+                <input asp-for="ConfirmarNuevaClave" class="form-control" type="password" />
+                <span asp-validation-for="ConfirmarNuevaClave" class="text-danger"></span>
+            </div>
+
+            <div class="d-grid">
+                <button type="submit" class="btn btn-principal">Guardar nueva contraseña</button>
+            </div>
+        </form>
+    </div>
+
+    <partial name="_ValidationScriptsPartial" />
+</body>
+</html>

@@ -1,0 +1,121 @@
+﻿@model MiHotel.Models.SolicitarRecuperacion
+
+@{
+    ViewData["Title"] = "Recuperar Contraseña";
+    Layout = null;
+
+    string nombreEmpresa = ViewBag.EmpresaNombre ?? "MiHotel";
+    string logoEmpresa = ViewBag.EmpresaLogo ?? "logo.png";
+}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Recuperar Contraseña - @nombreEmpresa</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <style>
+        body {
+            background-color: #4D2F26;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 30px 15px;
+        }
+
+        .contenedor {
+            background-color: #DEDEDE;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            padding: 30px;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .logo {
+            display: block;
+            margin: 0 auto 15px auto;
+            max-width: 140px;
+            width: 100%;
+            height: auto;
+        }
+
+        .titulo {
+            color: #824B44;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .btn-principal {
+            background-color: #824B44;
+            border-color: #824B44;
+            color: white;
+        }
+
+            .btn-principal:hover {
+                background-color: #6d3d37;
+                border-color: #6d3d37;
+                color: white;
+            }
+
+        .btn-secundario {
+            background-color: #363636;
+            border-color: #363636;
+            color: white;
+        }
+
+            .btn-secundario:hover {
+                background-color: #1f1f1f;
+                border-color: #1f1f1f;
+                color: white;
+            }
+
+        .mensaje-error {
+            color: red;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .mensaje-exito {
+            color: green;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="contenedor">
+        <img src="~/images/@logoEmpresa" alt="@nombreEmpresa" class="logo" />
+
+        <h2 class="titulo">Recuperar Contraseña</h2>
+
+        @if (ViewBag.Mensaje != null)
+        {
+            <div class="mensaje-error">@ViewBag.Mensaje</div>
+        }
+
+        @if (ViewBag.Exito != null)
+        {
+            <div class="mensaje-exito">@ViewBag.Exito</div>
+        }
+
+        <form asp-action="OlvideClave" asp-controller="Acceso" method="post">
+            <div class="mb-3">
+                <label asp-for="Correo" class="form-label">Correo electrónico</label>
+                <input asp-for="Correo" class="form-control" />
+                <span asp-validation-for="Correo" class="text-danger"></span>
+            </div>
+
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-principal">Enviar enlace</button>
+                <a asp-controller="Acceso" asp-action="Login" class="btn btn-secundario">Volver al login</a>
+            </div>
+        </form>
+    </div>
+
+    <partial name="_ValidationScriptsPartial" />
+</body>
+</html>

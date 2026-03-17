@@ -1,0 +1,76 @@
+﻿@model MiHotel.Models.Rol
+
+@{
+    ViewData["Title"] = "Crear Rol";
+}
+
+<style>
+    .tarjeta-contenido {
+        background-color: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.10);
+        max-width: 600px;
+    }
+
+    .btn-guardar {
+        background-color: #464482;
+        color: white;
+        border: none;
+        padding: 10px 18px;
+        border-radius: 8px;
+        font-weight: 500;
+    }
+
+        .btn-guardar:hover {
+            background-color: #36366b;
+        }
+</style>
+
+<div class="tarjeta-contenido">
+
+    <h3 class="mb-4">Crear nuevo rol</h3>
+
+    @if (ViewBag.Mensaje != null)
+    {
+        <div class="alert alert-danger">
+            @ViewBag.Mensaje
+        </div>
+    }
+
+    <form asp-action="Crear" method="post">
+
+        <div class="mb-3">
+            <label class="form-label">Nombre del Rol</label>
+            <input asp-for="NombreRol" class="form-control" />
+            <span asp-validation-for="NombreRol" class="text-danger"></span>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Estado</label>
+
+            <select asp-for="Estado" class="form-select">
+                <option value="activo">Activo</option>
+                <option value="inactivo">Inactivo</option>
+            </select>
+        </div>
+
+        <div class="mt-4">
+
+            <button type="submit" class="btn-guardar">
+                Guardar rol
+            </button>
+
+            <a asp-controller="Roles" asp-action="Index" class="btn btn-secondary ms-2">
+                Cancelar
+            </a>
+
+        </div>
+
+    </form>
+
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
