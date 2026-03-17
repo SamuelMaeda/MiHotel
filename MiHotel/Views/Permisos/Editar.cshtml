@@ -1,0 +1,73 @@
+﻿@model MiHotel.Models.Permiso
+
+@{
+    ViewData["Title"] = "Editar Permiso";
+}
+
+<style>
+    .tarjeta-contenido {
+        background-color: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.10);
+        max-width: 600px;
+    }
+
+    .btn-guardar {
+        background-color: #464482;
+        color: white;
+        border: none;
+        padding: 10px 18px;
+        border-radius: 8px;
+        font-weight: 500;
+    }
+
+        .btn-guardar:hover {
+            background-color: #36366b;
+        }
+</style>
+
+<div class="tarjeta-contenido">
+
+    <h3 class="mb-4">Editar permiso</h3>
+
+    @if (ViewBag.Mensaje != null)
+    {
+        <div class="alert alert-danger">
+            @ViewBag.Mensaje
+        </div>
+    }
+
+    <form asp-action="Editar" method="post">
+
+        <input asp-for="IdPermiso" type="hidden" />
+
+        <div class="mb-3">
+            <label class="form-label">Nombre del permiso</label>
+            <input asp-for="NombrePermiso" class="form-control" />
+            <span asp-validation-for="NombrePermiso" class="text-danger"></span>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Descripción</label>
+            <input asp-for="Descripcion" class="form-control" />
+            <span asp-validation-for="Descripcion" class="text-danger"></span>
+        </div>
+
+        <div class="mt-4">
+            <button type="submit" class="btn-guardar">
+                Guardar cambios
+            </button>
+
+            <a asp-controller="Permisos" asp-action="Index" class="btn btn-secondary ms-2">
+                Cancelar
+            </a>
+        </div>
+
+    </form>
+
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,180 @@
+﻿@model MiHotel.Models.GestionRolPermisoViewModel
+
+@{
+    ViewData["Title"] = "Gestionar Permisos";
+}
+
+<style>
+    .tarjeta-contenido {
+        background-color: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.10);
+    }
+
+    .titulo-formulario {
+        margin-bottom: 20px;
+    }
+
+        .titulo-formulario h3 {
+            margin: 0;
+        }
+
+    .texto-ayuda {
+        color: #6c757d;
+        margin-top: 5px;
+        margin-bottom: 0;
+    }
+
+    .acciones-formulario {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 25px;
+    }
+
+    .btn-guardar {
+        background-color: #464482;
+        color: white;
+        padding: 10px 16px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 500;
+        border: none;
+    }
+
+        .btn-guardar:hover {
+            background-color: #36366b;
+            color: white;
+        }
+
+    .btn-volver {
+        background-color: #E6D3D0;
+        color: #363636;
+        padding: 10px 16px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 500;
+        border: none;
+    }
+
+        .btn-volver:hover {
+            background-color: #d8c1bd;
+            color: #363636;
+        }
+
+    .tabla-permisos {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+
+        .tabla-permisos th,
+        .tabla-permisos td {
+            border: 1px solid #dee2e6;
+            padding: 12px;
+            vertical-align: middle;
+        }
+
+        .tabla-permisos thead {
+            background-color: #363636;
+            color: white;
+        }
+
+    .descripcion-secundaria {
+        color: #6c757d;
+        font-size: 14px;
+    }
+
+    .sin-descripcion {
+        color: #6c757d;
+        font-style: italic;
+    }
+
+    .checkbox-permiso {
+        transform: scale(1.2);
+    }
+</style>
+
+<div class="tarjeta-contenido">
+
+    <div class="titulo-formulario">
+        <h3>Gestionar Permisos</h3>
+        <p class="texto-ayuda">
+            Rol seleccionado: <strong>@Model.NombreRol</strong>
+        </p>
+    </div>
+
+    @if (TempData["Mensaje"] != null)
+    {
+        <div class="alert alert-danger">
+            @TempData["Mensaje"]
+        </div>
+    }
+
+    <form asp-controller="RolPermisos" asp-action="Gestionar" method="post">
+        @Html.AntiForgeryToken()
+
+        <input asp-for="IdRol" type="hidden" />
+        <input asp-for="NombreRol" type="hidden" />
+
+        <div class="table-responsive">
+            <table class="tabla-permisos">
+                <thead>
+                    <tr>
+                        <th style="width: 90px;">Asignar</th>
+                        <th>Permiso</th>
+                        <th>Descripción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Permisos == null || Model.Permisos.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="3" class="text-center">
+                                No hay permisos activos disponibles.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        for (int i = 0; i < Model.Permisos.Count; i++)
+                        {
+                            <tr>
+                                <td class="text-center">
+                                    <input asp-for="Permisos[i].Asignado" class="checkbox-permiso" />
+                                    <input asp-for="Permisos[i].IdPermiso" type="hidden" />
+                                    <input asp-for="Permisos[i].NombrePermiso" type="hidden" />
+                                    <input asp-for="Permisos[i].Descripcion" type="hidden" />
+                                </td>
+                                <td>
+                                    <strong>@Model.Permisos[i].NombrePermiso</strong>
+                                </td>
+                                <td>
+                                    @if (string.IsNullOrWhiteSpace(Model.Permisos[i].Descripcion))
+                                    {
+                                        <span class="sin-descripcion">Sin descripción</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="descripcion-secundaria">@Model.Permisos[i].Descripcion</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="acciones-formulario">
+            <button type="submit" class="btn-guardar">
+                Guardar cambios
+            </button>
+
+            <a asp-controller="RolPermisos" asp-action="Index" class="btn-volver">
+                Volver
+            </a>
+        </div>
+    </form>
+</div>

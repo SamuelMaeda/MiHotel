@@ -1,7 +1,7 @@
 ﻿@model System.Data.DataTable
 
 @{
-    ViewData["Title"] = "Usuarios";
+    ViewData["Title"] = "Permisos";
 
     string busqueda = ViewBag.Busqueda ?? "";
     string ordenarPor = ViewBag.OrdenarPor ?? "nombre";
@@ -10,23 +10,6 @@
     int paginaActual = ViewBag.PaginaActual ?? 1;
     int totalPaginas = ViewBag.TotalPaginas ?? 1;
     int totalRegistros = ViewBag.TotalRegistros ?? 0;
-
-    bool puedeCrear = ViewBag.PuedeCrear ?? false;
-    bool puedeEditar = ViewBag.PuedeEditar ?? false;
-    bool puedeCambiarEstado = ViewBag.PuedeCambiarEstado ?? false;
-    bool puedeResetearClave = ViewBag.PuedeResetearClave ?? false;
-
-    string FormatearTelefono(object? telefonoObj)
-    {
-        string telefono = telefonoObj?.ToString() ?? "";
-
-        if (telefono.Length == 8)
-        {
-            return telefono.Substring(0, 4) + " " + telefono.Substring(4, 4);
-        }
-
-        return telefono;
-    }
 
     string SiguienteDireccion(string columna)
     {
@@ -56,20 +39,6 @@
         padding: 25px;
         box-shadow: 0 4px 10px rgba(0,0,0,0.10);
     }
-
-    .btn-crear {
-        background-color: #464482;
-        color: white;
-        padding: 10px 16px;
-        border-radius: 8px;
-        text-decoration: none;
-        font-weight: 500;
-    }
-
-        .btn-crear:hover {
-            background-color: #36366b;
-            color: white;
-        }
 
     .estado-activo {
         color: green;
@@ -102,10 +71,6 @@
 
     .btn-editar {
         background-color: #824B44;
-    }
-
-    .btn-resetear {
-        background-color: #464482;
     }
 
     .btn-estado {
@@ -180,18 +145,11 @@
 <div class="tarjeta-contenido">
 
     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-        <h3 class="m-0">Gestión de Usuarios</h3>
-
-        @if (puedeCrear)
-        {
-            <a asp-controller="Usuarios" asp-action="Crear" class="btn-crear">
-                Nuevo Usuario
-            </a>
-        }
+        <h3 class="m-0">Gestión de Permisos</h3>
     </div>
 
     <div class="tabs-vista">
-        <a asp-controller="Usuarios"
+        <a asp-controller="Permisos"
            asp-action="Index"
            asp-route-vista="activos"
            asp-route-busqueda="@busqueda"
@@ -201,7 +159,7 @@
             Activos
         </a>
 
-        <a asp-controller="Usuarios"
+        <a asp-controller="Permisos"
            asp-action="Index"
            asp-route-vista="inactivos"
            asp-route-busqueda="@busqueda"
@@ -233,18 +191,18 @@
         </div>
     }
 
-    <form id="formBusquedaUsuarios" asp-controller="Usuarios" asp-action="Index" method="get" class="mb-4">
+    <form id="formBusquedaPermisos" asp-controller="Permisos" asp-action="Index" method="get" class="mb-4">
         <input type="hidden" name="vista" value="@vista" />
         <input type="hidden" name="ordenarPor" value="@ordenarPor" />
         <input type="hidden" name="direccion" value="@direccion" />
 
-        <label class="form-label">Buscar usuario</label>
+        <label class="form-label">Buscar permiso</label>
         <input type="text"
-               id="busquedaUsuarios"
+               id="busquedaPermisos"
                name="busqueda"
                value="@busqueda"
                class="form-control"
-               placeholder="Buscar por nombre, correo o rol" />
+               placeholder="Buscar por nombre, descripción o estado" />
     </form>
 
     <div class="mb-3">
@@ -253,46 +211,45 @@
 
     <div class="table-responsive">
         <table class="table table-bordered table-striped">
+
             <thead class="table-dark">
                 <tr>
                     <th>
-                        <a asp-controller="Usuarios"
+                        <a asp-controller="Permisos"
                            asp-action="Index"
                            asp-route-busqueda="@busqueda"
                            asp-route-ordenarPor="nombre"
                            asp-route-direccion="@SiguienteDireccion("nombre")"
                            asp-route-vista="@vista"
                            class="encabezado-orden">
-                            Nombre
+                            Nombre del Permiso
                             <i class="bi @IconoOrden("nombre")"></i>
                         </a>
                     </th>
                     <th>
-                        <a asp-controller="Usuarios"
+                        <a asp-controller="Permisos"
                            asp-action="Index"
                            asp-route-busqueda="@busqueda"
-                           asp-route-ordenarPor="correo"
-                           asp-route-direccion="@SiguienteDireccion("correo")"
+                           asp-route-ordenarPor="descripcion"
+                           asp-route-direccion="@SiguienteDireccion("descripcion")"
                            asp-route-vista="@vista"
                            class="encabezado-orden">
-                            Correo
-                            <i class="bi @IconoOrden("correo")"></i>
+                            Descripción
+                            <i class="bi @IconoOrden("descripcion")"></i>
                         </a>
                     </th>
-                    <th>Teléfono</th>
                     <th>
-                        <a asp-controller="Usuarios"
+                        <a asp-controller="Permisos"
                            asp-action="Index"
                            asp-route-busqueda="@busqueda"
-                           asp-route-ordenarPor="rol"
-                           asp-route-direccion="@SiguienteDireccion("rol")"
+                           asp-route-ordenarPor="estado"
+                           asp-route-direccion="@SiguienteDireccion("estado")"
                            asp-route-vista="@vista"
                            class="encabezado-orden">
-                            Rol
-                            <i class="bi @IconoOrden("rol")"></i>
+                            Estado
+                            <i class="bi @IconoOrden("estado")"></i>
                         </a>
                     </th>
-                    <th>Estado</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
@@ -301,8 +258,8 @@
                 @if (Model.Rows.Count == 0)
                 {
                     <tr>
-                        <td colspan="6" class="text-center">
-                            No se encontraron usuarios en esta vista.
+                        <td colspan="4" class="text-center">
+                            No hay permisos registrados en esta vista.
                         </td>
                     </tr>
                 }
@@ -311,17 +268,20 @@
                     foreach (System.Data.DataRow fila in Model.Rows)
                     {
                         string estado = fila["estado"]?.ToString()?.ToLower() ?? "";
-                        string tituloEstado = estado == "activo" ? "Desactivar usuario" : "Activar usuario";
-                        string iconoEstado = estado == "activo" ? "bi-person-x-fill" : "bi-person-check-fill";
+                        string tituloEstado = estado == "activo" ? "Desactivar permiso" : "Activar permiso";
+                        string iconoEstado = estado == "activo" ? "bi-toggle-off" : "bi-toggle-on";
 
                         <tr>
-                            <td>@fila["nombre_usuario"]</td>
-                            <td>@fila["correo"]</td>
-                            <td>@FormatearTelefono(fila["telefono"])</td>
-                            <td>@fila["nombre_rol"]</td>
+                            <td>@fila["nombre_permiso"]</td>
 
                             <td>
-                                @if (estado == "activo")
+                                @(string.IsNullOrWhiteSpace(fila["descripcion"]?.ToString())
+                                                        ? "Sin descripción"
+                                                        : fila["descripcion"])
+                    </td>
+
+                            <td>
+                        @if (estado == "activo")
                                 {
                                     <span class="estado-activo">Activo</span>
                                 }
@@ -333,55 +293,40 @@
 
                             <td>
                                 <div class="acciones-contenedor">
-                                    @if (puedeEditar)
-                                    {
-                                        <a asp-controller="Usuarios"
-                                           asp-action="Editar"
-                                           asp-route-id="@fila["id_usuario"]"
-                                           class="btn-icono btn-editar"
-                                           title="Editar usuario">
-                                            <i class="bi bi-pencil-fill"></i>
-                                        </a>
-                                    }
+                                    <a asp-controller="Permisos"
+                                       asp-action="Editar"
+                                       asp-route-id="@fila["id_permiso"]"
+                                       class="btn-icono btn-editar"
+                                       title="Editar permiso">
+                                        <i class="bi bi-pencil-fill"></i>
+                                    </a>
 
-                                    @if (puedeResetearClave)
-                                    {
-                                        <a asp-controller="Usuarios"
-                                           asp-action="ResetearClave"
-                                           asp-route-id="@fila["id_usuario"]"
-                                           class="btn-icono btn-resetear"
-                                           title="Restablecer contraseña">
-                                            <i class="bi bi-key-fill"></i>
-                                        </a>
-                                    }
+                                    <form asp-controller="Permisos"
+                                          asp-action="CambiarEstado"
+                                          asp-route-id="@fila["id_permiso"]"
+                                          method="post"
+                                          class="form-estado">
+                                        @Html.AntiForgeryToken()
 
-                                    @if (puedeCambiarEstado)
-                                    {
-                                        <form asp-controller="Usuarios"
-                                              asp-action="CambiarEstado"
-                                              asp-route-id="@fila["id_usuario"]"
-                                              method="post"
-                                              class="form-estado">
-                                            @Html.AntiForgeryToken()
-                                            <input type="hidden" name="busqueda" value="@busqueda" />
-                                            <input type="hidden" name="ordenarPor" value="@ordenarPor" />
-                                            <input type="hidden" name="direccion" value="@direccion" />
-                                            <input type="hidden" name="vista" value="@vista" />
-                                            <input type="hidden" name="pagina" value="@paginaActual" />
+                                        <input type="hidden" name="busqueda" value="@busqueda" />
+                                        <input type="hidden" name="ordenarPor" value="@ordenarPor" />
+                                        <input type="hidden" name="direccion" value="@direccion" />
+                                        <input type="hidden" name="vista" value="@vista" />
+                                        <input type="hidden" name="pagina" value="@paginaActual" />
 
-                                            <button type="submit"
-                                                    class="btn-icono btn-estado"
-                                                    title="@tituloEstado">
-                                                <i class="bi @iconoEstado"></i>
-                                            </button>
-                                        </form>
-                                    }
+                                        <button type="submit"
+                                                class="btn-icono btn-estado"
+                                                title="@tituloEstado">
+                                            <i class="bi @iconoEstado"></i>
+                                        </button>
+                                    </form>
                                 </div>
                             </td>
                         </tr>
                     }
                 }
             </tbody>
+
         </table>
     </div>
 
@@ -390,7 +335,7 @@
         <div class="paginacion">
             @for (int i = 1; i <= totalPaginas; i++)
             {
-                <a asp-controller="Usuarios"
+                <a asp-controller="Permisos"
                    asp-action="Index"
                    asp-route-busqueda="@busqueda"
                    asp-route-ordenarPor="@ordenarPor"
@@ -407,13 +352,13 @@
 
 @section Scripts {
     <script>
-        let temporizadorBusquedaUsuarios;
+        let temporizadorBusquedaPermisos;
 
-        document.getElementById("busquedaUsuarios").addEventListener("input", function () {
-            clearTimeout(temporizadorBusquedaUsuarios);
+        document.getElementById("busquedaPermisos").addEventListener("input", function () {
+            clearTimeout(temporizadorBusquedaPermisos);
 
-            temporizadorBusquedaUsuarios = setTimeout(function () {
-                document.getElementById("formBusquedaUsuarios").submit();
+            temporizadorBusquedaPermisos = setTimeout(function () {
+                document.getElementById("formBusquedaPermisos").submit();
             }, 350);
         });
     </script>

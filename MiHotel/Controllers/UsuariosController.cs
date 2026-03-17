@@ -48,19 +48,73 @@ namespace MiHotel.Controllers
         }
 
         // ===============================
-        // VALIDAR ACCESO AL MODULO
+        // VALIDAR SI EL USUARIO TIENE UN PERMISO
         // ===============================
 
-        private IActionResult? ValidarAccesoAdmin()
+        private bool TienePermiso(string nombrePermiso)
+        {
+            if (!TieneSesionActiva())
+            {
+                return false;
+            }
+
+            if (EsAdmin())
+            {
+                return true;
+            }
+
+            string? idRolSesion = HttpContext.Session.GetString("IdRol");
+
+            if (string.IsNullOrWhiteSpace(idRolSesion))
+            {
+                return false;
+            }
+
+            if (!int.TryParse(idRolSesion, out int idRol))
+            {
+                return false;
+            }
+
+            try
+            {
+                using var conexion = _conexionBD.ObtenerConexion();
+                conexion.Open();
+
+                string consulta = @"
+                    SELECT COUNT(*)
+                    FROM rol_permiso rp
+                    INNER JOIN permisos p ON rp.id_permiso = p.id_permiso
+                    WHERE rp.id_rol = @idRol
+                      AND p.nombre_permiso = @nombrePermiso
+                      AND p.estado = 1;";
+
+                using var comando = new MySqlCommand(consulta, conexion);
+                comando.Parameters.AddWithValue("@idRol", idRol);
+                comando.Parameters.AddWithValue("@nombrePermiso", nombrePermiso);
+
+                int cantidad = Convert.ToInt32(comando.ExecuteScalar());
+                return cantidad > 0;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        // ===============================
+        // VALIDAR ACCESO POR PERMISO
+        // ===============================
+
+        private IActionResult? ValidarAccesoPorPermiso(string nombrePermiso, string mensajeSinPermiso)
         {
             if (!TieneSesionActiva())
             {
                 return RedirectToAction("Login", "Acceso");
             }
 
-            if (!EsAdmin())
+            if (!TienePermiso(nombrePermiso))
             {
-                TempData["Mensaje"] = "No tiene permisos para acceder al módulo de usuarios.";
+                TempData["Mensaje"] = mensajeSinPermiso;
                 return RedirectToAction("Index", "Panel");
             }
 
@@ -118,11 +172,19 @@ namespace MiHotel.Controllers
             string vista = "activos",
             int pagina = 1)
         {
-            IActionResult? acceso = ValidarAccesoAdmin();
+            IActionResult? acceso = ValidarAccesoPorPermiso(
+                "ver_usuarios",
+                "No tiene permisos para acceder al módulo de usuarios.");
+
             if (acceso != null)
             {
                 return acceso;
             }
+
+            ViewBag.PuedeCrear = TienePermiso("crear_usuario");
+            ViewBag.PuedeEditar = TienePermiso("editar_usuario");
+            ViewBag.PuedeCambiarEstado = TienePermiso("cambiar_estado_usuario");
+            ViewBag.PuedeResetearClave = TienePermiso("resetear_clave_usuario");
 
             DataTable tablaUsuarios = new DataTable();
 
@@ -233,7 +295,10 @@ namespace MiHotel.Controllers
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public IActionResult Crear()
         {
-            IActionResult? acceso = ValidarAccesoAdmin();
+            IActionResult? acceso = ValidarAccesoPorPermiso(
+                "crear_usuario",
+                "No tiene permisos para crear usuarios.");
+
             if (acceso != null)
             {
                 return acceso;
@@ -244,10 +309,14 @@ namespace MiHotel.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public IActionResult Crear(UsuarioAdmin modelo)
         {
-            IActionResult? acceso = ValidarAccesoAdmin();
+            IActionResult? acceso = ValidarAccesoPorPermiso(
+                "crear_usuario",
+                "No tiene permisos para crear usuarios.");
+
             if (acceso != null)
             {
                 return acceso;
@@ -331,7 +400,10 @@ namespace MiHotel.Controllers
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public IActionResult Editar(int id)
         {
-            IActionResult? acceso = ValidarAccesoAdmin();
+            IActionResult? acceso = ValidarAccesoPorPermiso(
+                "editar_usuario",
+                "No tiene permisos para editar usuarios.");
+
             if (acceso != null)
             {
                 return acceso;
@@ -387,10 +459,14 @@ namespace MiHotel.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public IActionResult Editar(EditarUsuario modelo)
         {
-            IActionResult? acceso = ValidarAccesoAdmin();
+            IActionResult? acceso = ValidarAccesoPorPermiso(
+                "editar_usuario",
+                "No tiene permisos para editar usuarios.");
+
             if (acceso != null)
             {
                 return acceso;
@@ -460,6 +536,7 @@ namespace MiHotel.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public IActionResult CambiarEstado(
             int id,
@@ -469,7 +546,10 @@ namespace MiHotel.Controllers
             string vista = "activos",
             int pagina = 1)
         {
-            IActionResult? acceso = ValidarAccesoAdmin();
+            IActionResult? acceso = ValidarAccesoPorPermiso(
+                "cambiar_estado_usuario",
+                "No tiene permisos para cambiar el estado de usuarios.");
+
             if (acceso != null)
             {
                 return acceso;
@@ -525,7 +605,10 @@ namespace MiHotel.Controllers
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public IActionResult ResetearClave(int id)
         {
-            IActionResult? acceso = ValidarAccesoAdmin();
+            IActionResult? acceso = ValidarAccesoPorPermiso(
+                "resetear_clave_usuario",
+                "No tiene permisos para restablecer contraseñas de usuarios.");
+
             if (acceso != null)
             {
                 return acceso;
@@ -569,10 +652,14 @@ namespace MiHotel.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public IActionResult ResetearClave(ResetearClaveAdmin modelo)
         {
-            IActionResult? acceso = ValidarAccesoAdmin();
+            IActionResult? acceso = ValidarAccesoPorPermiso(
+                "resetear_clave_usuario",
+                "No tiene permisos para restablecer contraseñas de usuarios.");
+
             if (acceso != null)
             {
                 return acceso;

@@ -44,6 +44,7 @@
     }
 
     <form asp-action="ResetearClave" method="post">
+        @Html.AntiForgeryToken()
 
         <input asp-for="IdUsuario" type="hidden" />
         <input asp-for="NombreUsuario" type="hidden" />

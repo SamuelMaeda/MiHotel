@@ -39,6 +39,7 @@
     }
 
     <form asp-action="Editar" method="post">
+        @Html.AntiForgeryToken()
 
         <input asp-for="IdUsuario" type="hidden" />
 

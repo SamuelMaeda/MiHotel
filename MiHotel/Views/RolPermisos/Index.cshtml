@@ -1,0 +1,159 @@
+﻿@model System.Data.DataTable
+
+@{
+    ViewData["Title"] = "Permisos por Rol";
+
+    string busqueda = ViewBag.Busqueda ?? "";
+    string ordenarPor = ViewBag.OrdenarPor ?? "nombre";
+    string direccion = ViewBag.Direccion ?? "asc";
+    int paginaActual = ViewBag.PaginaActual ?? 1;
+    int totalPaginas = ViewBag.TotalPaginas ?? 1;
+    int totalRegistros = ViewBag.TotalRegistros ?? 0;
+
+    string SiguienteDireccion(string columna)
+    {
+        if (ordenarPor == columna && direccion == "asc")
+        {
+            return "desc";
+        }
+        return "asc";
+    }
+
+    string IconoOrden(string columna)
+    {
+        if (ordenarPor != columna)
+        {
+            return "bi-arrow-down-up";
+        }
+
+        return direccion == "asc" ? "bi-sort-alpha-down" : "bi-sort-alpha-up";
+    }
+}
+
+<style>
+    .tarjeta-contenido {
+        background-color: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.10);
+    }
+
+    .nota-admin {
+        font-size: 14px;
+        color: #6c757d;
+        margin-bottom: 15px;
+    }
+
+    .btn-icono {
+        width: 38px;
+        height: 38px;
+        border-radius: 8px;
+        border: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+    }
+
+    .btn-configurar {
+        background-color: #824B44;
+    }
+
+    .btn-icono:hover {
+        opacity: 0.9;
+    }
+
+    .paginacion {
+        display: flex;
+        gap: 8px;
+        margin-top: 20px;
+    }
+
+    .pagina-link {
+        padding: 8px 12px;
+        border-radius: 8px;
+        background-color: #E6D3D0;
+        text-decoration: none;
+        color: #363636;
+    }
+
+        .pagina-link.activa {
+            background-color: #464482;
+            color: white;
+        }
+
+    .encabezado-orden {
+        text-decoration: none;
+        color: inherit;
+        display: inline-flex;
+        gap: 6px;
+        align-items: center;
+    }
+</style>
+
+<div class="tarjeta-contenido">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="m-0">Gestión de Permisos por Rol</h3>
+    </div>
+
+    <div class="nota-admin">
+        Nota: Los permisos del administrador no pueden ser modificados
+    </div>
+
+    <form asp-action="Index" method="get" class="mb-3">
+        <label>Buscar rol</label>
+        <input type="text" name="busqueda" value="@busqueda" class="form-control" />
+    </form>
+
+    <div class="mb-2">
+        <strong>Total:</strong> @totalRegistros
+    </div>
+
+    <table class="table table-bordered table-striped">
+        <thead class="table-dark">
+            <tr>
+                <th>
+                    <a asp-route-ordenarPor="nombre"
+                       asp-route-direccion="@SiguienteDireccion("nombre")"
+                       class="encabezado-orden">
+                        Nombre
+                        <i class="bi @IconoOrden("nombre")"></i>
+                    </a>
+                </th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @foreach (System.Data.DataRow fila in Model.Rows)
+            {
+                <tr>
+                    <td>@fila["nombre_rol"]</td>
+
+                    <td>
+                        <a asp-action="Gestionar"
+                           asp-route-id="@fila["id_rol"]"
+                           class="btn-icono btn-configurar"
+                           title="Gestionar permisos">
+                            <i class="bi bi-shield-lock-fill"></i>
+                        </a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    @if (totalPaginas > 1)
+    {
+        <div class="paginacion">
+            @for (int i = 1; i <= totalPaginas; i++)
+            {
+                <a asp-route-pagina="@i"
+                   class="pagina-link @(i == paginaActual ? "activa" : "")">
+                    @i
+                </a>
+            }
+        </div>
+    }
+</div>
