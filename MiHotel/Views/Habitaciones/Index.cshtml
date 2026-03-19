@@ -38,16 +38,22 @@
         border-radius: 15px;
         padding: 25px;
         box-shadow: 0 4px 10px rgba(0,0,0,0.10);
-        overflow: visible;
-    }
-
-    .table-responsive {
-        overflow: visible;
+        overflow: hidden;
     }
 
     .tabla-habitaciones-wrapper {
-        overflow: visible;
-        position: relative;
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+    }
+
+    .table-habitaciones {
+        min-width: 900px;
+        margin-bottom: 0;
     }
 
     .btn-crear {
@@ -92,7 +98,7 @@
     .acciones-contenedor {
         display: flex;
         gap: 8px;
-        flex-wrap: nowrap;
+        flex-wrap: wrap;
         align-items: center;
     }
 
@@ -112,14 +118,6 @@
 
     .btn-editar {
         background-color: #824B44;
-    }
-
-    .btn-disponibilidad {
-        background-color: #464482;
-    }
-
-    .btn-reservas {
-        background-color: #363636;
     }
 
     .btn-estado {
@@ -213,6 +211,44 @@
         .btn-estado-opcion:hover {
             background-color: #f1f1f1;
         }
+
+    @@media (max-width: 768px) {
+        .tarjeta-contenido {
+            padding: 15px;
+        }
+
+        .btn-crear {
+            width: 100%;
+            text-align: center;
+        }
+
+        .tab-vista {
+            padding: 8px 10px;
+            font-size: 14px;
+        }
+
+        .form-control {
+            font-size: 14px;
+        }
+
+        .acciones-contenedor {
+            gap: 6px;
+        }
+
+        .btn-icono {
+            width: 34px;
+            height: 34px;
+            font-size: 14px;
+        }
+
+        .menu-estado {
+            min-width: 160px;
+        }
+
+        .table-habitaciones {
+            min-width: 780px;
+        }
+    }
 </style>
 
 <div class="tarjeta-contenido">
@@ -318,7 +354,7 @@
 
     <div class="tabla-habitaciones-wrapper">
         <div class="table-responsive">
-            <table class="table table-bordered table-striped">
+            <table class="table table-bordered table-striped table-habitaciones">
                 <thead class="table-dark">
                     <tr>
                         <th>
@@ -483,22 +519,6 @@
                                                 </form>
                                             </div>
                                         </div>
-
-                                        <a asp-controller="Habitaciones"
-                                           asp-action="VerDisponibilidad"
-                                           asp-route-id="@fila["id_proser"]"
-                                           class="btn-icono btn-disponibilidad"
-                                           title="Ver disponibilidad">
-                                            <i class="bi bi-calendar-check-fill"></i>
-                                        </a>
-
-                                        <a asp-controller="Habitaciones"
-                                           asp-action="VerReservas"
-                                           asp-route-id="@fila["id_proser"]"
-                                           class="btn-icono btn-reservas"
-                                           title="Ver reservas">
-                                            <i class="bi bi-journal-text"></i>
-                                        </a>
                                     </div>
                                 </td>
                             </tr>

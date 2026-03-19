@@ -7,6 +7,7 @@
 
     string nombreUsuario = Context.Session.GetString("NombreUsuario") ?? "Usuario";
     string nombreRol = Context.Session.GetString("NombreRol") ?? "Sin rol";
+    bool haySesion = Context.Session.GetString("NombreUsuario") != null;
 }
 
 <!DOCTYPE html>
@@ -31,14 +32,22 @@
             background-color: #824B44;
             color: white;
             padding: 12px 20px;
+        }
+
+        .encabezado-desktop {
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 10px;
+            gap: 18px;
         }
 
         .encabezado-izquierda {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-shrink: 0;
+        }
+
+        .grupo-marca {
             display: flex;
             align-items: center;
             gap: 12px;
@@ -47,17 +56,32 @@
         .logo-icono {
             height: 45px;
             width: auto;
+            flex-shrink: 0;
+        }
+
+        .titulo-sistema {
+            margin: 0;
+            white-space: nowrap;
+        }
+
+        .relleno-encabezado {
+            flex: 1;
         }
 
         .encabezado-derecha {
             display: flex;
             align-items: center;
-            gap: 12px;
-            flex-wrap: wrap;
+            gap: 16px;
+            margin-left: auto;
+            flex-shrink: 0;
+        }
+
+        .texto-usuario {
+            font-size: 16px;
+            white-space: nowrap;
         }
 
         .btn-header {
-            background-color: #363636;
             color: white;
             text-decoration: none;
             padding: 10px 16px;
@@ -66,12 +90,33 @@
             display: inline-flex;
             align-items: center;
             gap: 8px;
+            border: none;
+            white-space: nowrap;
         }
 
             .btn-header:hover {
-                background-color: #1f1f1f;
                 color: white;
             }
+
+        .btn-inicio {
+            background-color: #363636;
+        }
+
+            .btn-inicio:hover {
+                background-color: #1f1f1f;
+            }
+
+        .btn-cerrar {
+            background-color: #B82525;
+        }
+
+            .btn-cerrar:hover {
+                background-color: #B82525;
+            }
+
+        .encabezado-mobile {
+            display: none;
+        }
 
         .contenido-principal {
             padding: 30px;
@@ -83,31 +128,140 @@
             padding: 15px 30px;
             margin-top: 30px;
         }
+
+        @@media (max-width: 768px) {
+            .encabezado-desktop {
+                display: none;
+            }
+
+            .encabezado-mobile {
+                display: block;
+            }
+
+            .encabezado-sistema {
+                padding: 14px 16px;
+            }
+
+            .encabezado-mobile-superior {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 10px;
+            }
+
+            .encabezado-mobile-izquierda {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                flex: 1;
+                min-width: 0;
+            }
+
+            .encabezado-mobile-inferior {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 10px;
+                margin-top: 12px;
+            }
+
+            .logo-icono {
+                height: 40px;
+            }
+
+            .titulo-sistema {
+                font-size: 17px;
+                line-height: 1.2;
+                white-space: normal;
+            }
+
+            .texto-usuario {
+                font-size: 15px;
+                line-height: 1.3;
+                white-space: nowrap;
+            }
+
+            .btn-header {
+                padding: 9px 12px;
+                font-size: 14px;
+                flex-shrink: 0;
+            }
+
+            .contenido-principal {
+                padding: 15px;
+            }
+
+            .footer-sistema {
+                padding: 15px;
+                margin-top: 20px;
+            }
+        }
     </style>
 </head>
 <body>
     <header>
         <div class="encabezado-sistema">
-            <div class="encabezado-izquierda">
-                <img src="~/images/@empresaLogo" alt="@empresaNombre" class="logo-icono" />
-                <h4 class="m-0">@empresaNombre</h4>
-            </div>
+            @if (haySesion)
+            {
+                <div class="encabezado-desktop">
+                    <div class="encabezado-izquierda">
+                        <div class="grupo-marca">
+                            <img src="~/images/@empresaLogo" alt="@empresaNombre" class="logo-icono" />
+                            <h4 class="titulo-sistema">@empresaNombre</h4>
+                        </div>
 
-            <div class="encabezado-derecha">
-                @if (Context.Session.GetString("NombreUsuario") != null)
-                {
-                    <a asp-controller="Panel" asp-action="Index" class="btn-header">
-                        <i class="bi bi-house-door-fill"></i>
-                        Inicio
-                    </a>
+                        <a asp-controller="Panel" asp-action="Index" class="btn-header btn-inicio">
+                            <i class="bi bi-house-door-fill"></i>
+                            Inicio
+                        </a>
+                    </div>
 
-                    <span><strong>@nombreUsuario</strong> - @nombreRol</span>
-                    <a asp-controller="Acceso" asp-action="CerrarSesion" class="btn-header">
-                        <i class="bi bi-box-arrow-right"></i>
-                        Cerrar sesión
-                    </a>
-                }
-            </div>
+                    <div class="relleno-encabezado"></div>
+
+                    <div class="encabezado-derecha">
+                        <span class="texto-usuario">
+                            <strong>@nombreUsuario</strong> - @nombreRol
+                        </span>
+
+                        <a asp-controller="Acceso" asp-action="CerrarSesion" class="btn-header btn-cerrar">
+                            <i class="bi bi-box-arrow-right"></i>
+                            Cerrar sesión
+                        </a>
+                    </div>
+                </div>
+
+                <div class="encabezado-mobile">
+                    <div class="encabezado-mobile-superior">
+                        <div class="encabezado-mobile-izquierda">
+                            <img src="~/images/@empresaLogo" alt="@empresaNombre" class="logo-icono" />
+                            <h4 class="titulo-sistema">@empresaNombre</h4>
+                        </div>
+
+                        <a asp-controller="Panel" asp-action="Index" class="btn-header btn-inicio">
+                            <i class="bi bi-house-door-fill"></i>
+                            Inicio
+                        </a>
+                    </div>
+
+                    <div class="encabezado-mobile-inferior">
+                        <span class="texto-usuario">
+                            <strong>@nombreUsuario</strong> - @nombreRol
+                        </span>
+
+                        <a asp-controller="Acceso" asp-action="CerrarSesion" class="btn-header btn-cerrar">
+                            <i class="bi bi-box-arrow-right"></i>
+                            Cerrar sesión
+                        </a>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="grupo-marca">
+                    <img src="~/images/@empresaLogo" alt="@empresaNombre" class="logo-icono" />
+                    <h4 class="titulo-sistema">@empresaNombre</h4>
+                </div>
+            }
         </div>
     </header>
 
@@ -119,7 +273,7 @@
 
     <footer class="footer-sistema">
         <div>
-            &copy; @DateTime.Now.Year - @empresaNombre
+            © @DateTime.Now.Year - @empresaNombre
         </div>
     </footer>
 

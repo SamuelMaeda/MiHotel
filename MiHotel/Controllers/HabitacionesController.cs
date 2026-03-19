@@ -590,24 +590,6 @@ namespace MiHotel.Controllers
                 return RedirectToAction("Index", new { busqueda, ordenarPor, direccion, vista, pagina });
             }
         }
-
-        // ===============================
-        // ACCIONES FUTURAS
-        // ===============================
-        [HttpGet]
-        public IActionResult VerDisponibilidad(int id)
-        {
-            TempData["Mensaje"] = "Esta funcionalidad se implementará en el siguiente proceso.";
-            return RedirectToAction("Index");
-        }
-
-        [HttpGet]
-        public IActionResult VerReservas(int id)
-        {
-            TempData["Mensaje"] = "Esta funcionalidad se implementará en el siguiente proceso.";
-            return RedirectToAction("Index");
-        }
-
         // ===============================
         // CARGAR COMBOS
         // ===============================
