@@ -64,8 +64,9 @@
         <a href="#" class="opcion-menu">Reservas</a>
         <a href="#" class="opcion-menu">Check-In</a>
         <a href="#" class="opcion-menu">Check-Out</a>
-        <a href="#" class="opcion-menu">Habitaciones</a>
+        <a asp-controller="Habitaciones" asp-action="Index" class="opcion-menu">Habitaciones</a>
         <a href="#" class="opcion-menu">Clientes</a>
+        
     }
     else if (nombreRol.ToLower() == "camarero")
     {
@@ -78,6 +79,7 @@
         <a href="#" class="opcion-menu">Mis Reservas</a>
         <a href="#" class="opcion-menu">Nueva Reserva</a>
         <a href="#" class="opcion-menu">Mis Pagos</a>
+
     }
     else
     {

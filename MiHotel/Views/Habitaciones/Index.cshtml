@@ -1,0 +1,544 @@
+﻿@model System.Data.DataTable
+
+@{
+    ViewData["Title"] = "Habitaciones";
+
+    string busqueda = ViewBag.Busqueda ?? "";
+    string ordenarPor = ViewBag.OrdenarPor ?? "numero";
+    string direccion = ViewBag.Direccion ?? "asc";
+    string vista = ViewBag.Vista ?? "todas";
+    int paginaActual = ViewBag.PaginaActual ?? 1;
+    int totalPaginas = ViewBag.TotalPaginas ?? 1;
+    int totalRegistros = ViewBag.TotalRegistros ?? 0;
+
+    string SiguienteDireccion(string columna)
+    {
+        if (ordenarPor == columna && direccion == "asc")
+        {
+            return "desc";
+        }
+
+        return "asc";
+    }
+
+    string IconoOrden(string columna)
+    {
+        if (ordenarPor != columna)
+        {
+            return "bi-arrow-down-up";
+        }
+
+        return direccion == "asc" ? "bi-sort-alpha-down" : "bi-sort-alpha-up";
+    }
+}
+
+<style>
+    .tarjeta-contenido {
+        background-color: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.10);
+        overflow: visible;
+    }
+
+    .table-responsive {
+        overflow: visible;
+    }
+
+    .tabla-habitaciones-wrapper {
+        overflow: visible;
+        position: relative;
+    }
+
+    .btn-crear {
+        background-color: #464482;
+        color: white;
+        padding: 10px 16px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+        .btn-crear:hover {
+            background-color: #36366b;
+            color: white;
+        }
+
+    .estado-libre {
+        color: green;
+        font-weight: bold;
+    }
+
+    .estado-ocupada {
+        color: #824B44;
+        font-weight: bold;
+    }
+
+    .estado-remodelacion {
+        color: #b26b00;
+        font-weight: bold;
+    }
+
+    .estado-renta {
+        color: #464482;
+        font-weight: bold;
+    }
+
+    .estado-default {
+        color: #363636;
+        font-weight: bold;
+    }
+
+    .acciones-contenedor {
+        display: flex;
+        gap: 8px;
+        flex-wrap: nowrap;
+        align-items: center;
+    }
+
+    .btn-icono {
+        width: 38px;
+        height: 38px;
+        border-radius: 8px;
+        border: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        text-decoration: none;
+        font-size: 16px;
+        flex: 0 0 auto;
+    }
+
+    .btn-editar {
+        background-color: #824B44;
+    }
+
+    .btn-disponibilidad {
+        background-color: #464482;
+    }
+
+    .btn-reservas {
+        background-color: #363636;
+    }
+
+    .btn-estado {
+        background-color: #6c757d;
+    }
+
+    .btn-icono:hover {
+        opacity: 0.9;
+        color: white;
+    }
+
+    .tabs-vista {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+
+    .tab-vista {
+        text-decoration: none;
+        padding: 10px 14px;
+        border-radius: 8px;
+        background-color: #E6D3D0;
+        color: #363636;
+        font-weight: 500;
+    }
+
+        .tab-vista.activa {
+            background-color: #824B44;
+            color: white;
+        }
+
+    .paginacion {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 20px;
+    }
+
+    .pagina-link {
+        padding: 8px 12px;
+        border-radius: 8px;
+        text-decoration: none;
+        background-color: #E6D3D0;
+        color: #363636;
+    }
+
+        .pagina-link.activa {
+            background-color: #464482;
+            color: white;
+            font-weight: bold;
+        }
+
+    .encabezado-orden {
+        color: inherit;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-weight: 600;
+    }
+
+        .encabezado-orden:hover {
+            color: inherit;
+        }
+
+    .dropdown-habitacion {
+        position: relative;
+        overflow: visible;
+    }
+
+    .menu-estado {
+        min-width: 180px;
+        padding: 8px;
+        z-index: 2000;
+    }
+
+    .form-cambio-estado {
+        margin: 0;
+    }
+
+    .btn-estado-opcion {
+        width: 100%;
+        text-align: left;
+        border: none;
+        background: none;
+        padding: 8px 10px;
+        border-radius: 6px;
+    }
+
+        .btn-estado-opcion:hover {
+            background-color: #f1f1f1;
+        }
+</style>
+
+<div class="tarjeta-contenido">
+
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h3 class="m-0">Gestión de Habitaciones</h3>
+
+        <a asp-controller="Habitaciones" asp-action="Crear" class="btn-crear">
+            Nueva Habitación
+        </a>
+    </div>
+
+    <div class="tabs-vista">
+        <a asp-controller="Habitaciones"
+           asp-action="Index"
+           asp-route-vista="todas"
+           asp-route-busqueda="@busqueda"
+           asp-route-ordenarPor="@ordenarPor"
+           asp-route-direccion="@direccion"
+           class="tab-vista @(vista == "todas" ? "activa" : "")">
+            Todas
+        </a>
+
+        <a asp-controller="Habitaciones"
+           asp-action="Index"
+           asp-route-vista="libres"
+           asp-route-busqueda="@busqueda"
+           asp-route-ordenarPor="@ordenarPor"
+           asp-route-direccion="@direccion"
+           class="tab-vista @(vista == "libres" ? "activa" : "")">
+            Libres
+        </a>
+
+        <a asp-controller="Habitaciones"
+           asp-action="Index"
+           asp-route-vista="ocupadas"
+           asp-route-busqueda="@busqueda"
+           asp-route-ordenarPor="@ordenarPor"
+           asp-route-direccion="@direccion"
+           class="tab-vista @(vista == "ocupadas" ? "activa" : "")">
+            Ocupadas
+        </a>
+
+        <a asp-controller="Habitaciones"
+           asp-action="Index"
+           asp-route-vista="remodelacion"
+           asp-route-busqueda="@busqueda"
+           asp-route-ordenarPor="@ordenarPor"
+           asp-route-direccion="@direccion"
+           class="tab-vista @(vista == "remodelacion" ? "activa" : "")">
+            Remodelación
+        </a>
+
+        <a asp-controller="Habitaciones"
+           asp-action="Index"
+           asp-route-vista="renta"
+           asp-route-busqueda="@busqueda"
+           asp-route-ordenarPor="@ordenarPor"
+           asp-route-direccion="@direccion"
+           class="tab-vista @(vista == "renta" ? "activa" : "")">
+            Renta
+        </a>
+    </div>
+
+    @if (TempData["Exito"] != null)
+    {
+        <div class="alert alert-success">
+            @TempData["Exito"]
+        </div>
+    }
+
+    @if (TempData["Mensaje"] != null)
+    {
+        <div class="alert alert-danger">
+            @TempData["Mensaje"]
+        </div>
+    }
+
+    @if (ViewBag.Mensaje != null)
+    {
+        <div class="alert alert-danger">
+            @ViewBag.Mensaje
+        </div>
+    }
+
+    <form id="formBusquedaHabitaciones" asp-controller="Habitaciones" asp-action="Index" method="get" class="mb-4">
+        <input type="hidden" name="vista" value="@vista" />
+        <input type="hidden" name="ordenarPor" value="@ordenarPor" />
+        <input type="hidden" name="direccion" value="@direccion" />
+
+        <label class="form-label">Buscar habitación</label>
+        <input type="text"
+               id="busquedaHabitaciones"
+               name="busqueda"
+               value="@busqueda"
+               class="form-control"
+               placeholder="Buscar por número, tipo, estado o descripción" />
+    </form>
+
+    <div class="mb-3">
+        <strong>Total de registros:</strong> @totalRegistros
+    </div>
+
+    <div class="tabla-habitaciones-wrapper">
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped">
+                <thead class="table-dark">
+                    <tr>
+                        <th>
+                            <a asp-controller="Habitaciones"
+                               asp-action="Index"
+                               asp-route-busqueda="@busqueda"
+                               asp-route-ordenarPor="numero"
+                               asp-route-direccion="@SiguienteDireccion("numero")"
+                               asp-route-vista="@vista"
+                               class="encabezado-orden">
+                                Número de habitación
+                                <i class="bi @IconoOrden("numero")"></i>
+                            </a>
+                        </th>
+                        <th>
+                            <a asp-controller="Habitaciones"
+                               asp-action="Index"
+                               asp-route-busqueda="@busqueda"
+                               asp-route-ordenarPor="tipo"
+                               asp-route-direccion="@SiguienteDireccion("tipo")"
+                               asp-route-vista="@vista"
+                               class="encabezado-orden">
+                                Tipo
+                                <i class="bi @IconoOrden("tipo")"></i>
+                            </a>
+                        </th>
+                        <th>
+                            <a asp-controller="Habitaciones"
+                               asp-action="Index"
+                               asp-route-busqueda="@busqueda"
+                               asp-route-ordenarPor="precio"
+                               asp-route-direccion="@SiguienteDireccion("precio")"
+                               asp-route-vista="@vista"
+                               class="encabezado-orden">
+                                Precio por noche
+                                <i class="bi @IconoOrden("precio")"></i>
+                            </a>
+                        </th>
+                        <th>
+                            <a asp-controller="Habitaciones"
+                               asp-action="Index"
+                               asp-route-busqueda="@busqueda"
+                               asp-route-ordenarPor="estado"
+                               asp-route-direccion="@SiguienteDireccion("estado")"
+                               asp-route-vista="@vista"
+                               class="encabezado-orden">
+                                Estado
+                                <i class="bi @IconoOrden("estado")"></i>
+                            </a>
+                        </th>
+                        <th>Descripción</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @if (Model.Rows.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center">
+                                No se encontraron habitaciones en esta vista.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        foreach (System.Data.DataRow fila in Model.Rows)
+                        {
+                            string estado = fila["estado"]?.ToString()?.Trim().ToLower() ?? "";
+                            string claseEstado = estado switch
+                            {
+                                "libre" => "estado-libre",
+                                "ocupada" => "estado-ocupada",
+                                "remodelacion" => "estado-remodelacion",
+                                "renta" => "estado-renta",
+                                _ => "estado-default"
+                            };
+
+                            <tr>
+                                <td>@fila["codigo"]</td>
+                                <td>
+                                    @(string.IsNullOrWhiteSpace(fila["tipo_habitacion"]?.ToString())
+                                                                ? "-"
+                                                                : fila["tipo_habitacion"])
+                                                                                      </td>
+                                                                                      <td>Q @Convert.ToDecimal(fila["precio"]).ToString("N2")</td>
+                                                                                      <td>
+                                                                                          <span class="@claseEstado">@fila["estado"]</span>
+                                                                                      </td>
+                                                                                      <td>
+                                    @(string.IsNullOrWhiteSpace(fila["descripcion"]?.ToString())
+                                                                ? "Sin descripción"
+                                                                : fila["descripcion"])
+                        </td>
+                        <td>
+                            <div class="acciones-contenedor">
+                                <a asp-controller="Habitaciones"
+                                   asp-action="Editar"
+                                   asp-route-id="@fila["id_proser"]"
+                                   class="btn-icono btn-editar"
+                                   title="Editar habitación">
+                                    <i class="bi bi-pencil-fill"></i>
+                                </a>
+
+                                        <div class="dropdown d-inline dropdown-habitacion">
+                                            <button class="btn-icono btn-estado"
+                                                    type="button"
+                                                    data-bs-toggle="dropdown"
+                                                    data-bs-display="static"
+                                                    aria-expanded="false"
+                                                    title="Cambiar estado">
+                                                <i class="bi bi-arrow-repeat"></i>
+                                            </button>
+
+                                            <div class="dropdown-menu menu-estado">
+                                                <form asp-controller="Habitaciones" asp-action="CambiarEstado" method="post" class="form-cambio-estado">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="id" value="@fila["id_proser"]" />
+                                                    <input type="hidden" name="nombreEstado" value="libre" />
+                                                    <input type="hidden" name="busqueda" value="@busqueda" />
+                                                    <input type="hidden" name="ordenarPor" value="@ordenarPor" />
+                                                    <input type="hidden" name="direccion" value="@direccion" />
+                                                    <input type="hidden" name="vista" value="@vista" />
+                                                    <input type="hidden" name="pagina" value="@paginaActual" />
+                                                    <button type="submit" class="btn-estado-opcion">Libre</button>
+                                                </form>
+
+                                                <form asp-controller="Habitaciones" asp-action="CambiarEstado" method="post" class="form-cambio-estado">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="id" value="@fila["id_proser"]" />
+                                                    <input type="hidden" name="nombreEstado" value="ocupada" />
+                                                    <input type="hidden" name="busqueda" value="@busqueda" />
+                                                    <input type="hidden" name="ordenarPor" value="@ordenarPor" />
+                                                    <input type="hidden" name="direccion" value="@direccion" />
+                                                    <input type="hidden" name="vista" value="@vista" />
+                                                    <input type="hidden" name="pagina" value="@paginaActual" />
+                                                    <button type="submit" class="btn-estado-opcion">Ocupada</button>
+                                                </form>
+
+                                                <form asp-controller="Habitaciones" asp-action="CambiarEstado" method="post" class="form-cambio-estado">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="id" value="@fila["id_proser"]" />
+                                                    <input type="hidden" name="nombreEstado" value="remodelacion" />
+                                                    <input type="hidden" name="busqueda" value="@busqueda" />
+                                                    <input type="hidden" name="ordenarPor" value="@ordenarPor" />
+                                                    <input type="hidden" name="direccion" value="@direccion" />
+                                                    <input type="hidden" name="vista" value="@vista" />
+                                                    <input type="hidden" name="pagina" value="@paginaActual" />
+                                                    <button type="submit" class="btn-estado-opcion">Remodelación</button>
+                                                </form>
+
+                                                <form asp-controller="Habitaciones" asp-action="CambiarEstado" method="post" class="form-cambio-estado">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="id" value="@fila["id_proser"]" />
+                                                    <input type="hidden" name="nombreEstado" value="renta" />
+                                                    <input type="hidden" name="busqueda" value="@busqueda" />
+                                                    <input type="hidden" name="ordenarPor" value="@ordenarPor" />
+                                                    <input type="hidden" name="direccion" value="@direccion" />
+                                                    <input type="hidden" name="vista" value="@vista" />
+                                                    <input type="hidden" name="pagina" value="@paginaActual" />
+                                                    <button type="submit" class="btn-estado-opcion">Renta</button>
+                                                </form>
+                                            </div>
+                                        </div>
+
+                                        <a asp-controller="Habitaciones"
+                                           asp-action="VerDisponibilidad"
+                                           asp-route-id="@fila["id_proser"]"
+                                           class="btn-icono btn-disponibilidad"
+                                           title="Ver disponibilidad">
+                                            <i class="bi bi-calendar-check-fill"></i>
+                                        </a>
+
+                                        <a asp-controller="Habitaciones"
+                                           asp-action="VerReservas"
+                                           asp-route-id="@fila["id_proser"]"
+                                           class="btn-icono btn-reservas"
+                                           title="Ver reservas">
+                                            <i class="bi bi-journal-text"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    @if (totalPaginas > 1)
+    {
+        <div class="paginacion">
+            @for (int i = 1; i <= totalPaginas; i++)
+            {
+                <a asp-controller="Habitaciones"
+                   asp-action="Index"
+                   asp-route-busqueda="@busqueda"
+                   asp-route-ordenarPor="@ordenarPor"
+                   asp-route-direccion="@direccion"
+                   asp-route-vista="@vista"
+                   asp-route-pagina="@i"
+                   class="pagina-link @(i == paginaActual ? "activa" : "")">
+                    @i
+                </a>
+            }
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        let temporizadorBusquedaHabitaciones;
+
+        document.getElementById("busquedaHabitaciones").addEventListener("input", function () {
+            clearTimeout(temporizadorBusquedaHabitaciones);
+
+            temporizadorBusquedaHabitaciones = setTimeout(function () {
+                document.getElementById("formBusquedaHabitaciones").submit();
+            }, 350);
+        });
+    </script>
+}
