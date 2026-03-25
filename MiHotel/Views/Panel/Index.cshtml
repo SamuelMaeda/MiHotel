@@ -59,6 +59,7 @@
         <a href="#" class="opcion-menu">Cuentas por Pagar</a>
         <a href="#" class="opcion-menu">Reportes</a>
         <a asp-controller="Habitaciones" asp-action="Index" class="opcion-menu">Habitaciones</a>
+        <a asp-controller="Clientes" asp-action="Index" class="opcion-menu">Clientes</a>
     }
     else if (nombreRol.ToLower() == "recepcionista")
     {
@@ -66,7 +67,7 @@
         <a href="#" class="opcion-menu">Check-In</a>
         <a href="#" class="opcion-menu">Check-Out</a>
         <a asp-controller="Habitaciones" asp-action="Index" class="opcion-menu">Habitaciones</a>
-        <a href="#" class="opcion-menu">Clientes</a>
+        <a asp-controller="Clientes" asp-action="Index" class="opcion-menu">Clientes</a>
         
     }
     else if (nombreRol.ToLower() == "camarero")
