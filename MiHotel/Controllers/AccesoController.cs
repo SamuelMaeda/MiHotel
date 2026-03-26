@@ -35,8 +35,8 @@ namespace MiHotel.Controllers
 
         private void CargarDatosConfiguracion()
         {
-            ViewBag.EmpresaNombre = _configSistema.Empresa.Nombre;
-            ViewBag.EmpresaLogo = _configSistema.Empresa.Logo;
+            ViewBag.EmpresaNombre = _configSistema.Empresa?.Nombre ?? "MiHotel";
+            ViewBag.EmpresaLogo = _configSistema.Empresa?.Logo ?? "logo.png";
         }
 
         // ===============================
@@ -65,7 +65,7 @@ namespace MiHotel.Controllers
 
         private string NormalizarTelefono(string telefono)
         {
-            return telefono.Replace(" ", "").Trim();
+            return (telefono ?? "").Replace(" ", "").Trim();
         }
 
         // ===============================
@@ -82,6 +82,29 @@ namespace MiHotel.Controllers
             }
 
             return telefono;
+        }
+
+        // ===============================
+        // OBTENER ID DE TIPO CLIENTE
+        // ===============================
+
+        private int ObtenerIdTipoCliente(MySqlConnection conexion)
+        {
+            string consulta = @"
+                SELECT id_tipoclipro
+                FROM tipo_clipro
+                WHERE LOWER(tipo) = 'cliente'
+                LIMIT 1;";
+
+            using var comando = new MySqlCommand(consulta, conexion);
+            object? resultado = comando.ExecuteScalar();
+
+            if (resultado == null)
+            {
+                throw new Exception("No existe el tipo 'cliente' en tipo_clipro.");
+            }
+
+            return Convert.ToInt32(resultado);
         }
 
         // ===============================
@@ -104,7 +127,7 @@ namespace MiHotel.Controllers
                 "logo.png"
             );
 
-            string asunto = "Recuperación de contraseña - " + _configSistema.Empresa.Nombre;
+            string asunto = "Recuperación de contraseña - " + (_configSistema.Empresa?.Nombre ?? "MiHotel");
 
             string contenidoHtml = $@"
                 <html>
@@ -112,7 +135,7 @@ namespace MiHotel.Controllers
                     <div style='max-width:600px; margin:30px auto; background-color:#ffffff; border-radius:14px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.12);'>
                         
                         <div style='background-color:#824B44; padding:25px; text-align:center;'>
-                            <img src='cid:logoHotel' alt='{_configSistema.Empresa.Nombre}' style='max-height:90px; width:auto; margin-bottom:10px;' />
+                            <img src='cid:logoHotel' alt='{_configSistema.Empresa?.Nombre ?? "MiHotel"}' style='max-height:90px; width:auto; margin-bottom:10px;' />
                             <h2 style='margin:0; color:#ffffff;'>Recuperación de contraseña</h2>
                         </div>
 
@@ -121,7 +144,7 @@ namespace MiHotel.Controllers
 
                             <p>
                                 Hemos recibido una solicitud para restablecer tu contraseña en el sistema de
-                                <strong>{_configSistema.Empresa.Nombre}</strong>.
+                                <strong>{_configSistema.Empresa?.Nombre ?? "MiHotel"}</strong>.
                             </p>
 
                             <p>
@@ -156,11 +179,11 @@ namespace MiHotel.Controllers
 
             using var mensaje = new MailMessage();
 
-            string nombreMostrar = string.IsNullOrWhiteSpace(_configSistema.Correo.NombreMostrar)
-                ? _configSistema.Empresa.Nombre + " - No Reply"
+            string nombreMostrar = string.IsNullOrWhiteSpace(_configSistema.Correo?.NombreMostrar)
+                ? (_configSistema.Empresa?.Nombre ?? "MiHotel") + " - No Reply"
                 : _configSistema.Correo.NombreMostrar;
 
-            mensaje.From = new MailAddress(_configSistema.Correo.Remitente, nombreMostrar);
+            mensaje.From = new MailAddress(_configSistema.Correo!.Remitente, nombreMostrar);
             mensaje.To.Add(correoDestino);
 
             // ===============================
@@ -223,7 +246,7 @@ namespace MiHotel.Controllers
             }
 
             // ===============================
-            // VALIDAR COOKIE DE RECORDAR SESION
+            // VALIDAR COOKIE DE RECORDAR SESION PARA CLIENTES
             // ===============================
 
             if (Request.Cookies.TryGetValue("MiHotel_Recordarme", out string? tokenCookie))
@@ -233,44 +256,42 @@ namespace MiHotel.Controllers
                     using var conexion = _conexionBD.ObtenerConexion();
                     conexion.Open();
 
+                    int idTipoCliente = ObtenerIdTipoCliente(conexion);
+
                     string consultaToken = @"
                         SELECT 
-                            u.id_usuario,
-                            u.nombre_usuario,
-                            u.id_rol,
-                            u.estado,
-                            u.fecha_expiracion_recordarme,
-                            r.nombre_rol
-                        FROM usuario u
-                        INNER JOIN rol r ON u.id_rol = r.id_rol
-                        WHERE u.token_recordarme = @token
+                            c.id_clipro,
+                            c.nombre,
+                            c.estado,
+                            c.fecha_expiracion_recordarme
+                        FROM clipro c
+                        WHERE c.id_tipoclipro = @id_tipoclipro
+                          AND c.token_recordarme = @token
                         LIMIT 1;";
 
                     using var comandoToken = new MySqlCommand(consultaToken, conexion);
+                    comandoToken.Parameters.AddWithValue("@id_tipoclipro", idTipoCliente);
                     comandoToken.Parameters.AddWithValue("@token", tokenCookie);
 
                     using var lector = comandoToken.ExecuteReader();
 
                     if (lector.Read())
                     {
-                        string idUsuario = lector["id_usuario"]?.ToString() ?? "";
-                        string nombreUsuario = lector["nombre_usuario"]?.ToString() ?? "";
-                        string idRol = lector["id_rol"]?.ToString() ?? "";
-                        string nombreRol = lector["nombre_rol"]?.ToString() ?? "";
+                        string idClipro = lector["id_clipro"]?.ToString() ?? "";
+                        string nombreCliente = lector["nombre"]?.ToString() ?? "";
                         string estado = lector["estado"]?.ToString() ?? "";
 
                         DateTime fechaExpiracion = Convert.ToDateTime(lector["fecha_expiracion_recordarme"]);
 
-                        bool usuarioActivo = estado.Trim().ToLower() == "activo";
-                        bool esCliente = nombreRol.Trim().ToLower() == "cliente";
+                        bool clienteActivo = estado.Trim().ToLower() == "activo";
                         bool tokenVigente = fechaExpiracion >= DateTime.Now;
 
-                        if (usuarioActivo && esCliente && tokenVigente)
+                        if (clienteActivo && tokenVigente)
                         {
-                            HttpContext.Session.SetString("IdUsuario", idUsuario);
-                            HttpContext.Session.SetString("NombreUsuario", nombreUsuario);
-                            HttpContext.Session.SetString("IdRol", idRol);
-                            HttpContext.Session.SetString("NombreRol", nombreRol);
+                            HttpContext.Session.SetString("IdUsuario", idClipro);
+                            HttpContext.Session.SetString("NombreUsuario", nombreCliente);
+                            HttpContext.Session.SetString("IdRol", "cliente");
+                            HttpContext.Session.SetString("NombreRol", "cliente");
 
                             return RedirectToAction("Index", "Panel");
                         }
@@ -319,11 +340,17 @@ namespace MiHotel.Controllers
                 using var conexion = _conexionBD.ObtenerConexion();
                 conexion.Open();
 
-                string consulta = @"
+                string correoIngresado = modelo.Correo.Trim();
+                string claveIngresadaHash = SeguridadHelper.ObtenerSha256(modelo.Clave);
+
+                // ===============================
+                // INTENTAR LOGIN COMO USUARIO ADMINISTRATIVO
+                // ===============================
+
+                string consultaUsuario = @"
                     SELECT 
                         u.id_usuario,
                         u.nombre_usuario,
-                        u.correo,
                         u.clave,
                         u.estado,
                         u.id_rol,
@@ -333,98 +360,150 @@ namespace MiHotel.Controllers
                     WHERE u.correo = @correo
                     LIMIT 1;";
 
-                using var comando = new MySqlCommand(consulta, conexion);
-                comando.Parameters.AddWithValue("@correo", modelo.Correo);
-
-                using var lector = comando.ExecuteReader();
-
-                if (!lector.Read())
+                using (var comandoUsuario = new MySqlCommand(consultaUsuario, conexion))
                 {
-                    ViewBag.Mensaje = "Correo o clave incorrectos.";
-                    return View(modelo);
-                }
+                    comandoUsuario.Parameters.AddWithValue("@correo", correoIngresado);
 
-                string claveBD = lector["clave"]?.ToString() ?? "";
-                string estado = lector["estado"]?.ToString() ?? "";
-                string nombreUsuario = lector["nombre_usuario"]?.ToString() ?? "";
-                string idUsuario = lector["id_usuario"]?.ToString() ?? "";
-                string idRol = lector["id_rol"]?.ToString() ?? "";
-                string nombreRol = lector["nombre_rol"]?.ToString() ?? "";
+                    using var lectorUsuario = comandoUsuario.ExecuteReader();
 
-                if (estado.Trim().ToLower() != "activo")
-                {
-                    ViewBag.Mensaje = "El usuario está inactivo.";
-                    return View(modelo);
-                }
-
-                string claveIngresadaHash = SeguridadHelper.ObtenerSha256(modelo.Clave);
-
-                if (claveBD != claveIngresadaHash)
-                {
-                    ViewBag.Mensaje = "Correo o clave incorrectos.";
-                    return View(modelo);
-                }
-
-                HttpContext.Session.SetString("IdUsuario", idUsuario);
-                HttpContext.Session.SetString("NombreUsuario", nombreUsuario);
-                HttpContext.Session.SetString("IdRol", idRol);
-                HttpContext.Session.SetString("NombreRol", nombreRol);
-
-                lector.Close();
-
-                string rolNormalizado = nombreRol.Trim().ToLower();
-
-                // ===============================
-                // RECORDAR SESION SOLO PARA CLIENTES
-                // ===============================
-
-                if (rolNormalizado == "cliente")
-                {
-                    if (modelo.Recordarme)
+                    if (lectorUsuario.Read())
                     {
-                        string token = GenerarTokenSeguro();
-                        DateTime fechaExpiracion = DateTime.Now.AddDays(30);
+                        string claveBD = lectorUsuario["clave"]?.ToString() ?? "";
+                        string estado = lectorUsuario["estado"]?.ToString() ?? "";
+                        string nombreUsuario = lectorUsuario["nombre_usuario"]?.ToString() ?? "";
+                        string idUsuario = lectorUsuario["id_usuario"]?.ToString() ?? "";
+                        string idRol = lectorUsuario["id_rol"]?.ToString() ?? "";
+                        string nombreRol = lectorUsuario["nombre_rol"]?.ToString() ?? "";
 
-                        string actualizarToken = @"
-                            UPDATE usuario
-                            SET token_recordarme = @token,
-                                fecha_expiracion_recordarme = @fecha_expiracion
-                            WHERE id_usuario = @id_usuario;";
-
-                        using var comandoActualizar = new MySqlCommand(actualizarToken, conexion);
-                        comandoActualizar.Parameters.AddWithValue("@token", token);
-                        comandoActualizar.Parameters.AddWithValue("@fecha_expiracion", fechaExpiracion);
-                        comandoActualizar.Parameters.AddWithValue("@id_usuario", idUsuario);
-
-                        comandoActualizar.ExecuteNonQuery();
-
-                        CookieOptions opcionesCookie = new CookieOptions
+                        if (estado.Trim().ToLower() != "activo")
                         {
-                            Expires = fechaExpiracion,
-                            HttpOnly = true,
-                            IsEssential = true,
-                            Secure = false
-                        };
+                            ViewBag.Mensaje = "El usuario está inactivo.";
+                            return View(modelo);
+                        }
 
-                        Response.Cookies.Append("MiHotel_Recordarme", token, opcionesCookie);
+                        if (claveBD != claveIngresadaHash)
+                        {
+                            ViewBag.Mensaje = "Correo o clave incorrectos.";
+                            return View(modelo);
+                        }
+
+                        HttpContext.Session.SetString("IdUsuario", idUsuario);
+                        HttpContext.Session.SetString("NombreUsuario", nombreUsuario);
+                        HttpContext.Session.SetString("IdRol", idRol);
+                        HttpContext.Session.SetString("NombreRol", nombreRol);
+
+                        return RedirectToAction("Index", "Panel");
                     }
-                    else
+                }
+
+                // ===============================
+                // INTENTAR LOGIN COMO CLIENTE EN CLIPRO
+                // ===============================
+
+                int idTipoCliente = ObtenerIdTipoCliente(conexion);
+
+                string consultaCliente = @"
+                    SELECT
+                        c.id_clipro,
+                        c.nombre,
+                        c.correo,
+                        c.clave,
+                        c.estado
+                    FROM clipro c
+                    WHERE c.id_tipoclipro = @id_tipoclipro
+                      AND c.correo = @correo
+                    LIMIT 1;";
+
+                using var comandoCliente = new MySqlCommand(consultaCliente, conexion);
+                comandoCliente.Parameters.AddWithValue("@id_tipoclipro", idTipoCliente);
+                comandoCliente.Parameters.AddWithValue("@correo", correoIngresado);
+
+                using var lectorCliente = comandoCliente.ExecuteReader();
+
+                if (!lectorCliente.Read())
+                {
+                    ViewBag.Mensaje = "Correo o clave incorrectos.";
+                    return View(modelo);
+                }
+
+                string claveClienteBD = lectorCliente["clave"]?.ToString() ?? "";
+                string estadoCliente = lectorCliente["estado"]?.ToString() ?? "";
+                string nombreCliente = lectorCliente["nombre"]?.ToString() ?? "";
+                string idClipro = lectorCliente["id_clipro"]?.ToString() ?? "";
+
+                if (estadoCliente.Trim().ToLower() != "activo")
+                {
+                    ViewBag.Mensaje = "El cliente está inactivo.";
+                    return View(modelo);
+                }
+
+                if (string.IsNullOrWhiteSpace(claveClienteBD))
+                {
+                    ViewBag.Mensaje = "La cuenta del cliente no tiene acceso habilitado.";
+                    return View(modelo);
+                }
+
+                if (claveClienteBD != claveIngresadaHash)
+                {
+                    ViewBag.Mensaje = "Correo o clave incorrectos.";
+                    return View(modelo);
+                }
+
+                HttpContext.Session.SetString("IdUsuario", idClipro);
+                HttpContext.Session.SetString("NombreUsuario", nombreCliente);
+                HttpContext.Session.SetString("IdRol", "cliente");
+                HttpContext.Session.SetString("NombreRol", "cliente");
+
+                lectorCliente.Close();
+
+                // ===============================
+                // RECORDAR SESION PARA CLIENTES
+                // ===============================
+
+                if (modelo.Recordarme)
+                {
+                    string token = GenerarTokenSeguro();
+                    DateTime fechaExpiracion = DateTime.Now.AddDays(30);
+
+                    string actualizarToken = @"
+                        UPDATE clipro
+                        SET token_recordarme = @token,
+                            fecha_expiracion_recordarme = @fecha_expiracion
+                        WHERE id_clipro = @id_clipro
+                          AND id_tipoclipro = @id_tipoclipro;";
+
+                    using var comandoActualizar = new MySqlCommand(actualizarToken, conexion);
+                    comandoActualizar.Parameters.AddWithValue("@token", token);
+                    comandoActualizar.Parameters.AddWithValue("@fecha_expiracion", fechaExpiracion);
+                    comandoActualizar.Parameters.AddWithValue("@id_clipro", idClipro);
+                    comandoActualizar.Parameters.AddWithValue("@id_tipoclipro", idTipoCliente);
+
+                    comandoActualizar.ExecuteNonQuery();
+
+                    CookieOptions opcionesCookie = new CookieOptions
                     {
-                        string limpiarToken = @"
-                            UPDATE usuario
-                            SET token_recordarme = NULL,
-                                fecha_expiracion_recordarme = NULL
-                            WHERE id_usuario = @id_usuario;";
+                        Expires = fechaExpiracion,
+                        HttpOnly = true,
+                        IsEssential = true,
+                        Secure = false
+                    };
 
-                        using var comandoLimpiar = new MySqlCommand(limpiarToken, conexion);
-                        comandoLimpiar.Parameters.AddWithValue("@id_usuario", idUsuario);
-                        comandoLimpiar.ExecuteNonQuery();
-
-                        Response.Cookies.Delete("MiHotel_Recordarme");
-                    }
+                    Response.Cookies.Append("MiHotel_Recordarme", token, opcionesCookie);
                 }
                 else
                 {
+                    string limpiarToken = @"
+                        UPDATE clipro
+                        SET token_recordarme = NULL,
+                            fecha_expiracion_recordarme = NULL
+                        WHERE id_clipro = @id_clipro
+                          AND id_tipoclipro = @id_tipoclipro;";
+
+                    using var comandoLimpiar = new MySqlCommand(limpiarToken, conexion);
+                    comandoLimpiar.Parameters.AddWithValue("@id_clipro", idClipro);
+                    comandoLimpiar.Parameters.AddWithValue("@id_tipoclipro", idTipoCliente);
+                    comandoLimpiar.ExecuteNonQuery();
+
                     Response.Cookies.Delete("MiHotel_Recordarme");
                 }
 
@@ -471,76 +550,99 @@ namespace MiHotel.Controllers
 
             try
             {
-                // ===============================
-                // NORMALIZAR TELEFONO ANTES DE GUARDAR
-                // ===============================
-
                 modelo.Telefono = NormalizarTelefono(modelo.Telefono);
 
                 using var conexion = _conexionBD.ObtenerConexion();
                 conexion.Open();
 
-                string verificarCorreo = @"
-                    SELECT COUNT(*) 
-                    FROM usuario 
-                    WHERE correo = @correo;";
+                int idTipoCliente = ObtenerIdTipoCliente(conexion);
 
-                using var comandoVerificar = new MySqlCommand(verificarCorreo, conexion);
-                comandoVerificar.Parameters.AddWithValue("@correo", modelo.Correo);
+                string correoNormalizado = string.IsNullOrWhiteSpace(modelo.Correo)
+                    ? null!
+                    : modelo.Correo.Trim();
 
-                int existe = Convert.ToInt32(comandoVerificar.ExecuteScalar());
-
-                if (existe > 0)
+                if (!string.IsNullOrWhiteSpace(correoNormalizado))
                 {
-                    ViewBag.Mensaje = "El correo ya está registrado.";
-                    modelo.Telefono = FormatearTelefono(modelo.Telefono);
-                    return View(modelo);
+                    string verificarCorreoClipro = @"
+                        SELECT COUNT(*)
+                        FROM clipro
+                        WHERE id_tipoclipro = @id_tipoclipro
+                          AND correo = @correo;";
+
+                    using var comandoVerificarClipro = new MySqlCommand(verificarCorreoClipro, conexion);
+                    comandoVerificarClipro.Parameters.AddWithValue("@id_tipoclipro", idTipoCliente);
+                    comandoVerificarClipro.Parameters.AddWithValue("@correo", correoNormalizado);
+
+                    int existeClipro = Convert.ToInt32(comandoVerificarClipro.ExecuteScalar());
+
+                    if (existeClipro > 0)
+                    {
+                        ViewBag.Mensaje = "El correo ya está registrado.";
+                        modelo.Telefono = FormatearTelefono(modelo.Telefono);
+                        return View(modelo);
+                    }
+
+                    string verificarCorreoUsuario = @"
+                        SELECT COUNT(*)
+                        FROM usuario
+                        WHERE correo = @correo;";
+
+                    using var comandoVerificarUsuario = new MySqlCommand(verificarCorreoUsuario, conexion);
+                    comandoVerificarUsuario.Parameters.AddWithValue("@correo", correoNormalizado);
+
+                    int existeUsuario = Convert.ToInt32(comandoVerificarUsuario.ExecuteScalar());
+
+                    if (existeUsuario > 0)
+                    {
+                        ViewBag.Mensaje = "El correo ya está registrado.";
+                        modelo.Telefono = FormatearTelefono(modelo.Telefono);
+                        return View(modelo);
+                    }
                 }
 
-                string obtenerRol = @"
-                    SELECT id_rol
-                    FROM rol
-                    WHERE nombre_rol = 'cliente'
-                    LIMIT 1;";
-
-                using var comandoRol = new MySqlCommand(obtenerRol, conexion);
-                object? resultadoRol = comandoRol.ExecuteScalar();
-
-                if (resultadoRol == null)
-                {
-                    ViewBag.Mensaje = "No se encontró el rol de cliente en la base de datos.";
-                    modelo.Telefono = FormatearTelefono(modelo.Telefono);
-                    return View(modelo);
-                }
-
-                int idRolCliente = Convert.ToInt32(resultadoRol);
                 string claveHash = SeguridadHelper.ObtenerSha256(modelo.Clave);
 
                 string insertar = @"
-                    INSERT INTO usuario
+                    INSERT INTO clipro
                     (
-                        id_rol,
-                        nombre_usuario,
-                        correo,
+                        id_tipoclipro,
+                        nombre,
+                        nit,
+                        direccion,
+                        nombre_empresa,
+                        numero_empresa,
                         telefono,
+                        correo,
                         clave,
+                        token_recordarme,
+                        fecha_expiracion_recordarme,
+                        token_recuperacion,
+                        fecha_expiracion_recuperacion,
                         estado
                     )
                     VALUES
                     (
-                        @id_rol,
+                        @id_tipoclipro,
                         @nombre,
-                        @correo,
+                        NULL,
+                        NULL,
+                        NULL,
+                        NULL,
                         @telefono,
+                        @correo,
                         @clave,
+                        NULL,
+                        NULL,
+                        NULL,
+                        NULL,
                         'activo'
                     );";
 
                 using var comandoInsertar = new MySqlCommand(insertar, conexion);
-                comandoInsertar.Parameters.AddWithValue("@id_rol", idRolCliente);
-                comandoInsertar.Parameters.AddWithValue("@nombre", modelo.Nombre);
-                comandoInsertar.Parameters.AddWithValue("@correo", modelo.Correo);
+                comandoInsertar.Parameters.AddWithValue("@id_tipoclipro", idTipoCliente);
+                comandoInsertar.Parameters.AddWithValue("@nombre", modelo.Nombre.Trim());
                 comandoInsertar.Parameters.AddWithValue("@telefono", modelo.Telefono);
+                comandoInsertar.Parameters.AddWithValue("@correo", correoNormalizado);
                 comandoInsertar.Parameters.AddWithValue("@clave", claveHash);
 
                 comandoInsertar.ExecuteNonQuery();
@@ -595,48 +697,110 @@ namespace MiHotel.Controllers
                 using var conexion = _conexionBD.ObtenerConexion();
                 conexion.Open();
 
-                string consulta = @"
+                string correoIngresado = modelo.Correo.Trim();
+
+                // ===============================
+                // BUSCAR EN USUARIO
+                // ===============================
+
+                string consultaUsuario = @"
                     SELECT id_usuario, nombre_usuario, correo
                     FROM usuario
                     WHERE correo = @correo
                       AND estado = 'activo'
                     LIMIT 1;";
 
-                using var comando = new MySqlCommand(consulta, conexion);
-                comando.Parameters.AddWithValue("@correo", modelo.Correo);
+                using (var comandoUsuario = new MySqlCommand(consultaUsuario, conexion))
+                {
+                    comandoUsuario.Parameters.AddWithValue("@correo", correoIngresado);
 
-                using var lector = comando.ExecuteReader();
+                    using var lectorUsuario = comandoUsuario.ExecuteReader();
 
-                if (!lector.Read())
+                    if (lectorUsuario.Read())
+                    {
+                        string idUsuario = lectorUsuario["id_usuario"]?.ToString() ?? "";
+                        string nombreUsuario = lectorUsuario["nombre_usuario"]?.ToString() ?? "";
+                        string correo = lectorUsuario["correo"]?.ToString() ?? "";
+
+                        lectorUsuario.Close();
+
+                        string token = GenerarTokenRecuperacion();
+                        DateTime fechaExpiracion = DateTime.Now.AddMinutes(30);
+
+                        string actualizar = @"
+                            UPDATE usuario
+                            SET token_recuperacion = @token,
+                                fecha_expiracion_recuperacion = @fecha_expiracion
+                            WHERE id_usuario = @id_usuario;";
+
+                        using var comandoActualizar = new MySqlCommand(actualizar, conexion);
+                        comandoActualizar.Parameters.AddWithValue("@token", token);
+                        comandoActualizar.Parameters.AddWithValue("@fecha_expiracion", fechaExpiracion);
+                        comandoActualizar.Parameters.AddWithValue("@id_usuario", idUsuario);
+
+                        comandoActualizar.ExecuteNonQuery();
+
+                        EnviarCorreoRecuperacion(correo, nombreUsuario, token);
+
+                        ViewBag.Exito = "Si el correo existe en el sistema, se ha enviado un enlace de recuperación.";
+                        ModelState.Clear();
+
+                        return View();
+                    }
+                }
+
+                // ===============================
+                // BUSCAR EN CLIPRO COMO CLIENTE
+                // ===============================
+
+                int idTipoCliente = ObtenerIdTipoCliente(conexion);
+
+                string consultaCliente = @"
+                    SELECT id_clipro, nombre, correo
+                    FROM clipro
+                    WHERE id_tipoclipro = @id_tipoclipro
+                      AND correo = @correo
+                      AND estado = 'activo'
+                    LIMIT 1;";
+
+                using var comandoCliente = new MySqlCommand(consultaCliente, conexion);
+                comandoCliente.Parameters.AddWithValue("@id_tipoclipro", idTipoCliente);
+                comandoCliente.Parameters.AddWithValue("@correo", correoIngresado);
+
+                using var lectorCliente = comandoCliente.ExecuteReader();
+
+                if (!lectorCliente.Read())
                 {
                     ViewBag.Exito = "Si el correo existe en el sistema, se ha enviado un enlace de recuperación.";
                     ModelState.Clear();
                     return View();
                 }
 
-                string idUsuario = lector["id_usuario"]?.ToString() ?? "";
-                string nombreUsuario = lector["nombre_usuario"]?.ToString() ?? "";
-                string correo = lector["correo"]?.ToString() ?? "";
+                string idClipro = lectorCliente["id_clipro"]?.ToString() ?? "";
+                string nombreCliente = lectorCliente["nombre"]?.ToString() ?? "";
+                string correoCliente = lectorCliente["correo"]?.ToString() ?? "";
 
-                lector.Close();
+                lectorCliente.Close();
 
-                string token = GenerarTokenRecuperacion();
-                DateTime fechaExpiracion = DateTime.Now.AddMinutes(30);
+                string tokenCliente = GenerarTokenRecuperacion();
+                DateTime fechaExpiracionCliente = DateTime.Now.AddMinutes(30);
 
-                string actualizar = @"
-                    UPDATE usuario
+                string actualizarCliente = @"
+                    UPDATE clipro
                     SET token_recuperacion = @token,
                         fecha_expiracion_recuperacion = @fecha_expiracion
-                    WHERE id_usuario = @id_usuario;";
+                    WHERE id_clipro = @id_clipro
+                      AND id_tipoclipro = @id_tipoclipro;";
 
-                using var comandoActualizar = new MySqlCommand(actualizar, conexion);
-                comandoActualizar.Parameters.AddWithValue("@token", token);
-                comandoActualizar.Parameters.AddWithValue("@fecha_expiracion", fechaExpiracion);
-                comandoActualizar.Parameters.AddWithValue("@id_usuario", idUsuario);
+                using var comandoActualizarCliente = new MySqlCommand(actualizarCliente, conexion);
+                comandoActualizarCliente.Parameters.AddWithValue("@token", tokenCliente);
+                comandoActualizarCliente.Parameters.AddWithValue("@fecha_expiracion", fechaExpiracionCliente);
+                comandoActualizarCliente.Parameters.AddWithValue("@id_clipro", idClipro);
+                comandoActualizarCliente.Parameters.AddWithValue("@id_tipoclipro", idTipoCliente);
 
-                comandoActualizar.ExecuteNonQuery();
+                comandoActualizarCliente.ExecuteNonQuery();
 
-                EnviarCorreoRecuperacion(correo, nombreUsuario, token);
+                EnviarCorreoRecuperacion(correoCliente, nombreCliente, tokenCliente);
 
                 ViewBag.Exito = "Si el correo existe en el sistema, se ha enviado un enlace de recuperación.";
                 ModelState.Clear();
@@ -671,20 +835,47 @@ namespace MiHotel.Controllers
                 using var conexion = _conexionBD.ObtenerConexion();
                 conexion.Open();
 
-                string consulta = @"
+                string consultaUsuario = @"
                     SELECT COUNT(*)
                     FROM usuario
                     WHERE token_recuperacion = @token
                       AND fecha_expiracion_recuperacion >= @fecha_actual
                       AND estado = 'activo';";
 
-                using var comando = new MySqlCommand(consulta, conexion);
-                comando.Parameters.AddWithValue("@token", token);
-                comando.Parameters.AddWithValue("@fecha_actual", DateTime.Now);
+                using var comandoUsuario = new MySqlCommand(consultaUsuario, conexion);
+                comandoUsuario.Parameters.AddWithValue("@token", token);
+                comandoUsuario.Parameters.AddWithValue("@fecha_actual", DateTime.Now);
 
-                int existe = Convert.ToInt32(comando.ExecuteScalar());
+                int existeUsuario = Convert.ToInt32(comandoUsuario.ExecuteScalar());
 
-                if (existe == 0)
+                if (existeUsuario > 0)
+                {
+                    RestablecerClave modeloUsuario = new RestablecerClave
+                    {
+                        Token = token
+                    };
+
+                    return View(modeloUsuario);
+                }
+
+                int idTipoCliente = ObtenerIdTipoCliente(conexion);
+
+                string consultaCliente = @"
+                    SELECT COUNT(*)
+                    FROM clipro
+                    WHERE id_tipoclipro = @id_tipoclipro
+                      AND token_recuperacion = @token
+                      AND fecha_expiracion_recuperacion >= @fecha_actual
+                      AND estado = 'activo';";
+
+                using var comandoCliente = new MySqlCommand(consultaCliente, conexion);
+                comandoCliente.Parameters.AddWithValue("@id_tipoclipro", idTipoCliente);
+                comandoCliente.Parameters.AddWithValue("@token", token);
+                comandoCliente.Parameters.AddWithValue("@fecha_actual", DateTime.Now);
+
+                int existeCliente = Convert.ToInt32(comandoCliente.ExecuteScalar());
+
+                if (existeCliente == 0)
                 {
                     ViewBag.Mensaje = "El enlace de recuperación no es válido o ha expirado.";
                     return View(new RestablecerClave());
@@ -724,7 +915,13 @@ namespace MiHotel.Controllers
                 using var conexion = _conexionBD.ObtenerConexion();
                 conexion.Open();
 
-                string consulta = @"
+                string nuevaClaveHash = SeguridadHelper.ObtenerSha256(modelo.NuevaClave);
+
+                // ===============================
+                // INTENTAR ACTUALIZAR EN USUARIO
+                // ===============================
+
+                string consultaUsuario = @"
                     SELECT id_usuario
                     FROM usuario
                     WHERE token_recuperacion = @token
@@ -732,35 +929,83 @@ namespace MiHotel.Controllers
                       AND estado = 'activo'
                     LIMIT 1;";
 
-                using var comando = new MySqlCommand(consulta, conexion);
-                comando.Parameters.AddWithValue("@token", modelo.Token);
-                comando.Parameters.AddWithValue("@fecha_actual", DateTime.Now);
+                using (var comandoUsuario = new MySqlCommand(consultaUsuario, conexion))
+                {
+                    comandoUsuario.Parameters.AddWithValue("@token", modelo.Token);
+                    comandoUsuario.Parameters.AddWithValue("@fecha_actual", DateTime.Now);
 
-                object? resultado = comando.ExecuteScalar();
+                    object? resultadoUsuario = comandoUsuario.ExecuteScalar();
 
-                if (resultado == null)
+                    if (resultadoUsuario != null)
+                    {
+                        int idUsuario = Convert.ToInt32(resultadoUsuario);
+
+                        string actualizarUsuario = @"
+                            UPDATE usuario
+                            SET clave = @clave,
+                                token_recuperacion = NULL,
+                                fecha_expiracion_recuperacion = NULL,
+                                token_recordarme = NULL,
+                                fecha_expiracion_recordarme = NULL
+                            WHERE id_usuario = @id_usuario;";
+
+                        using var comandoActualizarUsuario = new MySqlCommand(actualizarUsuario, conexion);
+                        comandoActualizarUsuario.Parameters.AddWithValue("@clave", nuevaClaveHash);
+                        comandoActualizarUsuario.Parameters.AddWithValue("@id_usuario", idUsuario);
+
+                        comandoActualizarUsuario.ExecuteNonQuery();
+
+                        TempData["Exito"] = "La contraseña se restableció correctamente. Ahora puede iniciar sesión.";
+                        return RedirectToAction("Login");
+                    }
+                }
+
+                // ===============================
+                // INTENTAR ACTUALIZAR EN CLIPRO
+                // ===============================
+
+                int idTipoCliente = ObtenerIdTipoCliente(conexion);
+
+                string consultaCliente = @"
+                    SELECT id_clipro
+                    FROM clipro
+                    WHERE id_tipoclipro = @id_tipoclipro
+                      AND token_recuperacion = @token
+                      AND fecha_expiracion_recuperacion >= @fecha_actual
+                      AND estado = 'activo'
+                    LIMIT 1;";
+
+                using var comandoCliente = new MySqlCommand(consultaCliente, conexion);
+                comandoCliente.Parameters.AddWithValue("@id_tipoclipro", idTipoCliente);
+                comandoCliente.Parameters.AddWithValue("@token", modelo.Token);
+                comandoCliente.Parameters.AddWithValue("@fecha_actual", DateTime.Now);
+
+                object? resultadoCliente = comandoCliente.ExecuteScalar();
+
+                if (resultadoCliente == null)
                 {
                     ViewBag.Mensaje = "El enlace de recuperación no es válido o ha expirado.";
                     return View(modelo);
                 }
 
-                int idUsuario = Convert.ToInt32(resultado);
-                string nuevaClaveHash = SeguridadHelper.ObtenerSha256(modelo.NuevaClave);
+                int idClipro = Convert.ToInt32(resultadoCliente);
 
-                string actualizar = @"
-                    UPDATE usuario
+                string actualizarCliente = @"
+                    UPDATE clipro
                     SET clave = @clave,
                         token_recuperacion = NULL,
                         fecha_expiracion_recuperacion = NULL,
                         token_recordarme = NULL,
                         fecha_expiracion_recordarme = NULL
-                    WHERE id_usuario = @id_usuario;";
+                    WHERE id_clipro = @id_clipro
+                      AND id_tipoclipro = @id_tipoclipro;";
 
-                using var comandoActualizar = new MySqlCommand(actualizar, conexion);
-                comandoActualizar.Parameters.AddWithValue("@clave", nuevaClaveHash);
-                comandoActualizar.Parameters.AddWithValue("@id_usuario", idUsuario);
+                using var comandoActualizarCliente = new MySqlCommand(actualizarCliente, conexion);
+                comandoActualizarCliente.Parameters.AddWithValue("@clave", nuevaClaveHash);
+                comandoActualizarCliente.Parameters.AddWithValue("@id_clipro", idClipro);
+                comandoActualizarCliente.Parameters.AddWithValue("@id_tipoclipro", idTipoCliente);
 
-                comandoActualizar.ExecuteNonQuery();
+                comandoActualizarCliente.ExecuteNonQuery();
 
                 TempData["Exito"] = "La contraseña se restableció correctamente. Ahora puede iniciar sesión.";
                 return RedirectToAction("Login");
@@ -791,14 +1036,18 @@ namespace MiHotel.Controllers
                         using var conexion = _conexionBD.ObtenerConexion();
                         conexion.Open();
 
+                        int idTipoCliente = ObtenerIdTipoCliente(conexion);
+
                         string limpiarToken = @"
-                            UPDATE usuario
+                            UPDATE clipro
                             SET token_recordarme = NULL,
                                 fecha_expiracion_recordarme = NULL
-                            WHERE id_usuario = @id_usuario;";
+                            WHERE id_clipro = @id_clipro
+                              AND id_tipoclipro = @id_tipoclipro;";
 
                         using var comandoLimpiar = new MySqlCommand(limpiarToken, conexion);
-                        comandoLimpiar.Parameters.AddWithValue("@id_usuario", idUsuario);
+                        comandoLimpiar.Parameters.AddWithValue("@id_clipro", idUsuario);
+                        comandoLimpiar.Parameters.AddWithValue("@id_tipoclipro", idTipoCliente);
                         comandoLimpiar.ExecuteNonQuery();
                     }
                 }

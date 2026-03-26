@@ -22,14 +22,15 @@
         font-weight: 500;
     }
 
-        .btn-guardar:hover {
-            background-color: #36366b;
-        }
+    .btn-guardar:hover {
+        background-color: #36366b;
+        color: white;
+    }
 </style>
 
 <div class="tarjeta-contenido">
 
-    <h3 class="mb-4">Crear nuevo usuario</h3>
+    <h3 class="mb-4">Crear usuario</h3>
 
     @if (ViewBag.Mensaje != null)
     {
@@ -81,7 +82,12 @@
                 {
                     foreach (var rol in ViewBag.Roles)
                     {
-                        <option value="@rol.IdRol">@rol.NombreRol</option>
+                        string nombreRol = rol.NombreRol?.ToString()?.Trim().ToLower() ?? "";
+
+                        if (nombreRol != "cliente")
+                        {
+                            <option value="@rol.IdRol">@rol.NombreRol</option>
+                        }
                     }
                 }
             </select>

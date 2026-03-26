@@ -1,50 +1,7 @@
-﻿@model System.Data.DataTable
+﻿@model MiHotel.Models.ClienteAdmin
 
 @{
-    ViewData["Title"] = "Clientes";
-
-    string busqueda = ViewBag.Busqueda ?? "";
-    string ordenarPor = ViewBag.OrdenarPor ?? "nombre";
-    string direccion = ViewBag.Direccion ?? "asc";
-    string vista = ViewBag.Vista ?? "activos";
-    int paginaActual = ViewBag.PaginaActual ?? 1;
-    int totalPaginas = ViewBag.TotalPaginas ?? 1;
-    int totalRegistros = ViewBag.TotalRegistros ?? 0;
-
-    string SiguienteDireccion(string columna)
-    {
-        if (ordenarPor == columna && direccion == "asc")
-        {
-            return "desc";
-        }
-
-        return "asc";
-    }
-
-    string IconoOrden(string columna)
-    {
-        if (ordenarPor != columna)
-        {
-            return "bi-arrow-down-up";
-        }
-
-        return direccion == "asc" ? "bi-sort-alpha-down" : "bi-sort-alpha-up";
-    }
-
-    string FormatearTelefono(string telefono)
-    {
-        if (!string.IsNullOrWhiteSpace(telefono))
-        {
-            string limpio = telefono.Replace(" ", "").Trim();
-
-            if (limpio.Length == 8)
-            {
-                return limpio.Substring(0, 4) + " " + limpio.Substring(4, 4);
-            }
-        }
-
-        return telefono;
-    }
+    ViewData["Title"] = "Crear Cliente";
 }
 
 <style>
@@ -55,326 +12,156 @@
         box-shadow: 0 4px 10px rgba(0,0,0,0.10);
     }
 
-    .btn-crear {
+    .btn-guardar {
         background-color: #464482;
+        color: white;
+        padding: 10px 16px;
+        border-radius: 8px;
+        border: none;
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+        .btn-guardar:hover {
+            background-color: #36366b;
+            color: white;
+        }
+
+    .btn-volver {
+        background-color: #824B44;
         color: white;
         padding: 10px 16px;
         border-radius: 8px;
         text-decoration: none;
         font-weight: 500;
+        display: inline-block;
     }
 
-        .btn-crear:hover {
-            background-color: #36366b;
+        .btn-volver:hover {
+            background-color: #6e3f39;
             color: white;
         }
 
-    .btn-icono {
-        width: 38px;
-        height: 38px;
-        border-radius: 8px;
-        border: none;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        text-decoration: none;
-        font-size: 16px;
-        flex: 0 0 auto;
-    }
-
-    .btn-ver {
-        background-color: #464482;
-    }
-
-    .btn-editar {
-        background-color: #824B44;
-    }
-
-    .btn-estado {
-        background-color: #6c757d;
-    }
-
-    .btn-icono:hover {
-        opacity: 0.9;
-        color: white;
-    }
-
-    .acciones-contenedor {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-        align-items: center;
-    }
-
-    .tabs-vista {
+    .acciones-formulario {
         display: flex;
         gap: 10px;
-        margin-bottom: 20px;
-        flex-wrap: wrap;
-    }
-
-    .tab-vista {
-        text-decoration: none;
-        padding: 10px 14px;
-        border-radius: 8px;
-        background-color: #E6D3D0;
-        color: #363636;
-        font-weight: 500;
-    }
-
-        .tab-vista.activa {
-            background-color: #824B44;
-            color: white;
-        }
-
-    .paginacion {
-        display: flex;
-        gap: 8px;
         flex-wrap: wrap;
         margin-top: 20px;
     }
-
-    .pagina-link {
-        padding: 8px 12px;
-        border-radius: 8px;
-        text-decoration: none;
-        background-color: #E6D3D0;
-        color: #363636;
-    }
-
-        .pagina-link.activa {
-            background-color: #464482;
-            color: white;
-            font-weight: bold;
-        }
-
-    .encabezado-orden {
-        color: inherit;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        font-weight: 600;
-    }
-
-        .encabezado-orden:hover {
-            color: inherit;
-        }
 
     @@media (max-width: 768px) {
         .tarjeta-contenido {
             padding: 15px;
         }
 
-        .btn-crear {
+        .btn-guardar,
+        .btn-volver {
             width: 100%;
             text-align: center;
-        }
-
-        .table-clientes {
-            min-width: 920px;
         }
     }
 </style>
 
 <div class="tarjeta-contenido">
     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-        <h3 class="m-0">Gestión de Clientes</h3>
-
-        <a asp-controller="Clientes" asp-action="Crear" class="btn-crear">
-            Nuevo Cliente
-        </a>
+        <h3 class="m-0">Nuevo Cliente</h3>
     </div>
-
-    <div class="tabs-vista">
-        <a asp-controller="Clientes"
-           asp-action="Index"
-           asp-route-vista="activos"
-           asp-route-busqueda="@busqueda"
-           asp-route-ordenarPor="@ordenarPor"
-           asp-route-direccion="@direccion"
-           class="tab-vista @(vista == "activos" ? "activa" : "")">
-            Activos
-        </a>
-
-        <a asp-controller="Clientes"
-           asp-action="Index"
-           asp-route-vista="inactivos"
-           asp-route-busqueda="@busqueda"
-           asp-route-ordenarPor="@ordenarPor"
-           asp-route-direccion="@direccion"
-           class="tab-vista @(vista == "inactivos" ? "activa" : "")">
-            Inactivos
-        </a>
-    </div>
-
-    @if (TempData["Exito"] != null)
-    {
-        <div class="alert alert-success">@TempData["Exito"]</div>
-    }
-
-    @if (TempData["Mensaje"] != null)
-    {
-        <div class="alert alert-danger">@TempData["Mensaje"]</div>
-    }
 
     @if (ViewBag.Mensaje != null)
     {
-        <div class="alert alert-danger">@ViewBag.Mensaje</div>
-    }
-
-    <form id="formBusquedaClientes" asp-controller="Clientes" asp-action="Index" method="get" class="mb-4">
-        <input type="hidden" name="ordenarPor" value="@ordenarPor" />
-        <input type="hidden" name="direccion" value="@direccion" />
-        <input type="hidden" name="vista" value="@vista" />
-
-        <label class="form-label">Buscar cliente</label>
-        <input type="text"
-               id="busquedaClientes"
-               name="busqueda"
-               value="@busqueda"
-               class="form-control"
-               placeholder="Buscar por nombre, NIT, teléfono, correo, empresa o dirección" />
-    </form>
-
-    <div class="mb-3">
-        <strong>Total de registros:</strong> @totalRegistros
-    </div>
-
-    <div class="table-responsive">
-        <table class="table table-bordered table-striped table-clientes">
-            <thead class="table-dark">
-                <tr>
-                    <th>
-                        <a asp-action="Index" asp-route-busqueda="@busqueda" asp-route-ordenarPor="nombre" asp-route-direccion="@SiguienteDireccion("nombre")" asp-route-vista="@vista" class="encabezado-orden">
-                            Nombre <i class="bi @IconoOrden("nombre")"></i>
-                        </a>
-                    </th>
-                    <th>
-                        <a asp-action="Index" asp-route-busqueda="@busqueda" asp-route-ordenarPor="nit" asp-route-direccion="@SiguienteDireccion("nit")" asp-route-vista="@vista" class="encabezado-orden">
-                            NIT <i class="bi @IconoOrden("nit")"></i>
-                        </a>
-                    </th>
-                    <th>
-                        <a asp-action="Index" asp-route-busqueda="@busqueda" asp-route-ordenarPor="telefono" asp-route-direccion="@SiguienteDireccion("telefono")" asp-route-vista="@vista" class="encabezado-orden">
-                            Teléfono <i class="bi @IconoOrden("telefono")"></i>
-                        </a>
-                    </th>
-                    <th>
-                        <a asp-action="Index" asp-route-busqueda="@busqueda" asp-route-ordenarPor="correo" asp-route-direccion="@SiguienteDireccion("correo")" asp-route-vista="@vista" class="encabezado-orden">
-                            Correo <i class="bi @IconoOrden("correo")"></i>
-                        </a>
-                    </th>
-                    <th>
-                        <a asp-action="Index" asp-route-busqueda="@busqueda" asp-route-ordenarPor="empresa" asp-route-direccion="@SiguienteDireccion("empresa")" asp-route-vista="@vista" class="encabezado-orden">
-                            Empresa <i class="bi @IconoOrden("empresa")"></i>
-                        </a>
-                    </th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                @if (Model.Rows.Count == 0)
-                {
-                    <tr>
-                        <td colspan="6" class="text-center">No se encontraron clientes.</td>
-                    </tr>
-                }
-                else
-                {
-                    foreach (System.Data.DataRow fila in Model.Rows)
-                    {
-                        string nombreEmpresa = fila["nombre_empresa"]?.ToString() ?? "";
-                        string numeroEmpresa = fila["numero_empresa"]?.ToString() ?? "";
-                        string empresaMostrada = "-";
-                        string estado = fila["estado"]?.ToString()?.Trim().ToLower() ?? "activo";
-
-                        if (!string.IsNullOrWhiteSpace(nombreEmpresa))
-                        {
-                            empresaMostrada = nombreEmpresa;
-
-                            if (!string.IsNullOrWhiteSpace(numeroEmpresa))
-                            {
-                                empresaMostrada += " (" + FormatearTelefono(numeroEmpresa) + ")";
-                            }
-                        }
-
-                        <tr>
-                            <td>@fila["nombre"]</td>
-                            <td>@(string.IsNullOrWhiteSpace(fila["nit"]?.ToString()) ? "-" : fila["nit"])</td>
-                            <td>@FormatearTelefono(fila["telefono"]?.ToString() ?? "")</td>
-                            <td>@(string.IsNullOrWhiteSpace(fila["correo"]?.ToString()) ? "-" : fila["correo"])</td>
-                            <td>@empresaMostrada</td>
-                            <td>
-                                <div class="acciones-contenedor">
-                                    <a asp-action="Detalle"
-                                       asp-route-id="@fila["id_clipro"]"
-                                       class="btn-icono btn-ver"
-                                       title="Ver detalle">
-                                        <i class="bi bi-eye-fill"></i>
-                                    </a>
-
-                                    <a asp-action="Editar"
-                                       asp-route-id="@fila["id_clipro"]"
-                                       class="btn-icono btn-editar"
-                                       title="Editar cliente">
-                                        <i class="bi bi-pencil-fill"></i>
-                                    </a>
-
-                                    <form asp-action="CambiarEstado" method="post" class="m-0">
-                                        @Html.AntiForgeryToken()
-                                        <input type="hidden" name="id" value="@fila["id_clipro"]" />
-                                        <input type="hidden" name="busqueda" value="@busqueda" />
-                                        <input type="hidden" name="ordenarPor" value="@ordenarPor" />
-                                        <input type="hidden" name="direccion" value="@direccion" />
-                                        <input type="hidden" name="vista" value="@vista" />
-                                        <input type="hidden" name="pagina" value="@paginaActual" />
-
-                                        <button type="submit"
-                                                class="btn-icono btn-estado"
-                                                title="@(estado == "activo" ? "Inactivar cliente" : "Reactivar cliente")">
-                                            <i class="bi @(estado == "activo" ? "bi-person-x-fill" : "bi-person-check-fill")"></i>
-                                        </button>
-                                    </form>
-                                </div>
-                            </td>
-                        </tr>
-                    }
-                }
-            </tbody>
-        </table>
-    </div>
-
-    @if (totalPaginas > 1)
-    {
-        <div class="paginacion">
-            @for (int i = 1; i <= totalPaginas; i++)
-            {
-                <a asp-action="Index"
-                   asp-route-busqueda="@busqueda"
-                   asp-route-ordenarPor="@ordenarPor"
-                   asp-route-direccion="@direccion"
-                   asp-route-vista="@vista"
-                   asp-route-pagina="@i"
-                   class="pagina-link @(i == paginaActual ? "activa" : "")">
-                    @i
-                </a>
-            }
+        <div class="alert alert-danger">
+            @ViewBag.Mensaje
         </div>
     }
+
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+    <form asp-controller="Clientes" asp-action="Crear" method="post">
+        @Html.AntiForgeryToken()
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label asp-for="Nombre" class="form-label">Nombre</label>
+                <input asp-for="Nombre" class="form-control" placeholder="Ingrese el nombre del cliente" />
+                <span asp-validation-for="Nombre" class="text-danger"></span>
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label asp-for="Telefono" class="form-label">Teléfono</label>
+                <input asp-for="Telefono" class="form-control" maxlength="9" placeholder="1234 5678" />
+                <span asp-validation-for="Telefono" class="text-danger"></span>
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label asp-for="Nit" class="form-label">NIT</label>
+                <input asp-for="Nit" class="form-control" placeholder="Opcional" />
+                <span asp-validation-for="Nit" class="text-danger"></span>
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label asp-for="Correo" class="form-label">Correo</label>
+                <input asp-for="Correo" class="form-control" placeholder="Opcional" />
+                <span asp-validation-for="Correo" class="text-danger"></span>
+            </div>
+
+            <div class="col-md-12 mb-3">
+                <label asp-for="Direccion" class="form-label">Dirección</label>
+                <input asp-for="Direccion" class="form-control" placeholder="Opcional" />
+                <span asp-validation-for="Direccion" class="text-danger"></span>
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label asp-for="NombreEmpresa" class="form-label">Nombre de empresa</label>
+                <input asp-for="NombreEmpresa" class="form-control" placeholder="Opcional" />
+                <span asp-validation-for="NombreEmpresa" class="text-danger"></span>
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label asp-for="NumeroEmpresa" class="form-label">Número de empresa</label>
+                <input asp-for="NumeroEmpresa" class="form-control" maxlength="9" placeholder="Opcional" />
+                <span asp-validation-for="NumeroEmpresa" class="text-danger"></span>
+            </div>
+        </div>
+
+        <div class="acciones-formulario">
+            <button type="submit" class="btn-guardar">
+                Guardar Cliente
+            </button>
+
+            <a asp-controller="Clientes" asp-action="Index" class="btn-volver">
+                Volver al listado
+            </a>
+        </div>
+    </form>
 </div>
 
 @section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
     <script>
-        let temporizadorBusquedaClientes;
+        function formatearTelefono(input) {
+            let valor = input.value.replace(/\D/g, "").substring(0, 8);
 
-        document.getElementById("busquedaClientes").addEventListener("input", function () {
-            clearTimeout(temporizadorBusquedaClientes);
+            if (valor.length > 4) {
+                valor = valor.substring(0, 4) + " " + valor.substring(4);
+            }
 
-            temporizadorBusquedaClientes = setTimeout(function () {
-                document.getElementById("formBusquedaClientes").submit();
-            }, 350);
-        });
+            input.value = valor;
+        }
+
+        const telefono = document.getElementById("Telefono");
+        const numeroEmpresa = document.getElementById("NumeroEmpresa");
+
+        if (telefono) {
+            telefono.addEventListener("input", function () {
+                formatearTelefono(this);
+            });
+        }
+
+        if (numeroEmpresa) {
+            numeroEmpresa.addEventListener("input", function () {
+                formatearTelefono(this);
+            });
+        }
     </script>
 }

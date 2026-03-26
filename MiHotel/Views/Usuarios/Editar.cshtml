@@ -71,7 +71,12 @@
                 {
                     foreach (var rol in ViewBag.Roles)
                     {
-                        <option value="@rol.IdRol">@rol.NombreRol</option>
+                        string nombreRol = rol.NombreRol?.ToString()?.Trim().ToLower() ?? "";
+
+                        if (nombreRol != "cliente")
+                        {
+                            <option value="@rol.IdRol">@rol.NombreRol</option>
+                        }
                     }
                 }
             </select>
