@@ -27,9 +27,12 @@ namespace MiHotel.Models
         [Range(1, 20, ErrorMessage = "Ingrese una cantidad válida.")]
         public int CantidadPersonas { get; set; } = 1;
 
-        public decimal Anticipo { get; set; } = 0;
+        public decimal TotalReserva { get; set; } = 0;
 
-        public decimal SaldoPendiente { get; set; } = 0;
+        [Range(typeof(decimal), "0", "999999999", ErrorMessage = "Ingrese un monto válido.")]
+        public decimal MontoPagoInicial { get; set; } = 0;
+
+        public int? IdFormaPagoInicial { get; set; }
 
         public string? Observaciones { get; set; }
     }

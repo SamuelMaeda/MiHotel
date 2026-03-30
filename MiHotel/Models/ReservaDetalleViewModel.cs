@@ -8,9 +8,8 @@
         public DateTime FechaEntrada { get; set; }
         public DateTime FechaSalida { get; set; }
         public int CantidadPersonas { get; set; }
-        public decimal Anticipo { get; set; }
-        public decimal TotalPagadoAdicional { get; set; }
-        public decimal TotalPagadoGeneral { get; set; }
+        public decimal TotalReserva { get; set; }
+        public decimal TotalPagado { get; set; }
         public decimal SaldoPendiente { get; set; }
         public string Estado { get; set; } = "";
         public string? Observaciones { get; set; }

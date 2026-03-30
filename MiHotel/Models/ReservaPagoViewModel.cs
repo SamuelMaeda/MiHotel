@@ -13,9 +13,6 @@ namespace MiHotel.Models
         [Range(typeof(decimal), "0.01", "999999999", ErrorMessage = "Ingrese un monto válido.")]
         public decimal Monto { get; set; }
 
-        [StringLength(100)]
-        public string? Referencia { get; set; }
-
         public string? Observaciones { get; set; }
     }
 }

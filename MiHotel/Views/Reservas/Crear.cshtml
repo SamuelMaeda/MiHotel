@@ -4,6 +4,7 @@
     ViewData["Title"] = "Nueva Reserva";
     var clientes = ViewBag.Clientes as List<dynamic>;
     var habitaciones = ViewBag.Habitaciones as List<dynamic>;
+    var formasPago = ViewBag.FormasPago as List<dynamic>;
 }
 
 <style>
@@ -50,18 +51,6 @@
         flex-wrap: wrap;
         margin-top: 20px;
     }
-
-    @@media (max-width: 768px) {
-        .tarjeta-contenido {
-            padding: 15px;
-        }
-
-        .btn-guardar,
-        .btn-volver {
-            width: 100%;
-            text-align: center;
-        }
-    }
 </style>
 
 <div class="tarjeta-contenido">
@@ -71,15 +60,10 @@
 
     @if (ViewBag.Mensaje != null)
     {
-        <div class="alert alert-danger">
-            @ViewBag.Mensaje
-        </div>
+        <div class="alert alert-danger">@ViewBag.Mensaje</div>
     }
 
-    @if (!ViewData.ModelState.IsValid && ViewData.ModelState[string.Empty] != null)
-    {
-        <div class="alert alert-danger" asp-validation-summary="ModelOnly"></div>
-    }
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
 
     <form asp-controller="Reservas" asp-action="Crear" method="post">
         @Html.AntiForgeryToken()
@@ -134,26 +118,37 @@
             </div>
 
             <div class="col-md-6 mb-3">
-                <label asp-for="Anticipo" class="form-label">Anticipo</label>
-                <input asp-for="Anticipo" class="form-control" min="0" step="0.01" />
-                <span asp-validation-for="Anticipo" class="text-danger"></span>
+                <label asp-for="MontoPagoInicial" class="form-label">Pago inicial</label>
+                <input asp-for="MontoPagoInicial" class="form-control" min="0" step="0.01" />
+                <span asp-validation-for="MontoPagoInicial" class="text-danger"></span>
+                <small class="text-muted">Si no se ingresa monto, la reserva quedará con saldo pendiente completo.</small>
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label asp-for="IdFormaPagoInicial" class="form-label">Forma de pago inicial</label>
+                <select asp-for="IdFormaPagoInicial" class="form-select">
+                    <option value="">Seleccione una forma de pago</option>
+                    @if (formasPago != null)
+                    {
+                        foreach (var forma in formasPago)
+                        {
+                            <option value="@forma.IdFormaPago">@forma.NombreForma</option>
+                        }
+                    }
+                </select>
+                <span asp-validation-for="IdFormaPagoInicial" class="text-danger"></span>
             </div>
 
             <div class="col-12 mb-3">
                 <label asp-for="Observaciones" class="form-label">Observaciones</label>
-                <textarea asp-for="Observaciones" class="form-control" rows="4" placeholder="Ingrese observaciones si aplica"></textarea>
+                <textarea asp-for="Observaciones" class="form-control" rows="4"></textarea>
                 <span asp-validation-for="Observaciones" class="text-danger"></span>
             </div>
         </div>
 
         <div class="acciones-formulario">
-            <button type="submit" class="btn-guardar">
-                Guardar Reserva
-            </button>
-
-            <a asp-controller="Reservas" asp-action="Index" class="btn-volver">
-                Volver al listado
-            </a>
+            <button type="submit" class="btn-guardar">Guardar reserva</button>
+            <a asp-controller="Reservas" asp-action="Index" class="btn-volver">Volver al listado</a>
         </div>
     </form>
 </div>

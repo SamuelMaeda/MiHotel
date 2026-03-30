@@ -50,18 +50,6 @@
         flex-wrap: wrap;
         margin-top: 20px;
     }
-
-    @@media (max-width: 768px) {
-        .tarjeta-contenido {
-            padding: 15px;
-        }
-
-        .btn-guardar,
-        .btn-volver {
-            width: 100%;
-            text-align: center;
-        }
-    }
 </style>
 
 <div class="tarjeta-contenido">
@@ -71,9 +59,7 @@
 
     @if (ViewBag.Mensaje != null)
     {
-        <div class="alert alert-danger">
-            @ViewBag.Mensaje
-        </div>
+        <div class="alert alert-danger">@ViewBag.Mensaje</div>
     }
 
     <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
@@ -133,26 +119,20 @@
             </div>
 
             <div class="col-md-6 mb-3">
-                <label asp-for="Anticipo" class="form-label">Anticipo</label>
-                <input asp-for="Anticipo" class="form-control" min="0" step="0.01" />
-                <span asp-validation-for="Anticipo" class="text-danger"></span>
+                <label asp-for="TotalReserva" class="form-label">Total actual</label>
+                <input asp-for="TotalReserva" class="form-control" readonly />
             </div>
 
             <div class="col-12 mb-3">
                 <label asp-for="Observaciones" class="form-label">Observaciones</label>
-                <textarea asp-for="Observaciones" class="form-control" rows="4" placeholder="Ingrese observaciones si aplica"></textarea>
+                <textarea asp-for="Observaciones" class="form-control" rows="4"></textarea>
                 <span asp-validation-for="Observaciones" class="text-danger"></span>
             </div>
         </div>
 
         <div class="acciones-formulario">
-            <button type="submit" class="btn-guardar">
-                Guardar cambios
-            </button>
-
-            <a asp-controller="Reservas" asp-action="Index" class="btn-volver">
-                Volver al listado
-            </a>
+            <button type="submit" class="btn-guardar">Guardar cambios</button>
+            <a asp-controller="Reservas" asp-action="Index" class="btn-volver">Volver al listado</a>
         </div>
     </form>
 </div>
