@@ -1,0 +1,317 @@
+﻿@model MiHotel.Models.ReservaDetalleViewModel
+
+@{
+    ViewData["Title"] = "Detalle de Reserva";
+
+    string MostrarTexto(string? valor)
+    {
+        return string.IsNullOrWhiteSpace(valor) ? "-" : valor;
+    }
+}
+
+<style>
+    .tarjeta-contenido {
+        background-color: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.10);
+        max-width: 900px;
+    }
+
+    .detalle-label {
+        font-weight: 600;
+        color: #363636;
+        margin-bottom: 6px;
+    }
+
+    .detalle-valor {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 10px 12px;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        color: #363636;
+    }
+
+    .estado-pendiente {
+        color: #856404;
+        font-weight: bold;
+    }
+
+    .estado-confirmada {
+        color: #0f5132;
+        font-weight: bold;
+    }
+
+    .estado-cancelada {
+        color: #842029;
+        font-weight: bold;
+    }
+
+    .estado-finalizada {
+        color: #0c5460;
+        font-weight: bold;
+    }
+
+    .btn-volver {
+        background-color: #6c757d;
+        color: white;
+        text-decoration: none;
+        padding: 10px 18px;
+        border-radius: 8px;
+        font-weight: 500;
+        display: inline-block;
+    }
+
+    .btn-volver:hover {
+        background-color: #5a6268;
+        color: white;
+    }
+
+    .btn-editar {
+        background-color: #6f42c1;
+        color: white;
+        text-decoration: none;
+        padding: 10px 18px;
+        border-radius: 8px;
+        font-weight: 500;
+        display: inline-block;
+    }
+
+    .btn-editar:hover {
+        background-color: #5b35a8;
+        color: white;
+    }
+
+    .btn-pagos {
+        background-color: #464482;
+        color: white;
+        text-decoration: none;
+        padding: 10px 18px;
+        border-radius: 8px;
+        font-weight: 500;
+        display: inline-block;
+    }
+
+    .btn-pagos:hover {
+        background-color: #36366b;
+        color: white;
+    }
+
+    .btn-confirmar {
+        background-color: #198754;
+        color: white;
+        border: none;
+        text-decoration: none;
+        padding: 10px 18px;
+        border-radius: 8px;
+        font-weight: 500;
+        display: inline-block;
+    }
+
+    .btn-confirmar:hover {
+        background-color: #157347;
+        color: white;
+    }
+
+    .btn-cancelar {
+        background-color: #824B44;
+        color: white;
+        border: none;
+        text-decoration: none;
+        padding: 10px 18px;
+        border-radius: 8px;
+        font-weight: 500;
+        display: inline-block;
+    }
+
+    .btn-cancelar:hover {
+        background-color: #6e3f39;
+        color: white;
+    }
+
+    .acciones-formulario {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 20px;
+    }
+
+    .form-accion {
+        display: inline;
+    }
+
+    @@media (max-width: 768px) {
+        .tarjeta-contenido {
+            padding: 15px;
+        }
+
+        .btn-volver,
+        .btn-editar,
+        .btn-pagos,
+        .btn-confirmar,
+        .btn-cancelar {
+            width: 100%;
+            text-align: center;
+        }
+    }
+</style>
+
+<div class="tarjeta-contenido">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <h3 class="m-0">Detalle de la Reserva</h3>
+    </div>
+
+    @if (TempData["Mensaje"] != null)
+    {
+        <div class="alert alert-danger">
+            @TempData["Mensaje"]
+        </div>
+    }
+
+    @if (ViewBag.Mensaje != null)
+    {
+        <div class="alert alert-danger">
+            @ViewBag.Mensaje
+        </div>
+    }
+
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <div class="detalle-label">Cliente</div>
+            <div class="detalle-valor">@MostrarTexto(Model.Cliente)</div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <div class="detalle-label">Habitación</div>
+            <div class="detalle-valor">Habitación @MostrarTexto(Model.Habitacion)</div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <div class="detalle-label">Fecha de entrada</div>
+            <div class="detalle-valor">@Model.FechaEntrada.ToString("dd/MM/yyyy")</div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <div class="detalle-label">Fecha de salida</div>
+            <div class="detalle-valor">@Model.FechaSalida.ToString("dd/MM/yyyy")</div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <div class="detalle-label">Cantidad de personas</div>
+            <div class="detalle-valor">@Model.CantidadPersonas</div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <div class="detalle-label">Anticipo inicial</div>
+            <div class="detalle-valor">Q @Model.Anticipo.ToString("N2")</div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <div class="detalle-label">Pagos adicionales</div>
+            <div class="detalle-valor">Q @Model.TotalPagadoAdicional.ToString("N2")</div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <div class="detalle-label">Total pagado</div>
+            <div class="detalle-valor">Q @Model.TotalPagadoGeneral.ToString("N2")</div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <div class="detalle-label">Saldo pendiente</div>
+            <div class="detalle-valor">Q @Model.SaldoPendiente.ToString("N2")</div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <div class="detalle-label">Estado</div>
+            <div class="detalle-valor">
+                @{
+                    string estado = (Model.Estado ?? "").Trim().ToLower();
+                }
+
+                @if (estado == "pendiente")
+                {
+                    <span class="estado-pendiente">Pendiente</span>
+                }
+                else if (estado == "confirmada")
+                {
+                    <span class="estado-confirmada">Confirmada</span>
+                }
+                else if (estado == "cancelada")
+                {
+                    <span class="estado-cancelada">Cancelada</span>
+                }
+                else if (estado == "finalizada")
+                {
+                    <span class="estado-finalizada">Finalizada</span>
+                }
+                else
+                {
+                    <span>@Model.Estado</span>
+                }
+            </div>
+        </div>
+
+        <div class="col-12 mb-3">
+            <div class="detalle-label">Observaciones</div>
+            <div class="detalle-valor">@MostrarTexto(Model.Observaciones)</div>
+        </div>
+    </div>
+
+    <div class="acciones-formulario">
+        <a asp-controller="Reservas"
+           asp-action="Pagos"
+           asp-route-id="@Model.IdReserva"
+           class="btn-pagos">
+            Ver pagos
+        </a>
+
+        @if ((Model.Estado ?? "").Trim().ToLower() == "pendiente" ||
+             (Model.Estado ?? "").Trim().ToLower() == "confirmada")
+        {
+            <a asp-controller="Reservas"
+               asp-action="Editar"
+               asp-route-id="@Model.IdReserva"
+               class="btn-editar">
+                Editar reserva
+            </a>
+        }
+
+        @if ((Model.Estado ?? "").Trim().ToLower() == "pendiente")
+        {
+            <form asp-controller="Reservas"
+                  asp-action="Confirmar"
+                  asp-route-id="@Model.IdReserva"
+                  method="post"
+                  class="form-accion">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn-confirmar">
+                    Confirmar reserva
+                </button>
+            </form>
+        }
+
+        @if ((Model.Estado ?? "").Trim().ToLower() == "pendiente" ||
+             (Model.Estado ?? "").Trim().ToLower() == "confirmada")
+        {
+            <form asp-controller="Reservas"
+                  asp-action="Cancelar"
+                  asp-route-id="@Model.IdReserva"
+                  method="post"
+                  class="form-accion">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn-cancelar">
+                    Cancelar reserva
+                </button>
+            </form>
+        }
+
+        <a asp-controller="Reservas"
+           asp-action="Index"
+           class="btn-volver">
+            Volver al listado
+        </a>
+    </div>
+</div>

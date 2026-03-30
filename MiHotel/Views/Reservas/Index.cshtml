@@ -108,11 +108,78 @@
         .encabezado-orden:hover {
             color: inherit;
         }
+
+    .acciones-contenedor {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .btn-icono {
+        width: 38px;
+        height: 38px;
+        border-radius: 8px;
+        border: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        text-decoration: none;
+        font-size: 16px;
+    }
+
+    .btn-detalle {
+        background-color: #464482;
+    }
+
+    .btn-editar {
+        background-color: #6f42c1;
+    }
+
+    .btn-pagos {
+        background-color: #0d6efd;
+    }
+
+    .btn-confirmar {
+        background-color: #198754;
+    }
+
+    .btn-cancelar {
+        background-color: #824B44;
+    }
+
+    .btn-icono:hover {
+        opacity: 0.9;
+        color: white;
+    }
+
+    .form-accion {
+        display: inline;
+    }
+
+    .estado-pendiente {
+        color: #856404;
+        font-weight: bold;
+    }
+
+    .estado-confirmada {
+        color: #0f5132;
+        font-weight: bold;
+    }
+
+    .estado-cancelada {
+        color: #842029;
+        font-weight: bold;
+    }
+
+    .estado-finalizada {
+        color: #0c5460;
+        font-weight: bold;
+    }
 </style>
 
 <div class="tarjeta-contenido">
 
-    <!-- ENCABEZADO -->
     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
         <h3 class="m-0">Gestión de Reservas</h3>
 
@@ -121,9 +188,19 @@
         </a>
     </div>
 
-    <!-- TABS -->
     <div class="tabs-vista">
-        <a asp-action="Index"
+        <a asp-controller="Reservas"
+           asp-action="Index"
+           asp-route-vista="todas"
+           asp-route-busqueda="@busqueda"
+           asp-route-ordenarPor="@ordenarPor"
+           asp-route-direccion="@direccion"
+           class="tab-vista @(vista == "todas" ? "activa" : "")">
+            Todas
+        </a>
+
+        <a asp-controller="Reservas"
+           asp-action="Index"
            asp-route-vista="pendiente"
            asp-route-busqueda="@busqueda"
            asp-route-ordenarPor="@ordenarPor"
@@ -132,7 +209,8 @@
             Pendientes
         </a>
 
-        <a asp-action="Index"
+        <a asp-controller="Reservas"
+           asp-action="Index"
            asp-route-vista="confirmada"
            asp-route-busqueda="@busqueda"
            asp-route-ordenarPor="@ordenarPor"
@@ -141,7 +219,8 @@
             Confirmadas
         </a>
 
-        <a asp-action="Index"
+        <a asp-controller="Reservas"
+           asp-action="Index"
            asp-route-vista="cancelada"
            asp-route-busqueda="@busqueda"
            asp-route-ordenarPor="@ordenarPor"
@@ -150,7 +229,8 @@
             Canceladas
         </a>
 
-        <a asp-action="Index"
+        <a asp-controller="Reservas"
+           asp-action="Index"
            asp-route-vista="finalizada"
            asp-route-busqueda="@busqueda"
            asp-route-ordenarPor="@ordenarPor"
@@ -160,11 +240,17 @@
         </a>
     </div>
 
-    <!-- MENSAJES -->
     @if (TempData["Exito"] != null)
     {
         <div class="alert alert-success">
             @TempData["Exito"]
+        </div>
+    }
+
+    @if (TempData["Mensaje"] != null)
+    {
+        <div class="alert alert-danger">
+            @TempData["Mensaje"]
         </div>
     }
 
@@ -175,8 +261,7 @@
         </div>
     }
 
-    <!-- BUSCADOR -->
-    <form id="formBusqueda" asp-action="Index" method="get" class="mb-4">
+    <form id="formBusqueda" asp-controller="Reservas" asp-action="Index" method="get" class="mb-4">
         <input type="hidden" name="vista" value="@vista" />
         <input type="hidden" name="ordenarPor" value="@ordenarPor" />
         <input type="hidden" name="direccion" value="@direccion" />
@@ -187,20 +272,20 @@
                name="busqueda"
                value="@busqueda"
                class="form-control"
-               placeholder="Buscar por cliente o habitación" />
+               placeholder="Buscar por cliente, habitación u observaciones" />
     </form>
 
     <div class="mb-3">
         <strong>Total de registros:</strong> @totalRegistros
     </div>
 
-    <!-- TABLA -->
     <div class="table-responsive">
         <table class="table table-bordered table-striped">
             <thead class="table-dark">
                 <tr>
                     <th>
-                        <a asp-action="Index"
+                        <a asp-controller="Reservas"
+                           asp-action="Index"
                            asp-route-busqueda="@busqueda"
                            asp-route-ordenarPor="cliente"
                            asp-route-direccion="@SiguienteDireccion("cliente")"
@@ -214,7 +299,8 @@
                     <th>Habitación</th>
 
                     <th>
-                        <a asp-action="Index"
+                        <a asp-controller="Reservas"
+                           asp-action="Index"
                            asp-route-busqueda="@busqueda"
                            asp-route-ordenarPor="fecha_entrada"
                            asp-route-direccion="@SiguienteDireccion("fecha_entrada")"
@@ -227,6 +313,7 @@
 
                     <th>Salida</th>
                     <th>Estado</th>
+                    <th>Acciones</th>
                 </tr>
             </thead>
 
@@ -234,7 +321,7 @@
                 @if (Model.Rows.Count == 0)
                 {
                     <tr>
-                        <td colspan="5" class="text-center">
+                        <td colspan="6" class="text-center">
                             No se encontraron reservas.
                         </td>
                     </tr>
@@ -243,15 +330,98 @@
                 {
                     foreach (System.Data.DataRow fila in Model.Rows)
                     {
+                        string estado = fila["estado"]?.ToString()?.Trim().ToLower() ?? "";
+
                         <tr>
                             <td>@fila["nombre"]</td>
                             <td>@fila["habitacion"]</td>
                             <td>@Convert.ToDateTime(fila["fecha_entrada"]).ToString("dd/MM/yyyy")</td>
                             <td>@Convert.ToDateTime(fila["fecha_salida"]).ToString("dd/MM/yyyy")</td>
+
                             <td>
-                                <span class="badge bg-secondary">
-                                    @fila["estado"]
-                                </span>
+                                @if (estado == "pendiente")
+                                {
+                                    <span class="estado-pendiente">Pendiente</span>
+                                }
+                                else if (estado == "confirmada")
+                                {
+                                    <span class="estado-confirmada">Confirmada</span>
+                                }
+                                else if (estado == "cancelada")
+                                {
+                                    <span class="estado-cancelada">Cancelada</span>
+                                }
+                                else if (estado == "finalizada")
+                                {
+                                    <span class="estado-finalizada">Finalizada</span>
+                                }
+                                else
+                                {
+                                    <span>@fila["estado"]</span>
+                                }
+                            </td>
+
+                            <td>
+                                <div class="acciones-contenedor">
+                                    <a asp-controller="Reservas"
+                                       asp-action="Detalle"
+                                       asp-route-id="@fila["id_reserva"]"
+                                       class="btn-icono btn-detalle"
+                                       title="Ver detalle">
+                                        <i class="bi bi-eye-fill"></i>
+                                    </a>
+
+                                    <a asp-controller="Reservas"
+                                       asp-action="Pagos"
+                                       asp-route-id="@fila["id_reserva"]"
+                                       class="btn-icono btn-pagos"
+                                       title="Ver pagos">
+                                        <i class="bi bi-cash-stack"></i>
+                                    </a>
+
+                                    @if (estado == "pendiente" || estado == "confirmada")
+                                    {
+                                        <a asp-controller="Reservas"
+                                           asp-action="Editar"
+                                           asp-route-id="@fila["id_reserva"]"
+                                           class="btn-icono btn-editar"
+                                           title="Editar reserva">
+                                            <i class="bi bi-pencil-fill"></i>
+                                        </a>
+                                    }
+
+                                    @if (estado == "pendiente")
+                                    {
+                                        <form asp-controller="Reservas"
+                                              asp-action="Confirmar"
+                                              asp-route-id="@fila["id_reserva"]"
+                                              method="post"
+                                              class="form-accion">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit"
+                                                    class="btn-icono btn-confirmar"
+                                                    title="Confirmar reserva">
+                                                <i class="bi bi-check-circle-fill"></i>
+                                            </button>
+                                        </form>
+                                    }
+
+                                    @if (estado == "pendiente" || estado == "confirmada")
+                                    {
+                                        <form asp-controller="Reservas"
+                                              asp-action="Cancelar"
+                                              asp-route-id="@fila["id_reserva"]"
+                                              method="post"
+                                              class="form-accion">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit"
+                                                    class="btn-icono btn-cancelar"
+                                                    title="Cancelar reserva">
+                                                <i class="bi bi-x-circle-fill"></i>
+                                            </button>
+                                        </form>
+                                    }
+                                </div>
                             </td>
                         </tr>
                     }
@@ -260,13 +430,13 @@
         </table>
     </div>
 
-    <!-- PAGINACIÓN -->
     @if (totalPaginas > 1)
     {
         <div class="paginacion">
             @for (int i = 1; i <= totalPaginas; i++)
             {
-                <a asp-action="Index"
+                <a asp-controller="Reservas"
+                   asp-action="Index"
                    asp-route-busqueda="@busqueda"
                    asp-route-ordenarPor="@ordenarPor"
                    asp-route-direccion="@direccion"

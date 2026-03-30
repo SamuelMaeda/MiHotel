@@ -1,0 +1,162 @@
+﻿@model MiHotel.Models.ReservaFormViewModel
+
+@{
+    ViewData["Title"] = "Editar Reserva";
+    var clientes = ViewBag.Clientes as List<dynamic>;
+    var habitaciones = ViewBag.Habitaciones as List<dynamic>;
+}
+
+<style>
+    .tarjeta-contenido {
+        background-color: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.10);
+    }
+
+    .btn-guardar {
+        background-color: #464482;
+        color: white;
+        padding: 10px 16px;
+        border-radius: 8px;
+        border: none;
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+        .btn-guardar:hover {
+            background-color: #36366b;
+            color: white;
+        }
+
+    .btn-volver {
+        background-color: #824B44;
+        color: white;
+        padding: 10px 16px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 500;
+        display: inline-block;
+    }
+
+        .btn-volver:hover {
+            background-color: #6e3f39;
+            color: white;
+        }
+
+    .acciones-formulario {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 20px;
+    }
+
+    @@media (max-width: 768px) {
+        .tarjeta-contenido {
+            padding: 15px;
+        }
+
+        .btn-guardar,
+        .btn-volver {
+            width: 100%;
+            text-align: center;
+        }
+    }
+</style>
+
+<div class="tarjeta-contenido">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h3 class="m-0">Editar Reserva</h3>
+    </div>
+
+    @if (ViewBag.Mensaje != null)
+    {
+        <div class="alert alert-danger">
+            @ViewBag.Mensaje
+        </div>
+    }
+
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+    <form asp-controller="Reservas" asp-action="Editar" method="post">
+        @Html.AntiForgeryToken()
+
+        <input asp-for="IdReserva" type="hidden" />
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label asp-for="IdClipro" class="form-label">Cliente</label>
+                <select asp-for="IdClipro" class="form-select">
+                    <option value="">Seleccione un cliente</option>
+                    @if (clientes != null)
+                    {
+                        foreach (var cliente in clientes)
+                        {
+                            <option value="@cliente.Id">@cliente.Nombre</option>
+                        }
+                    }
+                </select>
+                <span asp-validation-for="IdClipro" class="text-danger"></span>
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label asp-for="IdHabitacion" class="form-label">Habitación</label>
+                <select asp-for="IdHabitacion" class="form-select">
+                    <option value="">Seleccione una habitación</option>
+                    @if (habitaciones != null)
+                    {
+                        foreach (var habitacion in habitaciones)
+                        {
+                            <option value="@habitacion.Id">Habitación @habitacion.Codigo</option>
+                        }
+                    }
+                </select>
+                <span asp-validation-for="IdHabitacion" class="text-danger"></span>
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label asp-for="FechaEntrada" class="form-label">Fecha de entrada</label>
+                <input asp-for="FechaEntrada" type="date" class="form-control" />
+                <span asp-validation-for="FechaEntrada" class="text-danger"></span>
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label asp-for="FechaSalida" class="form-label">Fecha de salida</label>
+                <input asp-for="FechaSalida" type="date" class="form-control" />
+                <span asp-validation-for="FechaSalida" class="text-danger"></span>
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label asp-for="CantidadPersonas" class="form-label">Cantidad de personas</label>
+                <input asp-for="CantidadPersonas" class="form-control" min="1" />
+                <span asp-validation-for="CantidadPersonas" class="text-danger"></span>
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label asp-for="Anticipo" class="form-label">Anticipo</label>
+                <input asp-for="Anticipo" class="form-control" min="0" step="0.01" />
+                <span asp-validation-for="Anticipo" class="text-danger"></span>
+            </div>
+
+            <div class="col-12 mb-3">
+                <label asp-for="Observaciones" class="form-label">Observaciones</label>
+                <textarea asp-for="Observaciones" class="form-control" rows="4" placeholder="Ingrese observaciones si aplica"></textarea>
+                <span asp-validation-for="Observaciones" class="text-danger"></span>
+            </div>
+        </div>
+
+        <div class="acciones-formulario">
+            <button type="submit" class="btn-guardar">
+                Guardar cambios
+            </button>
+
+            <a asp-controller="Reservas" asp-action="Index" class="btn-volver">
+                Volver al listado
+            </a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

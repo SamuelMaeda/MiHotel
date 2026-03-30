@@ -1,0 +1,314 @@
+﻿@model MiHotel.Models.ReservaPagoViewModel
+
+@{
+    ViewData["Title"] = "Pagos de Reserva";
+    var reserva = ViewBag.Reserva;
+    var formasPago = ViewBag.FormasPago as List<dynamic>;
+    var listaPagos = ViewBag.ListaPagos as List<dynamic>;
+
+    string estado = reserva?.Estado?.ToString()?.Trim().ToLower() ?? "";
+    bool permiteRegistrar = estado == "pendiente" || estado == "confirmada";
+
+    string MostrarTexto(string? valor)
+    {
+        return string.IsNullOrWhiteSpace(valor) ? "-" : valor;
+    }
+}
+
+<style>
+    .tarjeta-contenido {
+        background-color: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.10);
+    }
+
+    .resumen-label {
+        font-weight: 600;
+        color: #363636;
+        margin-bottom: 6px;
+    }
+
+    .resumen-valor {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 10px 12px;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        color: #363636;
+    }
+
+    .btn-guardar {
+        background-color: #464482;
+        color: white;
+        padding: 10px 16px;
+        border-radius: 8px;
+        border: none;
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+        .btn-guardar:hover {
+            background-color: #36366b;
+            color: white;
+        }
+
+    .btn-volver {
+        background-color: #824B44;
+        color: white;
+        padding: 10px 16px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 500;
+        display: inline-block;
+    }
+
+        .btn-volver:hover {
+            background-color: #6e3f39;
+            color: white;
+        }
+
+    .acciones-formulario {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 20px;
+    }
+
+    .estado-pendiente {
+        color: #856404;
+        font-weight: bold;
+    }
+
+    .estado-confirmada {
+        color: #0f5132;
+        font-weight: bold;
+    }
+
+    .estado-cancelada {
+        color: #842029;
+        font-weight: bold;
+    }
+
+    .estado-finalizada {
+        color: #0c5460;
+        font-weight: bold;
+    }
+
+    @@media (max-width: 768px) {
+        .tarjeta-contenido {
+            padding: 15px;
+        }
+
+        .btn-guardar,
+        .btn-volver {
+            width: 100%;
+            text-align: center;
+        }
+    }
+</style>
+
+<div class="tarjeta-contenido">
+
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h3 class="m-0">Pagos de la Reserva</h3>
+    </div>
+
+    @if (TempData["Exito"] != null)
+    {
+        <div class="alert alert-success">
+            @TempData["Exito"]
+        </div>
+    }
+
+    @if (TempData["Mensaje"] != null)
+    {
+        <div class="alert alert-danger">
+            @TempData["Mensaje"]
+        </div>
+    }
+
+    @if (ViewBag.Mensaje != null)
+    {
+        <div class="alert alert-danger">
+            @ViewBag.Mensaje
+        </div>
+    }
+
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+    <div class="row mb-4">
+        <div class="col-md-6 mb-3">
+            <div class="resumen-label">Cliente</div>
+            <div class="resumen-valor">@reserva?.Cliente</div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <div class="resumen-label">Habitación</div>
+            <div class="resumen-valor">Habitación @reserva?.Habitacion</div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <div class="resumen-label">Anticipo inicial</div>
+            <div class="resumen-valor">Q @(((decimal)(reserva?.Anticipo ?? 0m)).ToString("N2"))</div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <div class="resumen-label">Pagos adicionales</div>
+            <div class="resumen-valor">Q @(((decimal)(reserva?.TotalPagadoAdicional ?? 0m)).ToString("N2"))</div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <div class="resumen-label">Total pagado</div>
+            <div class="resumen-valor">Q @(((decimal)(reserva?.TotalPagadoGeneral ?? 0m)).ToString("N2"))</div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <div class="resumen-label">Saldo pendiente</div>
+            <div class="resumen-valor">Q @(((decimal)(reserva?.SaldoPendiente ?? 0m)).ToString("N2"))</div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <div class="resumen-label">Estado</div>
+            <div class="resumen-valor">
+                @if (estado == "pendiente")
+                {
+                    <span class="estado-pendiente">Pendiente</span>
+                }
+                else if (estado == "confirmada")
+                {
+                    <span class="estado-confirmada">Confirmada</span>
+                }
+                else if (estado == "cancelada")
+                {
+                    <span class="estado-cancelada">Cancelada</span>
+                }
+                else if (estado == "finalizada")
+                {
+                    <span class="estado-finalizada">Finalizada</span>
+                }
+                else
+                {
+                    <span>@reserva?.Estado</span>
+                }
+            </div>
+        </div>
+    </div>
+
+    <h5 class="mb-3">Historial de pagos</h5>
+
+    <div class="table-responsive mb-4">
+        <table class="table table-bordered table-striped">
+            <thead class="table-dark">
+                <tr>
+                    <th>Fecha</th>
+                    <th>Forma de pago</th>
+                    <th>Monto</th>
+                    <th>Referencia</th>
+                    <th>Observaciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (listaPagos == null || listaPagos.Count == 0)
+                {
+                    <tr>
+                        <td colspan="5" class="text-center">No hay pagos adicionales registrados.</td>
+                    </tr>
+                }
+                else
+                {
+                    foreach (var pago in listaPagos)
+                    {
+                        <tr>
+                            <td>@pago.FechaPago.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>@pago.NombreForma</td>
+                            <td>Q @(((decimal)pago.Monto).ToString("N2"))</td>
+                            <td>@MostrarTexto(pago.Referencia)</td>
+                            <td>@MostrarTexto(pago.Observaciones)</td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (permiteRegistrar)
+    {
+        <h5 class="mb-3">Registrar pago adicional</h5>
+
+        <form asp-controller="Reservas" asp-action="RegistrarPago" method="post">
+            @Html.AntiForgeryToken()
+
+            <input asp-for="IdReserva" type="hidden" />
+
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label asp-for="IdFormaPago" class="form-label">Forma de pago</label>
+                    <select asp-for="IdFormaPago" class="form-select">
+                        <option value="">Seleccione una forma de pago</option>
+                        @if (formasPago != null)
+                        {
+                            foreach (var forma in formasPago)
+                            {
+                                <option value="@forma.IdFormaPago">@forma.NombreForma</option>
+                            }
+                        }
+                    </select>
+                    <span asp-validation-for="IdFormaPago" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label asp-for="Monto" class="form-label">Monto</label>
+                    <input asp-for="Monto" class="form-control" min="0.01" step="0.01" />
+                    <span asp-validation-for="Monto" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label asp-for="Referencia" class="form-label">Referencia</label>
+                    <input asp-for="Referencia" class="form-control" placeholder="Opcional" />
+                    <span asp-validation-for="Referencia" class="text-danger"></span>
+                </div>
+
+                <div class="col-12 mb-3">
+                    <label asp-for="Observaciones" class="form-label">Observaciones</label>
+                    <textarea asp-for="Observaciones" class="form-control" rows="3" placeholder="Opcional"></textarea>
+                    <span asp-validation-for="Observaciones" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="acciones-formulario">
+                <button type="submit" class="btn-guardar">
+                    Registrar pago
+                </button>
+
+                <a asp-controller="Reservas"
+                   asp-action="Detalle"
+                   asp-route-id="@Model.IdReserva"
+                   class="btn-volver">
+                    Volver al detalle
+                </a>
+            </div>
+        </form>
+    }
+    else
+    {
+        <div class="alert alert-warning">
+            Solo se pueden registrar pagos en reservas pendientes o confirmadas.
+        </div>
+
+        <div class="acciones-formulario">
+            <a asp-controller="Reservas"
+               asp-action="Detalle"
+               asp-route-id="@Model.IdReserva"
+               class="btn-volver">
+                Volver al detalle
+            </a>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
