@@ -133,6 +133,14 @@
         background-color: #198754;
     }
 
+    .btn-checkin {
+        background-color: #0d6efd;
+    }
+
+    .btn-checkout {
+        background-color: #fd7e14;
+    }
+
     .btn-cancelar {
         background-color: #6e3f39;
     }
@@ -144,6 +152,11 @@
 
     .estado-confirmada {
         color: #0f5132;
+        font-weight: bold;
+    }
+
+    .estado-en_curso {
+        color: #0c5460;
         font-weight: bold;
     }
 
@@ -172,6 +185,7 @@
         <a asp-controller="Reservas" asp-action="Index" asp-route-vista="todas" asp-route-busqueda="@busqueda" asp-route-ordenarPor="@ordenarPor" asp-route-direccion="@direccion" class="tab-vista @(vista == "todas" ? "activa" : "")">Todas</a>
         <a asp-controller="Reservas" asp-action="Index" asp-route-vista="pendiente" asp-route-busqueda="@busqueda" asp-route-ordenarPor="@ordenarPor" asp-route-direccion="@direccion" class="tab-vista @(vista == "pendiente" ? "activa" : "")">Pendientes</a>
         <a asp-controller="Reservas" asp-action="Index" asp-route-vista="confirmada" asp-route-busqueda="@busqueda" asp-route-ordenarPor="@ordenarPor" asp-route-direccion="@direccion" class="tab-vista @(vista == "confirmada" ? "activa" : "")">Confirmadas</a>
+        <a asp-controller="Reservas" asp-action="Index" asp-route-vista="en_curso" asp-route-busqueda="@busqueda" asp-route-ordenarPor="@ordenarPor" asp-route-direccion="@direccion" class="tab-vista @(vista == "en_curso" ? "activa" : "")">En curso</a>
         <a asp-controller="Reservas" asp-action="Index" asp-route-vista="cancelada" asp-route-busqueda="@busqueda" asp-route-ordenarPor="@ordenarPor" asp-route-direccion="@direccion" class="tab-vista @(vista == "cancelada" ? "activa" : "")">Canceladas</a>
         <a asp-controller="Reservas" asp-action="Index" asp-route-vista="finalizada" asp-route-busqueda="@busqueda" asp-route-ordenarPor="@ordenarPor" asp-route-direccion="@direccion" class="tab-vista @(vista == "finalizada" ? "activa" : "")">Finalizadas</a>
     </div>
@@ -216,7 +230,7 @@
                     </th>
                     <th>Salida</th>
                     <th>Total</th>
-                    <th>Saldo</th>
+                    <th>Pago Pendiente</th>
                     <th>Estado</th>
                     <th>Acciones</th>
                 </tr>
@@ -252,6 +266,10 @@
                                 {
                                     <span class="estado-confirmada">Confirmada</span>
                                 }
+                                else if (estado == "en_curso")
+                                {
+                                    <span class="estado-en_curso">En curso</span>
+                                }
                                 else if (estado == "cancelada")
                                 {
                                     <span class="estado-cancelada">Cancelada</span>
@@ -285,6 +303,26 @@
                                             @Html.AntiForgeryToken()
                                             <button type="submit" class="btn-icono btn-confirmar" title="Confirmar reserva">
                                                 <i class="bi bi-check-circle-fill"></i>
+                                            </button>
+                                        </form>
+                                    }
+
+                                    @if (estado == "confirmada")
+                                    {
+                                        <form asp-controller="Reservas" asp-action="CheckIn" asp-route-id="@fila["id_reserva"]" method="post" class="form-accion">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn-icono btn-checkin" title="Realizar check-in">
+                                                <i class="bi bi-box-arrow-in-right"></i>
+                                            </button>
+                                        </form>
+                                    }
+
+                                    @if (estado == "en_curso")
+                                    {
+                                        <form asp-controller="Reservas" asp-action="CheckOut" asp-route-id="@fila["id_reserva"]" method="post" class="form-accion">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn-icono btn-checkout" title="Realizar check-out">
+                                                <i class="bi bi-box-arrow-right"></i>
                                             </button>
                                         </form>
                                     }

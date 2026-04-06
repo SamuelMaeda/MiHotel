@@ -51,6 +51,50 @@
         flex-wrap: wrap;
         margin-top: 20px;
     }
+
+    .campo-solo-lectura {
+        background-color: #f8f9fa;
+    }
+
+    .contenedor-autocomplete {
+        position: relative;
+    }
+
+    .lista-sugerencias {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        z-index: 20;
+        background-color: white;
+        border: 1px solid #ced4da;
+        border-top: none;
+        border-radius: 0 0 8px 8px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+        max-height: 220px;
+        overflow-y: auto;
+        display: none;
+    }
+
+    .item-sugerencia {
+        padding: 10px 12px;
+        cursor: pointer;
+        border-bottom: 1px solid #f1f1f1;
+    }
+
+        .item-sugerencia:hover,
+        .item-sugerencia.activo {
+            background-color: #f8f9fa;
+        }
+
+        .item-sugerencia:last-child {
+            border-bottom: none;
+        }
+
+    .texto-sin-resultados {
+        padding: 10px 12px;
+        color: #6c757d;
+    }
 </style>
 
 <div class="tarjeta-contenido">
@@ -65,38 +109,55 @@
 
     <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
 
-    <form asp-controller="Reservas" asp-action="Crear" method="post">
+    <form asp-controller="Reservas" asp-action="Crear" method="post" id="formReserva">
         @Html.AntiForgeryToken()
+
+        <input asp-for="IdClipro" type="hidden" id="IdClipro" />
 
         <div class="row">
             <div class="col-md-6 mb-3">
-                <label asp-for="IdClipro" class="form-label">Cliente</label>
-                <select asp-for="IdClipro" class="form-select">
-                    <option value="">Seleccione un cliente</option>
-                    @if (clientes != null)
-                    {
-                        foreach (var cliente in clientes)
-                        {
-                            <option value="@cliente.Id">@cliente.Nombre</option>
-                        }
-                    }
-                </select>
+                <label class="form-label">Cliente</label>
+
+                <div class="contenedor-autocomplete">
+                    <input type="text"
+                           id="clienteBusqueda"
+                           class="form-control"
+                           placeholder="Escriba para buscar un cliente..."
+                           autocomplete="off" />
+
+                    <div id="listaClientes" class="lista-sugerencias"></div>
+                </div>
+
                 <span asp-validation-for="IdClipro" class="text-danger"></span>
             </div>
 
             <div class="col-md-6 mb-3">
                 <label asp-for="IdHabitacion" class="form-label">Habitación</label>
-                <select asp-for="IdHabitacion" class="form-select">
+                <select asp-for="IdHabitacion" class="form-select" id="selectHabitacion">
                     <option value="">Seleccione una habitación</option>
                     @if (habitaciones != null)
                     {
                         foreach (var habitacion in habitaciones)
                         {
-                            <option value="@habitacion.Id">Habitación @habitacion.Codigo</option>
+                            <option value="@habitacion.Id"
+                                    data-precio="@habitacion.Precio"
+                                    data-tipo="@habitacion.Tipo">
+                                Habitación @habitacion.Codigo
+                            </option>
                         }
                     }
                 </select>
                 <span asp-validation-for="IdHabitacion" class="text-danger"></span>
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Tipo de habitación</label>
+                <input type="text" id="tipoHabitacion" class="form-control campo-solo-lectura" readonly />
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Precio por noche</label>
+                <input type="text" id="precioHabitacion" class="form-control campo-solo-lectura" readonly />
             </div>
 
             <div class="col-md-6 mb-3">
@@ -121,7 +182,6 @@
                 <label asp-for="MontoPagoInicial" class="form-label">Pago inicial</label>
                 <input asp-for="MontoPagoInicial" class="form-control" min="0" step="0.01" />
                 <span asp-validation-for="MontoPagoInicial" class="text-danger"></span>
-                <small class="text-muted">Si no se ingresa monto, la reserva quedará con saldo pendiente completo.</small>
             </div>
 
             <div class="col-md-6 mb-3">
@@ -132,7 +192,12 @@
                     {
                         foreach (var forma in formasPago)
                         {
-                            <option value="@forma.IdFormaPago">@forma.NombreForma</option>
+                            string nombreForma = forma.NombreForma?.ToString() ?? "";
+
+                            if (!nombreForma.Trim().Equals("credito", StringComparison.OrdinalIgnoreCase))
+                            {
+                                <option value="@forma.IdFormaPago">@forma.NombreForma</option>
+                            }
                         }
                     }
                 </select>
@@ -155,4 +220,99 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const clientes = [
+                @if (clientes != null)
+                {
+                        for (int i = 0; i < clientes.Count; i++)
+                        {
+                                var cliente = clientes[i];
+                                @:{ id: @cliente.Id, nombre: "@cliente.Nombre" }@(i < clientes.Count - 1 ? "," : "")
+                        }
+                }
+            ];
+
+            const inputCliente = document.getElementById("clienteBusqueda");
+            const hiddenIdClipro = document.getElementById("IdClipro");
+            const listaClientes = document.getElementById("listaClientes");
+
+            const selectHabitacion = document.getElementById("selectHabitacion");
+            const precioHabitacion = document.getElementById("precioHabitacion");
+            const tipoHabitacion = document.getElementById("tipoHabitacion");
+
+            function limpiarListaClientes() {
+                listaClientes.innerHTML = "";
+                listaClientes.style.display = "none";
+            }
+
+            function mostrarSugerencias(texto) {
+                listaClientes.innerHTML = "";
+
+                const textoNormalizado = texto.trim().toLowerCase();
+
+                if (textoNormalizado === "") {
+                    limpiarListaClientes();
+                    return;
+                }
+
+                const coincidencias = clientes.filter(c =>
+                    c.nombre.toLowerCase().includes(textoNormalizado)
+                );
+
+                if (coincidencias.length === 0) {
+                    const sinResultados = document.createElement("div");
+                    sinResultados.className = "texto-sin-resultados";
+                    sinResultados.textContent = "No se encontraron clientes.";
+                    listaClientes.appendChild(sinResultados);
+                    listaClientes.style.display = "block";
+                    return;
+                }
+
+                coincidencias.forEach(cliente => {
+                    const item = document.createElement("div");
+                    item.className = "item-sugerencia";
+                    item.textContent = cliente.nombre;
+
+                    item.addEventListener("click", function () {
+                        inputCliente.value = cliente.nombre;
+                        hiddenIdClipro.value = cliente.id;
+                        limpiarListaClientes();
+                    });
+
+                    listaClientes.appendChild(item);
+                });
+
+                listaClientes.style.display = "block";
+            }
+
+            inputCliente.addEventListener("input", function () {
+                hiddenIdClipro.value = "";
+                mostrarSugerencias(inputCliente.value);
+            });
+
+            inputCliente.addEventListener("focus", function () {
+                if (inputCliente.value.trim() !== "") {
+                    mostrarSugerencias(inputCliente.value);
+                }
+            });
+
+            document.addEventListener("click", function (e) {
+                if (!listaClientes.contains(e.target) && e.target !== inputCliente) {
+                    limpiarListaClientes();
+                }
+            });
+
+            selectHabitacion.addEventListener("change", function () {
+                const opcionSeleccionada = selectHabitacion.options[selectHabitacion.selectedIndex];
+
+                const precio = opcionSeleccionada.getAttribute("data-precio");
+                const tipo = opcionSeleccionada.getAttribute("data-tipo");
+
+                precioHabitacion.value = precio ? "Q " + parseFloat(precio).toFixed(2) : "";
+                tipoHabitacion.value = tipo ?? "";
+            });
+        });
+    </script>
 }

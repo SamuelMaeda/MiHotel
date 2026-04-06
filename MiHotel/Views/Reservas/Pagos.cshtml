@@ -50,6 +50,11 @@
         font-weight: 500;
     }
 
+        .btn-guardar:hover {
+            background-color: #36366b;
+            color: white;
+        }
+
     .btn-volver {
         background-color: #824B44;
         color: white;
@@ -58,6 +63,11 @@
         text-decoration: none;
         font-weight: 500;
     }
+
+        .btn-volver:hover {
+            background-color: #6e3f39;
+            color: white;
+        }
 
     .acciones-formulario {
         display: flex;
@@ -83,14 +93,19 @@
     <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
 
     <div class="row mb-4">
-        <div class="col-md-6 mb-3">
+        <div class="col-md-4 mb-3">
             <div class="resumen-label">Cliente</div>
             <div class="resumen-valor">@reserva?.Cliente</div>
         </div>
 
-        <div class="col-md-6 mb-3">
+        <div class="col-md-4 mb-3">
             <div class="resumen-label">Habitación</div>
             <div class="resumen-valor">Habitación @reserva?.Habitacion</div>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <div class="resumen-label">Tipo de habitación</div>
+            <div class="resumen-valor">@reserva?.TipoHabitacion</div>
         </div>
 
         <div class="col-md-4 mb-3">
@@ -104,19 +119,18 @@
         </div>
 
         <div class="col-md-4 mb-3">
-            <div class="resumen-label">Saldo pendiente</div>
+            <div class="resumen-label">Pago pendiente</div>
             <div class="resumen-valor">Q @(((decimal)(reserva?.SaldoPendiente ?? 0m)).ToString("N2"))</div>
         </div>
     </div>
 
-    <h5 class="mb-3">Historial de movimientos de cobro</h5>
+    <h5 class="mb-3">Historial financiero de la reserva</h5>
 
     <div class="table-responsive mb-4">
-        <table class="table table-bordered table-striped">
+        <table class="table table-bordered table-striped align-middle">
             <thead class="table-dark">
                 <tr>
                     <th>Fecha</th>
-                    <th>Tipo</th>
                     <th>Forma de pago</th>
                     <th>Monto</th>
                     <th>Observaciones</th>
@@ -126,7 +140,7 @@
                 @if (listaPagos == null || listaPagos.Count == 0)
                 {
                     <tr>
-                        <td colspan="5" class="text-center">No hay pagos registrados.</td>
+                        <td colspan="4" class="text-center">Todavía no se han añadido pagos a esta reserva.</td>
                     </tr>
                 }
                 else
@@ -135,10 +149,9 @@
                     {
                         <tr>
                             <td>@pago.FechaHora.ToString("dd/MM/yyyy HH:mm")</td>
-                            <td>@pago.NombreTipoMov</td>
-                            <td>@pago.NombreForma</td>
+                            <td>@MostrarTexto(pago.NombreForma?.ToString())</td>
                             <td>Q @(((decimal)pago.Monto).ToString("N2"))</td>
-                            <td>@MostrarTexto(pago.Observaciones)</td>
+                            <td>@MostrarTexto(pago.Observaciones?.ToString())</td>
                         </tr>
                     }
                 }
@@ -163,7 +176,12 @@
                         {
                             foreach (var forma in formasPago)
                             {
-                                <option value="@forma.IdFormaPago">@forma.NombreForma</option>
+                                string nombreForma = forma.NombreForma?.ToString() ?? "";
+
+                                if (!nombreForma.Trim().Equals("credito", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    <option value="@forma.IdFormaPago">@forma.NombreForma</option>
+                                }
                             }
                         }
                     </select>
@@ -185,14 +203,14 @@
 
             <div class="acciones-formulario">
                 <button type="submit" class="btn-guardar">Registrar pago</button>
-                <a asp-controller="Reservas" asp-action="Detalle" asp-route-id="@Model.IdReserva" class="btn-volver">Volver al detalle</a>
+                <a asp-controller="Reservas" asp-action="Index" class="btn-volver">Volver al listado</a>
             </div>
         </form>
     }
     else
     {
         <div class="acciones-formulario">
-            <a asp-controller="Reservas" asp-action="Detalle" asp-route-id="@Model.IdReserva" class="btn-volver">Volver al detalle</a>
+            <a asp-controller="Reservas" asp-action="Index" class="btn-volver">Volver al listado</a>
         </div>
     }
 </div>
