@@ -4,6 +4,7 @@
 
 using MiHotel.Data;
 using MiHotel.Models.Configuracion;
+using MiHotel.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -102,6 +103,7 @@ builder.Services.Configure<ConfigSistema>(
 builder.Services.AddControllersWithViews();
 
 builder.Services.AddScoped<ConexionBD>();
+builder.Services.AddScoped<DisponibilidadService>();
 
 builder.Services.AddSession(options =>
 {

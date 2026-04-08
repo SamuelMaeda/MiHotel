@@ -219,7 +219,7 @@ namespace MiHotel.Controllers
         // CREAR CLIENTE
         [HttpGet]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
-        public IActionResult Crear()
+        public IActionResult Crear(string? returnUrl = null)
         {
             IActionResult? acceso = ValidarSesion();
             if (acceso != null)
@@ -227,19 +227,22 @@ namespace MiHotel.Controllers
                 return acceso;
             }
 
+            ViewBag.ReturnUrl = returnUrl;
             return View(new ClienteAdmin());
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
-        public IActionResult Crear(ClienteAdmin modelo)
+        public IActionResult Crear(ClienteAdmin modelo, string? returnUrl = null)
         {
             IActionResult? acceso = ValidarSesion();
             if (acceso != null)
             {
                 return acceso;
             }
+
+            ViewBag.ReturnUrl = returnUrl;
 
             if (!ModelState.IsValid)
             {
@@ -331,7 +334,21 @@ namespace MiHotel.Controllers
 
                 comandoInsertar.ExecuteNonQuery();
 
+                int idClienteGenerado = Convert.ToInt32(comandoInsertar.LastInsertedId);
+
                 TempData["Exito"] = "Cliente creado correctamente.";
+
+                if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+                {
+                    string separador = returnUrl.Contains("?") ? "&" : "?";
+                    string destino = returnUrl + separador + "idClipro=" + idClienteGenerado;
+
+                    if (Url.IsLocalUrl(destino))
+                    {
+                        return Redirect(destino);
+                    }
+                }
+
                 return RedirectToAction("Index");
             }
             catch (Exception ex)

@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using MiHotel.Data;
 using MiHotel.Models;
+using MiHotel.Services;
 using MySql.Data.MySqlClient;
 using System.Data;
 
@@ -9,11 +10,15 @@ namespace MiHotel.Controllers
     public class ReservasController : Controller
     {
         private readonly ConexionBD _conexionBD;
+        private readonly DisponibilidadService _disponibilidadService;
         private const int RegistrosPorPagina = 20;
 
-        public ReservasController(ConexionBD conexionBD)
+        public ReservasController(
+            ConexionBD conexionBD,
+            DisponibilidadService disponibilidadService)
         {
             _conexionBD = conexionBD;
+            _disponibilidadService = disponibilidadService;
         }
 
         // ===============================
@@ -45,6 +50,31 @@ namespace MiHotel.Controllers
             }
 
             return idUsuario;
+        }
+
+        private string ObtenerNombreRolSesion()
+        {
+            return HttpContext.Session.GetString("NombreRol")?.Trim().ToLower() ?? "";
+        }
+
+        private bool EsClienteSesion()
+        {
+            return ObtenerNombreRolSesion() == "cliente";
+        }
+
+        private int ObtenerIdClienteSesion()
+        {
+            if (!EsClienteSesion())
+            {
+                throw new Exception("La sesión actual no corresponde a un cliente.");
+            }
+
+            return ObtenerIdUsuarioSesion();
+        }
+
+        private string ObtenerNombreUsuarioSesion()
+        {
+            return HttpContext.Session.GetString("NombreUsuario")?.Trim() ?? "";
         }
 
         private int ObtenerIdTipoCliente(MySqlConnection conexion)
@@ -170,7 +200,10 @@ namespace MiHotel.Controllers
             ViewBag.FormasPago = formasPago;
         }
 
-        private void CargarCombos()
+        private void CargarCombos(
+            DateTime? fechaEntrada = null,
+            DateTime? fechaSalida = null,
+            int? idHabitacionSeleccionada = null)
         {
             List<dynamic> clientes = new List<dynamic>();
             List<dynamic> habitaciones = new List<dynamic>();
@@ -206,19 +239,71 @@ namespace MiHotel.Controllers
                     }
                 }
 
-                string consultaHabitaciones = @"
-                    SELECT 
-                        p.id_proser,
-                        p.codigo,
-                        p.precio,
-                        COALESCE(s.nombre_subcategoria, '-') AS tipo_habitacion
-                    FROM proser p
-                    LEFT JOIN subcategoria s ON p.id_subcategoria = s.id_subcategoria
-                    WHERE p.id_tipoproser = @id_tipoproser
-                    ORDER BY p.codigo;";
-
-                using (var comandoHabitaciones = new MySqlCommand(consultaHabitaciones, conexion))
+                if (fechaEntrada.HasValue && fechaSalida.HasValue && fechaSalida.Value.Date > fechaEntrada.Value.Date)
                 {
+                    var habitacionesDisponibles = _disponibilidadService.ObtenerHabitacionesDisponibles(
+                        fechaEntrada.Value,
+                        fechaSalida.Value
+                    );
+
+                    foreach (var habitacion in habitacionesDisponibles)
+                    {
+                        habitaciones.Add(new
+                        {
+                            Id = habitacion.IdHabitacion,
+                            Codigo = habitacion.NumeroHabitacion,
+                            Precio = habitacion.Precio,
+                            Tipo = habitacion.TipoHabitacion
+                        });
+                    }
+
+                    if (idHabitacionSeleccionada.HasValue &&
+                        !habitaciones.Any(h => h.Id == idHabitacionSeleccionada.Value))
+                    {
+                        string consultaHabitacionSeleccionada = @"
+                            SELECT
+                                p.id_proser,
+                                p.codigo,
+                                p.precio,
+                                COALESCE(s.nombre_subcategoria, '-') AS tipo_habitacion
+                            FROM proser p
+                            LEFT JOIN subcategoria s ON p.id_subcategoria = s.id_subcategoria
+                            WHERE p.id_proser = @id_habitacion
+                              AND p.id_tipoproser = @id_tipoproser
+                            LIMIT 1;";
+
+                        using var comandoHabitacionSeleccionada = new MySqlCommand(consultaHabitacionSeleccionada, conexion);
+                        comandoHabitacionSeleccionada.Parameters.AddWithValue("@id_habitacion", idHabitacionSeleccionada.Value);
+                        comandoHabitacionSeleccionada.Parameters.AddWithValue("@id_tipoproser", idTipoHabitacion);
+
+                        using var lectorHabitacionSeleccionada = comandoHabitacionSeleccionada.ExecuteReader();
+
+                        if (lectorHabitacionSeleccionada.Read())
+                        {
+                            habitaciones.Add(new
+                            {
+                                Id = Convert.ToInt32(lectorHabitacionSeleccionada["id_proser"]),
+                                Codigo = lectorHabitacionSeleccionada["codigo"]?.ToString() ?? "",
+                                Precio = Convert.ToDecimal(lectorHabitacionSeleccionada["precio"]),
+                                Tipo = lectorHabitacionSeleccionada["tipo_habitacion"]?.ToString() ?? "-"
+                            });
+                        }
+                    }
+                }
+                else
+                {
+                    string consultaHabitaciones = @"
+                        SELECT 
+                            p.id_proser,
+                            p.codigo,
+                            p.precio,
+                            COALESCE(s.nombre_subcategoria, '-') AS tipo_habitacion
+                        FROM proser p
+                        LEFT JOIN subcategoria s ON p.id_subcategoria = s.id_subcategoria
+                        WHERE p.id_tipoproser = @id_tipoproser
+                        ORDER BY p.codigo;";
+
+                    using var comandoHabitaciones = new MySqlCommand(consultaHabitaciones, conexion);
                     comandoHabitaciones.Parameters.AddWithValue("@id_tipoproser", idTipoHabitacion);
 
                     using var lectorHabitaciones = comandoHabitaciones.ExecuteReader();
@@ -347,11 +432,11 @@ namespace MiHotel.Controllers
         // ===============================
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public IActionResult Index(
-    string busqueda = "",
-    string ordenarPor = "fecha_entrada",
-    string direccion = "asc",
-    string vista = "pendiente",
-    int pagina = 1)
+            string busqueda = "",
+            string ordenarPor = "fecha_entrada",
+            string direccion = "asc",
+            string vista = "pendiente",
+            int pagina = 1)
         {
             IActionResult? acceso = ValidarSesion();
             if (acceso != null)
@@ -575,7 +660,15 @@ namespace MiHotel.Controllers
         // ===============================
         [HttpGet]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
-        public IActionResult Crear()
+        public IActionResult Crear(
+            int? idHabitacion = null,
+            int? idClipro = null,
+            DateTime? fechaEntrada = null,
+            DateTime? fechaSalida = null,
+            int? cantidadPersonas = null,
+            decimal? montoPagoInicial = null,
+            int? idFormaPagoInicial = null,
+            string? observaciones = null)
         {
             IActionResult? acceso = ValidarSesion();
             if (acceso != null)
@@ -583,10 +676,62 @@ namespace MiHotel.Controllers
                 return acceso;
             }
 
-            CargarCombos();
+            bool esCliente = EsClienteSesion();
+
+            CargarCombos(fechaEntrada, fechaSalida, idHabitacion);
             CargarFormasPago();
 
-            return View(new ReservaFormViewModel());
+            ReservaFormViewModel modelo = new ReservaFormViewModel();
+
+            if (fechaEntrada.HasValue)
+            {
+                modelo.FechaEntrada = fechaEntrada.Value;
+            }
+
+            if (fechaSalida.HasValue)
+            {
+                modelo.FechaSalida = fechaSalida.Value;
+            }
+
+            if (idHabitacion.HasValue)
+            {
+                modelo.IdHabitacion = idHabitacion.Value;
+            }
+
+            if (cantidadPersonas.HasValue)
+            {
+                modelo.CantidadPersonas = cantidadPersonas.Value;
+            }
+
+            if (montoPagoInicial.HasValue)
+            {
+                modelo.MontoPagoInicial = montoPagoInicial.Value;
+            }
+
+            if (idFormaPagoInicial.HasValue)
+            {
+                modelo.IdFormaPagoInicial = idFormaPagoInicial.Value;
+            }
+
+            if (!string.IsNullOrWhiteSpace(observaciones))
+            {
+                modelo.Observaciones = observaciones;
+            }
+
+            if (esCliente)
+            {
+                modelo.IdClipro = ObtenerIdClienteSesion();
+                ViewBag.NombreClienteSesion = ObtenerNombreUsuarioSesion();
+            }
+            else if (idClipro.HasValue)
+            {
+                modelo.IdClipro = idClipro.Value;
+            }
+
+            ViewBag.EsClienteSesion = esCliente;
+            ViewBag.BloquearHabitacion = idHabitacion.HasValue;
+
+            return View(modelo);
         }
 
         // ===============================
@@ -603,7 +748,18 @@ namespace MiHotel.Controllers
                 return acceso;
             }
 
-            CargarCombos();
+            bool esCliente = EsClienteSesion();
+
+            if (esCliente)
+            {
+                modelo.IdClipro = ObtenerIdClienteSesion();
+                ViewBag.NombreClienteSesion = ObtenerNombreUsuarioSesion();
+            }
+
+            ViewBag.EsClienteSesion = esCliente;
+            ViewBag.BloquearHabitacion = modelo.IdHabitacion > 0;
+
+            CargarCombos(modelo.FechaEntrada, modelo.FechaSalida, modelo.IdHabitacion);
             CargarFormasPago();
 
             if (!ModelState.IsValid)
@@ -693,29 +849,17 @@ namespace MiHotel.Controllers
                     }
                 }
 
-                string validarDisponibilidad = @"
-                    SELECT COUNT(*)
-                    FROM reserva
-                    WHERE id_habitacion = @id_habitacion
-                      AND estado IN ('pendiente', 'confirmada')
-                      AND (
-                            @fecha_entrada < fecha_salida
-                            AND @fecha_salida > fecha_entrada
-                          );";
+                bool habitacionDisponible = _disponibilidadService.EstaHabitacionDisponible(
+                    modelo.IdHabitacion,
+                    modelo.FechaEntrada,
+                    modelo.FechaSalida
+                );
 
-                using (var comandoDisponibilidad = new MySqlCommand(validarDisponibilidad, conexion))
+                if (!habitacionDisponible)
                 {
-                    comandoDisponibilidad.Parameters.AddWithValue("@id_habitacion", modelo.IdHabitacion);
-                    comandoDisponibilidad.Parameters.AddWithValue("@fecha_entrada", modelo.FechaEntrada.Date);
-                    comandoDisponibilidad.Parameters.AddWithValue("@fecha_salida", modelo.FechaSalida.Date);
-
-                    int existeCruce = Convert.ToInt32(comandoDisponibilidad.ExecuteScalar());
-
-                    if (existeCruce > 0)
-                    {
-                        ModelState.AddModelError("", "La habitación ya está reservada en esas fechas.");
-                        return View(modelo);
-                    }
+                    ModelState.AddModelError("", "La habitación ya no está disponible en esas fechas.");
+                    CargarCombos(modelo.FechaEntrada, modelo.FechaSalida, modelo.IdHabitacion);
+                    return View(modelo);
                 }
 
                 string consultaPrecio = @"
@@ -839,6 +983,12 @@ namespace MiHotel.Controllers
                 transaccion.Commit();
 
                 TempData["Exito"] = "Reserva creada correctamente.";
+
+                if (esCliente)
+                {
+                    return RedirectToAction("Index", "Panel");
+                }
+
                 return RedirectToAction("Index");
             }
             catch (Exception ex)
@@ -860,8 +1010,6 @@ namespace MiHotel.Controllers
             {
                 return acceso;
             }
-
-            CargarCombos();
 
             try
             {
@@ -916,6 +1064,8 @@ namespace MiHotel.Controllers
                     TotalReserva = Convert.ToDecimal(lector["total_reserva"])
                 };
 
+                CargarCombos(modelo.FechaEntrada, modelo.FechaSalida, modelo.IdHabitacion);
+
                 return View(modelo);
             }
             catch (Exception ex)
@@ -939,7 +1089,7 @@ namespace MiHotel.Controllers
                 return acceso;
             }
 
-            CargarCombos();
+            CargarCombos(modelo.FechaEntrada, modelo.FechaSalida, modelo.IdHabitacion);
 
             if (!ModelState.IsValid)
             {
@@ -1043,31 +1193,18 @@ namespace MiHotel.Controllers
                     }
                 }
 
-                string validarDisponibilidad = @"
-                    SELECT COUNT(*)
-                    FROM reserva
-                    WHERE id_habitacion = @id_habitacion
-                      AND id_reserva <> @id_reserva
-                      AND estado IN ('pendiente', 'confirmada')
-                      AND (
-                            @fecha_entrada < fecha_salida
-                            AND @fecha_salida > fecha_entrada
-                          );";
+                bool habitacionDisponible = _disponibilidadService.EstaHabitacionDisponible(
+                    modelo.IdHabitacion,
+                    modelo.FechaEntrada,
+                    modelo.FechaSalida,
+                    modelo.IdReserva
+                );
 
-                using (var comandoDisponibilidad = new MySqlCommand(validarDisponibilidad, conexion))
+                if (!habitacionDisponible)
                 {
-                    comandoDisponibilidad.Parameters.AddWithValue("@id_habitacion", modelo.IdHabitacion);
-                    comandoDisponibilidad.Parameters.AddWithValue("@id_reserva", modelo.IdReserva);
-                    comandoDisponibilidad.Parameters.AddWithValue("@fecha_entrada", modelo.FechaEntrada.Date);
-                    comandoDisponibilidad.Parameters.AddWithValue("@fecha_salida", modelo.FechaSalida.Date);
-
-                    int existeCruce = Convert.ToInt32(comandoDisponibilidad.ExecuteScalar());
-
-                    if (existeCruce > 0)
-                    {
-                        ModelState.AddModelError("", "La habitación ya está reservada en esas fechas.");
-                        return View(modelo);
-                    }
+                    ModelState.AddModelError("", "La habitación ya no está disponible en esas fechas.");
+                    CargarCombos(modelo.FechaEntrada, modelo.FechaSalida, modelo.IdHabitacion);
+                    return View(modelo);
                 }
 
                 string consultaPrecio = @"
@@ -1439,10 +1576,10 @@ namespace MiHotel.Controllers
         private int ObtenerIdEstadoHabitacion(MySqlConnection conexion, string nombre)
         {
             string query = @"
-        SELECT id_tipoestado
-        FROM tipo_estado
-        WHERE LOWER(estado) = @nombre
-        LIMIT 1;";
+                SELECT id_tipoestado
+                FROM tipo_estado
+                WHERE LOWER(estado) = @nombre
+                LIMIT 1;";
 
             using var cmd = new MySqlCommand(query, conexion);
             cmd.Parameters.AddWithValue("@nombre", nombre.ToLower());
@@ -1470,10 +1607,10 @@ namespace MiHotel.Controllers
                 using var transaccion = conexion.BeginTransaction();
 
                 string consulta = @"
-            SELECT id_reserva, id_habitacion, estado
-            FROM reserva
-            WHERE id_reserva = @id
-            LIMIT 1;";
+                    SELECT id_reserva, id_habitacion, estado
+                    FROM reserva
+                    WHERE id_reserva = @id
+                    LIMIT 1;";
 
                 int idHabitacion;
                 string estado;
@@ -1503,9 +1640,9 @@ namespace MiHotel.Controllers
                 }
 
                 string updateReserva = @"
-            UPDATE reserva
-            SET estado = 'en_curso'
-            WHERE id_reserva = @id;";
+                    UPDATE reserva
+                    SET estado = 'en_curso'
+                    WHERE id_reserva = @id;";
 
                 using (var cmd = new MySqlCommand(updateReserva, conexion, transaccion))
                 {
@@ -1516,9 +1653,9 @@ namespace MiHotel.Controllers
                 int idEstadoOcupada = ObtenerIdEstadoHabitacion(conexion, "ocupada");
 
                 string updateHabitacion = @"
-            UPDATE proser
-            SET id_tipoestado = @estado
-            WHERE id_proser = @id;";
+                    UPDATE proser
+                    SET id_tipoestado = @estado
+                    WHERE id_proser = @id;";
 
                 using (var cmd = new MySqlCommand(updateHabitacion, conexion, transaccion))
                 {
@@ -1538,9 +1675,10 @@ namespace MiHotel.Controllers
 
             return RedirectToAction("Index");
         }
-        //==============================
-        // METODO CHECK IN 
-        //==============================
+
+        // ===============================
+        // METODO CHECK OUT
+        // ===============================
         [HttpPost]
         [ValidateAntiForgeryToken]
         public IActionResult CheckOut(int id)
@@ -1556,10 +1694,10 @@ namespace MiHotel.Controllers
                 using var transaccion = conexion.BeginTransaction();
 
                 string consulta = @"
-            SELECT id_reserva, id_habitacion, estado
-            FROM reserva
-            WHERE id_reserva = @id
-            LIMIT 1;";
+                    SELECT id_reserva, id_habitacion, estado
+                    FROM reserva
+                    WHERE id_reserva = @id
+                    LIMIT 1;";
 
                 int idHabitacion;
                 string estado;
@@ -1589,9 +1727,9 @@ namespace MiHotel.Controllers
                 }
 
                 string updateReserva = @"
-            UPDATE reserva
-            SET estado = 'finalizada'
-            WHERE id_reserva = @id;";
+                    UPDATE reserva
+                    SET estado = 'finalizada'
+                    WHERE id_reserva = @id;";
 
                 using (var cmd = new MySqlCommand(updateReserva, conexion, transaccion))
                 {
@@ -1602,9 +1740,9 @@ namespace MiHotel.Controllers
                 int idEstadoLibre = ObtenerIdEstadoHabitacion(conexion, "libre");
 
                 string updateHabitacion = @"
-            UPDATE proser
-            SET id_tipoestado = @estado
-            WHERE id_proser = @id;";
+                    UPDATE proser
+                    SET id_tipoestado = @estado
+                    WHERE id_proser = @id;";
 
                 using (var cmd = new MySqlCommand(updateHabitacion, conexion, transaccion))
                 {

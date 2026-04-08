@@ -1,0 +1,194 @@
+﻿@model MiHotel.Models.DisponibilidadConsultaViewModel
+
+@{
+    ViewData["Title"] = "Disponibilidad de Habitaciones";
+    var tiposHabitacion = ViewBag.TiposHabitacion as List<dynamic> ?? new List<dynamic>();
+}
+
+<style>
+    .tarjeta-contenido {
+        background-color: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.10);
+    }
+
+    .btn-consultar {
+        background-color: #464482;
+        color: white;
+        padding: 10px 16px;
+        border-radius: 8px;
+        border: none;
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+        .btn-consultar:hover {
+            background-color: #36366b;
+            color: white;
+        }
+
+    .btn-limpiar {
+        background-color: #824B44;
+        color: white;
+        padding: 10px 16px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 500;
+        display: inline-block;
+    }
+
+        .btn-limpiar:hover {
+            background-color: #6e3f39;
+            color: white;
+        }
+
+    .acciones-formulario {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 20px;
+    }
+
+    .tabla-resultados th {
+        background-color: #E6D3D0;
+        color: #363636;
+        white-space: nowrap;
+    }
+
+    .btn-reservar {
+        background-color: #464482;
+        color: white;
+        border-radius: 8px;
+        padding: 8px 12px;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+
+        .btn-reservar:hover {
+            background-color: #36366b;
+            color: white;
+        }
+
+    @@media (max-width: 768px) {
+        .tarjeta-contenido {
+            padding: 15px;
+        }
+
+        .btn-consultar,
+        .btn-limpiar {
+            width: 100%;
+            text-align: center;
+        }
+    }
+</style>
+
+<div class="tarjeta-contenido">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h3 class="m-0">Disponibilidad de Habitaciones</h3>
+    </div>
+
+    @if (ViewBag.Mensaje != null)
+    {
+        <div class="alert alert-danger">
+            @ViewBag.Mensaje
+        </div>
+    }
+
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+    <form asp-controller="Disponibilidad" asp-action="Consultar" method="post">
+        @Html.AntiForgeryToken()
+
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label asp-for="FechaEntrada" class="form-label">Fecha de entrada</label>
+                <input asp-for="FechaEntrada" type="date" class="form-control" />
+                <span asp-validation-for="FechaEntrada" class="text-danger"></span>
+            </div>
+
+            <div class="col-md-4 mb-3">
+                <label asp-for="FechaSalida" class="form-label">Fecha de salida</label>
+                <input asp-for="FechaSalida" type="date" class="form-control" />
+                <span asp-validation-for="FechaSalida" class="text-danger"></span>
+            </div>
+
+            <div class="col-md-4 mb-3">
+                <label asp-for="IdSubcategoria" class="form-label">Tipo de habitación</label>
+                <select asp-for="IdSubcategoria" class="form-select">
+                    <option value="">Todos los tipos</option>
+                    @foreach (var tipo in tiposHabitacion)
+                    {
+                        <option value="@tipo.IdSubcategoria">@tipo.Nombre</option>
+                    }
+                </select>
+                <span asp-validation-for="IdSubcategoria" class="text-danger"></span>
+            </div>
+        </div>
+
+        <div class="acciones-formulario">
+            <button type="submit" class="btn-consultar">Consultar disponibilidad</button>
+            <a asp-controller="Disponibilidad" asp-action="Index" class="btn-limpiar">Limpiar</a>
+        </div>
+    </form>
+
+    @if (Model.Consultado)
+    {
+        <hr class="my-4" />
+
+        @if (Model.HabitacionesDisponibles != null && Model.HabitacionesDisponibles.Any())
+        {
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                <h5 class="m-0">Habitaciones disponibles dentro del intervalo de fechas</h5>
+                <span class="text-muted">@Model.HabitacionesDisponibles.Count resultado(s)</span>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-bordered align-middle tabla-resultados">
+                    <thead>
+                        <tr>
+                            <th>Habitación</th>
+                            <th>Tipo</th>
+                            <th>Precio por noche</th>
+                            <th>Estado</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var habitacion in Model.HabitacionesDisponibles)
+                        {
+                            <tr>
+                                <td>Habitación @habitacion.NumeroHabitacion</td>
+                                <td>@habitacion.TipoHabitacion</td>
+                                <td>Q @habitacion.Precio.ToString("N2")</td>
+                                <td>@habitacion.Estado</td>
+                                <td>
+                                    <a asp-controller="Reservas"
+                                       asp-action="Crear"
+                                       asp-route-idHabitacion="@habitacion.IdHabitacion"
+                                       asp-route-fechaEntrada="@Model.FechaEntrada?.ToString("yyyy-MM-dd")"
+                                       asp-route-fechaSalida="@Model.FechaSalida?.ToString("yyyy-MM-dd")"
+                                       class="btn-reservar">
+                                        Reservar
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-warning mt-3">
+                No hay habitaciones disponibles en las fechas indicadas.
+            </div>
+        }
+    }
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
