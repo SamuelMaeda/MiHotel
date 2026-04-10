@@ -678,6 +678,13 @@ namespace MiHotel.Controllers
 
             bool esCliente = EsClienteSesion();
 
+            if (esCliente &&
+                (!idHabitacion.HasValue || !fechaEntrada.HasValue || !fechaSalida.HasValue))
+            {
+                TempData["Mensaje"] = "Para crear una reserva debe seleccionar primero una habitación disponible.";
+                return RedirectToAction("Index", "Disponibilidad");
+            }
+
             CargarCombos(fechaEntrada, fechaSalida, idHabitacion);
             CargarFormasPago();
 
@@ -729,7 +736,7 @@ namespace MiHotel.Controllers
             }
 
             ViewBag.EsClienteSesion = esCliente;
-            ViewBag.BloquearHabitacion = idHabitacion.HasValue;
+            ViewBag.BloquearHabitacion = esCliente && idHabitacion.HasValue;
 
             return View(modelo);
         }
@@ -757,7 +764,7 @@ namespace MiHotel.Controllers
             }
 
             ViewBag.EsClienteSesion = esCliente;
-            ViewBag.BloquearHabitacion = modelo.IdHabitacion > 0;
+            ViewBag.BloquearHabitacion = esCliente && modelo.IdHabitacion > 0;
 
             CargarCombos(modelo.FechaEntrada, modelo.FechaSalida, modelo.IdHabitacion);
             CargarFormasPago();
@@ -982,13 +989,13 @@ namespace MiHotel.Controllers
 
                 transaccion.Commit();
 
-                TempData["Exito"] = "Reserva creada correctamente.";
-
                 if (esCliente)
                 {
+                    TempData["Exito"] = "Su reserva fue creada correctamente.";
                     return RedirectToAction("Index", "Panel");
                 }
 
+                TempData["Exito"] = "Reserva creada correctamente.";
                 return RedirectToAction("Index");
             }
             catch (Exception ex)
