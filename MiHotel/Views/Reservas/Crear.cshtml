@@ -8,7 +8,9 @@
 
     bool esClienteSesion = ViewBag.EsClienteSesion != null && (bool)ViewBag.EsClienteSesion;
     bool bloquearHabitacion = ViewBag.BloquearHabitacion != null && (bool)ViewBag.BloquearHabitacion;
+    bool bloquearFechas = ViewBag.BloquearFechas != null && (bool)ViewBag.BloquearFechas;
     string nombreClienteSesion = ViewBag.NombreClienteSesion?.ToString() ?? "";
+    string tokenFlujoCliente = ViewBag.TokenFlujoCliente?.ToString() ?? "";
 }
 
 <style>
@@ -121,15 +123,6 @@
         padding: 10px 12px;
         color: #6c757d;
     }
-
-    .mensaje-informativo {
-        background-color: #E6D3D0;
-        color: #363636;
-        border: 1px solid #824B44;
-        border-radius: 8px;
-        padding: 12px 14px;
-        margin-bottom: 20px;
-    }
 </style>
 
 <div class="container-fluid px-3 px-md-4 py-4">
@@ -150,19 +143,17 @@
                     <div class="alert alert-success">@TempData["Exito"]</div>
                 }
 
-                @if (esClienteSesion)
-                {
-                    <div class="mensaje-informativo">
-                        Está realizando su reserva como cliente. El cliente y la habitación seleccionada no pueden modificarse desde este formulario.
-                    </div>
-                }
-
                 <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
 
                 <form asp-controller="Reservas" asp-action="Crear" method="post" id="formReserva">
                     @Html.AntiForgeryToken()
 
                     <input asp-for="IdClipro" type="hidden" id="IdClipro" />
+
+                    @if (esClienteSesion && !string.IsNullOrWhiteSpace(tokenFlujoCliente))
+                    {
+                        <input type="hidden" name="tokenFlujoCliente" value="@tokenFlujoCliente" />
+                    }
 
                     <div class="row">
                         @if (esClienteSesion)
@@ -211,12 +202,23 @@
                                     <option value="">Seleccione una habitación</option>
                                     @foreach (var habitacion in habitaciones)
                                     {
-                                        <option value="@habitacion.Id"
-                                                data-precio="@habitacion.Precio"
-                                                data-tipo="@habitacion.Tipo"
-                                                selected="@(Model.IdHabitacion == habitacion.Id)">
-                                            Habitación @habitacion.Codigo
-                                        </option>
+                                        if (Model.IdHabitacion == habitacion.Id)
+                                        {
+                                            <option value="@habitacion.Id"
+                                                    data-precio="@habitacion.Precio"
+                                                    data-tipo="@habitacion.Tipo"
+                                                    selected>
+                                                Habitación @habitacion.Codigo
+                                            </option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@habitacion.Id"
+                                                    data-precio="@habitacion.Precio"
+                                                    data-tipo="@habitacion.Tipo">
+                                                Habitación @habitacion.Codigo
+                                            </option>
+                                        }
                                     }
                                 </select>
                             }
@@ -250,13 +252,39 @@
 
                         <div class="col-12 col-md-6 col-lg-4 mb-3">
                             <label asp-for="FechaEntrada" class="form-label">Fecha de entrada</label>
-                            <input asp-for="FechaEntrada" type="date" class="form-control" id="FechaEntrada" />
+
+                            @if (bloquearFechas)
+                            {
+                                <input asp-for="FechaEntrada" type="hidden" id="FechaEntrada" />
+                                <input type="date"
+                                       class="form-control campo-solo-lectura"
+                                       value="@Model.FechaEntrada.ToString("yyyy-MM-dd")"
+                                       disabled />
+                            }
+                            else
+                            {
+                                <input asp-for="FechaEntrada" type="date" class="form-control" id="FechaEntrada" />
+                            }
+
                             <span asp-validation-for="FechaEntrada" class="text-danger"></span>
                         </div>
 
                         <div class="col-12 col-md-6 col-lg-4 mb-3">
                             <label asp-for="FechaSalida" class="form-label">Fecha de salida</label>
-                            <input asp-for="FechaSalida" type="date" class="form-control" id="FechaSalida" />
+
+                            @if (bloquearFechas)
+                            {
+                                <input asp-for="FechaSalida" type="hidden" id="FechaSalida" />
+                                <input type="date"
+                                       class="form-control campo-solo-lectura"
+                                       value="@Model.FechaSalida.ToString("yyyy-MM-dd")"
+                                       disabled />
+                            }
+                            else
+                            {
+                                <input asp-for="FechaSalida" type="date" class="form-control" id="FechaSalida" />
+                            }
+
                             <span asp-validation-for="FechaSalida" class="text-danger"></span>
                         </div>
 
@@ -338,6 +366,13 @@
 
             const btnRegistrarCliente = document.getElementById("btnRegistrarCliente");
             const urlBaseCrearCliente = "@Url.Action("Crear", "Clientes")";
+
+            const fechaEntradaElement = document.getElementById("FechaEntrada");
+            const fechaSalidaElement = document.getElementById("FechaSalida");
+            const cantidadPersonasElement = document.getElementById("CantidadPersonas");
+            const montoPagoInicialElement = document.getElementById("MontoPagoInicial");
+            const idFormaPagoInicialElement = document.getElementById("IdFormaPagoInicial");
+            const observacionesElement = document.getElementById("Observaciones");
 
             function limpiarListaClientes() {
                 if (!listaClientes) {
@@ -429,19 +464,19 @@
             }
 
             function actualizarEnlaceRegistrarCliente() {
-                if (!btnRegistrarCliente) {
+                if (!btnRegistrarCliente || esClienteSesion) {
                     return;
                 }
 
                 const params = new URLSearchParams();
 
                 const idHabitacion = selectHabitacion ? selectHabitacion.value : "";
-                const fechaEntrada = document.getElementById("FechaEntrada").value;
-                const fechaSalida = document.getElementById("FechaSalida").value;
-                const cantidadPersonas = document.getElementById("CantidadPersonas").value;
-                const montoPagoInicial = document.getElementById("MontoPagoInicial").value;
-                const idFormaPagoInicial = document.getElementById("IdFormaPagoInicial").value;
-                const observaciones = document.getElementById("Observaciones").value;
+                const fechaEntrada = fechaEntradaElement ? fechaEntradaElement.value : "";
+                const fechaSalida = fechaSalidaElement ? fechaSalidaElement.value : "";
+                const cantidadPersonas = cantidadPersonasElement ? cantidadPersonasElement.value : "";
+                const montoPagoInicial = montoPagoInicialElement ? montoPagoInicialElement.value : "";
+                const idFormaPagoInicial = idFormaPagoInicialElement ? idFormaPagoInicialElement.value : "";
+                const observaciones = observacionesElement ? observacionesElement.value : "";
 
                 if (idHabitacion) {
                     params.append("idHabitacion", idHabitacion);
@@ -508,12 +543,29 @@
                 });
             }
 
-            document.getElementById("FechaEntrada").addEventListener("change", actualizarEnlaceRegistrarCliente);
-            document.getElementById("FechaSalida").addEventListener("change", actualizarEnlaceRegistrarCliente);
-            document.getElementById("CantidadPersonas").addEventListener("input", actualizarEnlaceRegistrarCliente);
-            document.getElementById("MontoPagoInicial").addEventListener("input", actualizarEnlaceRegistrarCliente);
-            document.getElementById("IdFormaPagoInicial").addEventListener("change", actualizarEnlaceRegistrarCliente);
-            document.getElementById("Observaciones").addEventListener("input", actualizarEnlaceRegistrarCliente);
+            if (fechaEntradaElement && !esClienteSesion) {
+                fechaEntradaElement.addEventListener("change", actualizarEnlaceRegistrarCliente);
+            }
+
+            if (fechaSalidaElement && !esClienteSesion) {
+                fechaSalidaElement.addEventListener("change", actualizarEnlaceRegistrarCliente);
+            }
+
+            if (cantidadPersonasElement) {
+                cantidadPersonasElement.addEventListener("input", actualizarEnlaceRegistrarCliente);
+            }
+
+            if (montoPagoInicialElement) {
+                montoPagoInicialElement.addEventListener("input", actualizarEnlaceRegistrarCliente);
+            }
+
+            if (idFormaPagoInicialElement) {
+                idFormaPagoInicialElement.addEventListener("change", actualizarEnlaceRegistrarCliente);
+            }
+
+            if (observacionesElement) {
+                observacionesElement.addEventListener("input", actualizarEnlaceRegistrarCliente);
+            }
 
             cargarClienteSeleccionadoInicial();
             actualizarDatosHabitacion();

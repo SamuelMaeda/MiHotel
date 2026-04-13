@@ -1,0 +1,145 @@
+﻿@model MiHotel.Models.ReservaDetalleViewModel
+
+@{
+    ViewData["Title"] = "Confirmación de Reserva";
+}
+
+<style>
+    .tarjeta-confirmacion {
+        background-color: white;
+        border-radius: 15px;
+        padding: 24px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.10);
+    }
+
+    .mensaje-exito {
+        background-color: #dff3e3;
+        border: 1px solid #2e7d32;
+        color: #1b5e20;
+        border-radius: 10px;
+        padding: 16px 18px;
+        margin-bottom: 20px;
+    }
+
+    .tabla-detalle {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+        .tabla-detalle th {
+            background-color: #363636;
+            color: #DEDEDE;
+            text-align: left;
+            padding: 12px;
+            width: 35%;
+        }
+
+        .tabla-detalle td {
+            padding: 12px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .tabla-detalle tr:nth-child(even) td {
+            background-color: #f8f9fa;
+        }
+
+    .acciones-confirmacion {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 24px;
+    }
+
+    .btn-principal {
+        background-color: #464482;
+        color: white;
+        padding: 10px 16px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 500;
+        display: inline-block;
+    }
+
+        .btn-principal:hover {
+            background-color: #36366b;
+            color: white;
+        }
+
+    .btn-secundario {
+        background-color: #824B44;
+        color: white;
+        padding: 10px 16px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 500;
+        display: inline-block;
+    }
+
+        .btn-secundario:hover {
+            background-color: #6e3f39;
+            color: white;
+        }
+</style>
+
+<div class="container-fluid px-3 px-md-4 py-4">
+    <div class="row justify-content-center">
+        <div class="col-12 col-xl-8">
+            <div class="tarjeta-confirmacion">
+                <h3 class="mb-3">Confirmación de Reserva</h3>
+
+                <div class="mensaje-exito">
+                    <strong>Su reservación fue registrada correctamente.</strong><br />
+                    Ya puede revisar los datos principales de su reserva a continuación.
+                </div>
+
+                <table class="tabla-detalle">
+                    <tr>
+                        <th>Número de reserva</th>
+                        <td>@Model.IdReserva</td>
+                    </tr>
+                    <tr>
+                        <th>Cliente</th>
+                        <td>@Model.Cliente</td>
+                    </tr>
+                    <tr>
+                        <th>Habitación</th>
+                        <td>@Model.Habitacion</td>
+                    </tr>
+                    <tr>
+                        <th>Fecha de entrada</th>
+                        <td>@Model.FechaEntrada.ToString("dd/MM/yyyy")</td>
+                    </tr>
+                    <tr>
+                        <th>Fecha de salida</th>
+                        <td>@Model.FechaSalida.ToString("dd/MM/yyyy")</td>
+                    </tr>
+                    <tr>
+                        <th>Cantidad de personas</th>
+                        <td>@Model.CantidadPersonas</td>
+                    </tr>
+                    <tr>
+                        <th>Total de la reserva</th>
+                        <td>Q @Model.TotalReserva.ToString("N2")</td>
+                    </tr>
+                    <tr>
+                        <th>Saldo pendiente</th>
+                        <td>Q @Model.SaldoPendiente.ToString("N2")</td>
+                    </tr>
+                    <tr>
+                        <th>Estado</th>
+                        <td>@Model.Estado</td>
+                    </tr>
+                    <tr>
+                        <th>Observaciones</th>
+                        <td>@(string.IsNullOrWhiteSpace(Model.Observaciones) ? "-" : Model.Observaciones)</td>
+                    </tr>
+                </table>
+
+                <div class="acciones-confirmacion">
+                    <a asp-controller="Panel" asp-action="Index" class="btn-principal">Ir al panel</a>
+                    <a asp-controller="Disponibilidad" asp-action="Index" class="btn-secundario">Hacer otra consulta</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

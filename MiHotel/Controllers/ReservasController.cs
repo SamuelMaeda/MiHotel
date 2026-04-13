@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Mvc;
 using MiHotel.Data;
 using MiHotel.Models;
 using MiHotel.Services;
@@ -11,23 +12,27 @@ namespace MiHotel.Controllers
     {
         private readonly ConexionBD _conexionBD;
         private readonly DisponibilidadService _disponibilidadService;
+        private readonly IDataProtector _protectorFlujoReservaCliente;
         private const int RegistrosPorPagina = 20;
 
         public ReservasController(
             ConexionBD conexionBD,
-            DisponibilidadService disponibilidadService)
+            DisponibilidadService disponibilidadService,
+            IDataProtectionProvider dataProtectionProvider)
         {
             _conexionBD = conexionBD;
             _disponibilidadService = disponibilidadService;
+            _protectorFlujoReservaCliente = dataProtectionProvider.CreateProtector("MiHotel.Reservas.CrearCliente");
         }
 
-        // ===============================
-        // VALIDAR SESION ACTIVA
-        // ===============================
+        // ============================================================
+        // SESION Y ROL
+        // ============================================================
+
         private bool TieneSesionActiva()
         {
             string? idUsuario = HttpContext.Session.GetString("IdUsuario");
-            return !string.IsNullOrEmpty(idUsuario);
+            return !string.IsNullOrWhiteSpace(idUsuario);
         }
 
         private IActionResult? ValidarSesion()
@@ -35,6 +40,44 @@ namespace MiHotel.Controllers
             if (!TieneSesionActiva())
             {
                 return RedirectToAction("Login", "Acceso");
+            }
+
+            return null;
+        }
+
+        private string ObtenerNombreRolSesion()
+        {
+            return HttpContext.Session.GetString("NombreRol")?.Trim().ToLower() ?? "";
+        }
+
+        private bool EsClienteSesion()
+        {
+            return ObtenerNombreRolSesion() == "cliente";
+        }
+
+        private IActionResult? ValidarAccesoSoloAdministrativo()
+        {
+            IActionResult? acceso = ValidarSesion();
+            if (acceso != null) return acceso;
+
+            if (EsClienteSesion())
+            {
+                TempData["Mensaje"] = "No tiene acceso a esa opción.";
+                return RedirectToAction("Index", "Panel");
+            }
+
+            return null;
+        }
+
+        private IActionResult? ValidarAccesoSoloCliente()
+        {
+            IActionResult? acceso = ValidarSesion();
+            if (acceso != null) return acceso;
+
+            if (!EsClienteSesion())
+            {
+                TempData["Mensaje"] = "No tiene acceso a esa opción.";
+                return RedirectToAction("Index", "Panel");
             }
 
             return null;
@@ -52,16 +95,6 @@ namespace MiHotel.Controllers
             return idUsuario;
         }
 
-        private string ObtenerNombreRolSesion()
-        {
-            return HttpContext.Session.GetString("NombreRol")?.Trim().ToLower() ?? "";
-        }
-
-        private bool EsClienteSesion()
-        {
-            return ObtenerNombreRolSesion() == "cliente";
-        }
-
         private int ObtenerIdClienteSesion()
         {
             if (!EsClienteSesion())
@@ -76,6 +109,10 @@ namespace MiHotel.Controllers
         {
             return HttpContext.Session.GetString("NombreUsuario")?.Trim() ?? "";
         }
+
+        // ============================================================
+        // CATALOGOS Y HELPERS DE BD
+        // ============================================================
 
         private int ObtenerIdTipoCliente(MySqlConnection conexion)
         {
@@ -157,6 +194,27 @@ namespace MiHotel.Controllers
             return Convert.ToInt32(resultado);
         }
 
+        private int ObtenerIdEstadoHabitacion(MySqlConnection conexion, string nombre)
+        {
+            string query = @"
+                SELECT id_tipoestado
+                FROM tipo_estado
+                WHERE LOWER(estado) = @nombre
+                LIMIT 1;";
+
+            using var cmd = new MySqlCommand(query, conexion);
+            cmd.Parameters.AddWithValue("@nombre", nombre.ToLower());
+
+            object? result = cmd.ExecuteScalar();
+
+            if (result == null)
+            {
+                throw new Exception($"Estado '{nombre}' no existe.");
+            }
+
+            return Convert.ToInt32(result);
+        }
+
         private string ObtenerColumnaOrden(string columna)
         {
             return columna.Trim().ToLower() switch
@@ -166,6 +224,201 @@ namespace MiHotel.Controllers
                 _ => "r.fecha_entrada"
             };
         }
+
+        // ============================================================
+        // VALIDACIONES Y UTILIDADES DE RESERVA
+        // ============================================================
+
+        private bool FechasReservaSonValidas(DateTime fechaEntrada, DateTime fechaSalida, out string mensaje)
+        {
+            if (fechaEntrada.Date < DateTime.Today)
+            {
+                mensaje = "La fecha de entrada no puede ser menor a hoy.";
+                return false;
+            }
+
+            if (fechaSalida.Date <= fechaEntrada.Date)
+            {
+                mensaje = "La fecha de salida debe ser mayor que la fecha de entrada.";
+                return false;
+            }
+
+            mensaje = string.Empty;
+            return true;
+        }
+
+        private bool ClienteTieneFlujoCrearValido(ReservaFormViewModel modelo, out string mensaje)
+        {
+            if (modelo.IdHabitacion <= 0)
+            {
+                mensaje = "Debe seleccionar primero una habitación disponible.";
+                return false;
+            }
+
+            if (!FechasReservaSonValidas(modelo.FechaEntrada, modelo.FechaSalida, out mensaje))
+            {
+                return false;
+            }
+
+            mensaje = string.Empty;
+            return true;
+        }
+
+        private string GenerarTokenFlujoCliente(int idHabitacion, DateTime fechaEntrada, DateTime fechaSalida)
+        {
+            string contenido = $"{idHabitacion}|{fechaEntrada:yyyy-MM-dd}|{fechaSalida:yyyy-MM-dd}";
+            return _protectorFlujoReservaCliente.Protect(contenido);
+        }
+
+        private bool TokenFlujoClienteEsValido(
+            string? tokenFlujoCliente,
+            int idHabitacion,
+            DateTime fechaEntrada,
+            DateTime fechaSalida)
+        {
+            if (string.IsNullOrWhiteSpace(tokenFlujoCliente))
+            {
+                return false;
+            }
+
+            try
+            {
+                string contenidoEsperado = $"{idHabitacion}|{fechaEntrada:yyyy-MM-dd}|{fechaSalida:yyyy-MM-dd}";
+                string contenidoReal = _protectorFlujoReservaCliente.Unprotect(tokenFlujoCliente);
+
+                return string.Equals(contenidoEsperado, contenidoReal, StringComparison.Ordinal);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private bool HabitacionSigueDisponibleParaCrear(int idHabitacion, DateTime fechaEntrada, DateTime fechaSalida)
+        {
+            return _disponibilidadService.EstaHabitacionDisponible(
+                idHabitacion,
+                fechaEntrada,
+                fechaSalida
+            );
+        }
+
+        private void ConfigurarVistaCrear(
+            ReservaFormViewModel modelo,
+            bool esCliente,
+            string? tokenFlujoCliente = null)
+        {
+            if (esCliente)
+            {
+                ViewBag.NombreClienteSesion = ObtenerNombreUsuarioSesion();
+            }
+
+            ViewBag.EsClienteSesion = esCliente;
+            ViewBag.BloquearHabitacion = esCliente && modelo.IdHabitacion > 0;
+            ViewBag.BloquearFechas = esCliente;
+
+            if (!string.IsNullOrWhiteSpace(tokenFlujoCliente))
+            {
+                ViewBag.TokenFlujoCliente = tokenFlujoCliente;
+            }
+        }
+
+        private ReservaDetalleViewModel? ObtenerReservaDetallePorId(MySqlConnection conexion, int idReserva, int? idClipro = null)
+        {
+            string filtroCliente = idClipro.HasValue ? "AND r.id_clipro = @id_clipro" : "";
+
+            string consulta = $@"
+                SELECT
+                    r.id_reserva,
+                    r.id_clipro,
+                    c.nombre AS cliente,
+                    p.codigo AS habitacion,
+                    r.fecha_entrada,
+                    r.fecha_salida,
+                    r.cantidad_personas,
+                    r.total_reserva,
+                    r.saldo_pendiente,
+                    r.estado,
+                    r.observaciones
+                FROM reserva r
+                INNER JOIN clipro c ON r.id_clipro = c.id_clipro
+                INNER JOIN proser p ON r.id_habitacion = p.id_proser
+                WHERE r.id_reserva = @id
+                {filtroCliente}
+                LIMIT 1;";
+
+            using var comando = new MySqlCommand(consulta, conexion);
+            comando.Parameters.AddWithValue("@id", idReserva);
+
+            if (idClipro.HasValue)
+            {
+                comando.Parameters.AddWithValue("@id_clipro", idClipro.Value);
+            }
+
+            using var lector = comando.ExecuteReader();
+
+            if (!lector.Read())
+            {
+                return null;
+            }
+
+            return new ReservaDetalleViewModel
+            {
+                IdReserva = Convert.ToInt32(lector["id_reserva"]),
+                Cliente = lector["cliente"]?.ToString() ?? "",
+                Habitacion = lector["habitacion"]?.ToString() ?? "",
+                FechaEntrada = Convert.ToDateTime(lector["fecha_entrada"]),
+                FechaSalida = Convert.ToDateTime(lector["fecha_salida"]),
+                CantidadPersonas = Convert.ToInt32(lector["cantidad_personas"]),
+                TotalReserva = Convert.ToDecimal(lector["total_reserva"]),
+                SaldoPendiente = Convert.ToDecimal(lector["saldo_pendiente"]),
+                Estado = lector["estado"]?.ToString() ?? "",
+                Observaciones = lector["observaciones"] == DBNull.Value
+                    ? null
+                    : lector["observaciones"]?.ToString()
+            };
+        }
+
+        private int ObtenerIdUsuarioValidoParaMovimiento(MySqlConnection conexion)
+        {
+            int idSesion = ObtenerIdUsuarioSesion();
+
+            string consultaExiste = @"
+                SELECT COUNT(*)
+                FROM usuario
+                WHERE id_usuario = @id_usuario;";
+
+            using (var comandoExiste = new MySqlCommand(consultaExiste, conexion))
+            {
+                comandoExiste.Parameters.AddWithValue("@id_usuario", idSesion);
+                int existe = Convert.ToInt32(comandoExiste.ExecuteScalar());
+
+                if (existe > 0)
+                {
+                    return idSesion;
+                }
+            }
+
+            string consultaPrimero = @"
+                SELECT id_usuario
+                FROM usuario
+                ORDER BY id_usuario
+                LIMIT 1;";
+
+            using var comandoPrimero = new MySqlCommand(consultaPrimero, conexion);
+            object? resultado = comandoPrimero.ExecuteScalar();
+
+            if (resultado == null)
+            {
+                throw new Exception("No existe ningún usuario válido en la tabla usuario para registrar movimientos.");
+            }
+
+            return Convert.ToInt32(resultado);
+        }
+
+        // ============================================================
+        // CARGA DE COMBOS
+        // ============================================================
 
         private void CargarFormasPago()
         {
@@ -328,6 +581,10 @@ namespace MiHotel.Controllers
             ViewBag.Habitaciones = habitaciones;
         }
 
+        // ============================================================
+        // MOVIMIENTOS Y PAGOS
+        // ============================================================
+
         private decimal ObtenerTotalPagadoReserva(MySqlConnection conexion, int idReserva)
         {
             string consulta = @"
@@ -427,9 +684,104 @@ namespace MiHotel.Controllers
             comandoDetalle.ExecuteNonQuery();
         }
 
-        // ===============================
-        // INDEX DE RESERVAS
-        // ===============================
+        private void CargarDatosPagoReserva(int idReserva)
+        {
+            try
+            {
+                using var conexion = _conexionBD.ObtenerConexion();
+                conexion.Open();
+
+                string consultaReserva = @"
+                    SELECT
+                        r.id_reserva,
+                        c.nombre AS cliente,
+                        p.codigo AS habitacion,
+                        COALESCE(s.nombre_subcategoria, '-') AS tipo_habitacion,
+                        r.total_reserva,
+                        r.saldo_pendiente,
+                        r.estado
+                    FROM reserva r
+                    INNER JOIN clipro c ON r.id_clipro = c.id_clipro
+                    INNER JOIN proser p ON r.id_habitacion = p.id_proser
+                    LEFT JOIN subcategoria s ON p.id_subcategoria = s.id_subcategoria
+                    WHERE r.id_reserva = @id
+                    LIMIT 1;";
+
+                using (var comandoReserva = new MySqlCommand(consultaReserva, conexion))
+                {
+                    comandoReserva.Parameters.AddWithValue("@id", idReserva);
+
+                    using var lectorReserva = comandoReserva.ExecuteReader();
+
+                    if (lectorReserva.Read())
+                    {
+                        ViewBag.Reserva = new
+                        {
+                            IdReserva = Convert.ToInt32(lectorReserva["id_reserva"]),
+                            Cliente = lectorReserva["cliente"]?.ToString() ?? "",
+                            Habitacion = lectorReserva["habitacion"]?.ToString() ?? "",
+                            TipoHabitacion = lectorReserva["tipo_habitacion"]?.ToString() ?? "-",
+                            TotalReserva = Convert.ToDecimal(lectorReserva["total_reserva"]),
+                            SaldoPendiente = Convert.ToDecimal(lectorReserva["saldo_pendiente"]),
+                            Estado = lectorReserva["estado"]?.ToString() ?? ""
+                        };
+                    }
+                }
+
+                decimal totalPagado = ObtenerTotalPagadoReserva(conexion, idReserva);
+                ViewBag.TotalPagado = totalPagado;
+
+                List<dynamic> pagos = new List<dynamic>();
+
+                string consultaPagos = @"
+                    SELECT
+                        m.id_movimiento,
+                        tm.nombre_tipomov,
+                        fp.nombre_forma,
+                        m.fecha_hora,
+                        d.subtotal AS monto,
+                        m.observaciones
+                    FROM movimiento m
+                    INNER JOIN detalle d ON m.id_movimiento = d.id_movimiento
+                    INNER JOIN tipo_movimiento tm ON m.id_tipomov = tm.id_tipomov
+                    INNER JOIN forma_pago fp ON m.id_formapago = fp.id_formapago
+                    WHERE m.id_reserva = @id_reserva
+                      AND m.estado = 'activo'
+                      AND LOWER(tm.nombre_tipomov) = 'reserva'
+                    ORDER BY m.fecha_hora DESC, m.id_movimiento DESC;";
+
+                using (var comandoPagos = new MySqlCommand(consultaPagos, conexion))
+                {
+                    comandoPagos.Parameters.AddWithValue("@id_reserva", idReserva);
+
+                    using var lectorPagos = comandoPagos.ExecuteReader();
+
+                    while (lectorPagos.Read())
+                    {
+                        pagos.Add(new
+                        {
+                            IdMovimiento = Convert.ToInt32(lectorPagos["id_movimiento"]),
+                            NombreForma = lectorPagos["nombre_forma"]?.ToString() ?? "",
+                            FechaHora = Convert.ToDateTime(lectorPagos["fecha_hora"]),
+                            Monto = Convert.ToDecimal(lectorPagos["monto"]),
+                            Observaciones = lectorPagos["observaciones"] == DBNull.Value
+                                ? null
+                                : lectorPagos["observaciones"]?.ToString()
+                        });
+                    }
+                }
+
+                ViewBag.ListaPagos = pagos;
+            }
+            catch
+            {
+            }
+        }
+
+        // ============================================================
+        // INDEX ADMINISTRATIVO
+        // ============================================================
+
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public IActionResult Index(
             string busqueda = "",
@@ -438,7 +790,7 @@ namespace MiHotel.Controllers
             string vista = "pendiente",
             int pagina = 1)
         {
-            IActionResult? acceso = ValidarSesion();
+            IActionResult? acceso = ValidarAccesoSoloAdministrativo();
             if (acceso != null)
             {
                 return acceso;
@@ -473,21 +825,21 @@ namespace MiHotel.Controllers
                 if (!string.IsNullOrWhiteSpace(busqueda))
                 {
                     condicionBusqueda = @"
-                AND (
-                    c.nombre LIKE @busqueda
-                    OR p.codigo LIKE @busqueda
-                    OR r.observaciones LIKE @busqueda
-                ) ";
+                        AND (
+                            c.nombre LIKE @busqueda
+                            OR p.codigo LIKE @busqueda
+                            OR r.observaciones LIKE @busqueda
+                        ) ";
                 }
 
                 string consultaConteo = $@"
-            SELECT COUNT(*)
-            FROM reserva r
-            INNER JOIN clipro c ON r.id_clipro = c.id_clipro
-            INNER JOIN proser p ON r.id_habitacion = p.id_proser
-            WHERE 1 = 1
-            {condicionEstado}
-            {condicionBusqueda};";
+                    SELECT COUNT(*)
+                    FROM reserva r
+                    INNER JOIN clipro c ON r.id_clipro = c.id_clipro
+                    INNER JOIN proser p ON r.id_habitacion = p.id_proser
+                    WHERE 1 = 1
+                    {condicionEstado}
+                    {condicionBusqueda};";
 
                 using var comandoConteo = new MySqlCommand(consultaConteo, conexion);
 
@@ -517,24 +869,24 @@ namespace MiHotel.Controllers
                 int offset = (pagina - 1) * RegistrosPorPagina;
 
                 string consulta = $@"
-            SELECT
-                r.id_reserva,
-                c.nombre,
-                p.codigo AS habitacion,
-                r.fecha_entrada,
-                r.fecha_salida,
-                r.total_reserva,
-                r.saldo_pendiente,
-                r.estado,
-                r.observaciones
-            FROM reserva r
-            INNER JOIN clipro c ON r.id_clipro = c.id_clipro
-            INNER JOIN proser p ON r.id_habitacion = p.id_proser
-            WHERE 1 = 1
-            {condicionEstado}
-            {condicionBusqueda}
-            ORDER BY {columnaOrden} {direccionOrden}
-            LIMIT @limite OFFSET @offset;";
+                    SELECT
+                        r.id_reserva,
+                        c.nombre,
+                        p.codigo AS habitacion,
+                        r.fecha_entrada,
+                        r.fecha_salida,
+                        r.total_reserva,
+                        r.saldo_pendiente,
+                        r.estado,
+                        r.observaciones
+                    FROM reserva r
+                    INNER JOIN clipro c ON r.id_clipro = c.id_clipro
+                    INNER JOIN proser p ON r.id_habitacion = p.id_proser
+                    WHERE 1 = 1
+                    {condicionEstado}
+                    {condicionBusqueda}
+                    ORDER BY {columnaOrden} {direccionOrden}
+                    LIMIT @limite OFFSET @offset;";
 
                 using var comando = new MySqlCommand(consulta, conexion);
 
@@ -570,12 +922,265 @@ namespace MiHotel.Controllers
             return View(tablaReservas);
         }
 
-        // ===============================
-        // DETALLE DE RESERVA
-        // ===============================
+        // ============================================================
+        // MIS RESERVAS - CLIENTE
+        // ============================================================
+
+        [HttpGet]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        public IActionResult MisReservas(int pagina = 1)
+        {
+            IActionResult? acceso = ValidarAccesoSoloCliente();
+            if (acceso != null)
+            {
+                return acceso;
+            }
+
+            DataTable tablaReservas = new DataTable();
+
+            try
+            {
+                using var conexion = _conexionBD.ObtenerConexion();
+                conexion.Open();
+
+                int idClipro = ObtenerIdClienteSesion();
+
+                if (pagina < 1)
+                {
+                    pagina = 1;
+                }
+
+                string consultaConteo = @"
+                    SELECT COUNT(*)
+                    FROM reserva r
+                    WHERE r.id_clipro = @id_clipro;";
+
+                using var comandoConteo = new MySqlCommand(consultaConteo, conexion);
+                comandoConteo.Parameters.AddWithValue("@id_clipro", idClipro);
+
+                int totalRegistros = Convert.ToInt32(comandoConteo.ExecuteScalar());
+                int totalPaginas = (int)Math.Ceiling((double)totalRegistros / RegistrosPorPagina);
+
+                if (totalPaginas == 0)
+                {
+                    totalPaginas = 1;
+                }
+
+                if (pagina > totalPaginas)
+                {
+                    pagina = totalPaginas;
+                }
+
+                int offset = (pagina - 1) * RegistrosPorPagina;
+
+                string consulta = @"
+                    SELECT
+                        r.id_reserva,
+                        p.codigo AS habitacion,
+                        r.fecha_entrada,
+                        r.fecha_salida,
+                        r.cantidad_personas,
+                        r.total_reserva,
+                        r.saldo_pendiente,
+                        r.estado
+                    FROM reserva r
+                    INNER JOIN proser p ON r.id_habitacion = p.id_proser
+                    WHERE r.id_clipro = @id_clipro
+                    ORDER BY r.id_reserva DESC
+                    LIMIT @limite OFFSET @offset;";
+
+                using var comando = new MySqlCommand(consulta, conexion);
+                comando.Parameters.AddWithValue("@id_clipro", idClipro);
+                comando.Parameters.AddWithValue("@limite", RegistrosPorPagina);
+                comando.Parameters.AddWithValue("@offset", offset);
+
+                using var adaptador = new MySqlDataAdapter(comando);
+                adaptador.Fill(tablaReservas);
+
+                ViewBag.PaginaActual = pagina;
+                ViewBag.TotalPaginas = totalPaginas;
+                ViewBag.TotalRegistros = totalRegistros;
+            }
+            catch (Exception ex)
+            {
+                ViewBag.Mensaje = "Ocurrió un error al cargar sus reservaciones: " + ex.Message;
+            }
+
+            return View(tablaReservas);
+        }
+
+        [HttpGet]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        public IActionResult MiReservaDetalle(int id)
+        {
+            IActionResult? acceso = ValidarAccesoSoloCliente();
+            if (acceso != null)
+            {
+                return acceso;
+            }
+
+            try
+            {
+                using var conexion = _conexionBD.ObtenerConexion();
+                conexion.Open();
+
+                ReservaDetalleViewModel? modelo = ObtenerReservaDetallePorId(conexion, id, ObtenerIdClienteSesion());
+
+                if (modelo == null)
+                {
+                    TempData["Mensaje"] = "No se encontró la reservación solicitada.";
+                    return RedirectToAction("MisReservas");
+                }
+
+                try
+                {
+                    using var conexionPagos = _conexionBD.ObtenerConexion();
+                    conexionPagos.Open();
+                    modelo.TotalPagado = ObtenerTotalPagadoReserva(conexionPagos, id);
+                }
+                catch
+                {
+                    modelo.TotalPagado = 0;
+                }
+
+                return View(modelo);
+            }
+            catch (Exception ex)
+            {
+                TempData["Mensaje"] = "Ocurrió un error al cargar el detalle de la reservación: " + ex.Message;
+                return RedirectToAction("MisReservas");
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        public IActionResult CancelarMiReserva(int id)
+        {
+            IActionResult? acceso = ValidarAccesoSoloCliente();
+            if (acceso != null)
+            {
+                return acceso;
+            }
+
+            try
+            {
+                using var conexion = _conexionBD.ObtenerConexion();
+                conexion.Open();
+
+                int idCliproSesion = ObtenerIdClienteSesion();
+
+                string consultaEstado = @"
+                    SELECT estado
+                    FROM reserva
+                    WHERE id_reserva = @id
+                      AND id_clipro = @id_clipro
+                    LIMIT 1;";
+
+                using var comandoEstado = new MySqlCommand(consultaEstado, conexion);
+                comandoEstado.Parameters.AddWithValue("@id", id);
+                comandoEstado.Parameters.AddWithValue("@id_clipro", idCliproSesion);
+
+                object? resultadoEstado = comandoEstado.ExecuteScalar();
+
+                if (resultadoEstado == null)
+                {
+                    TempData["Mensaje"] = "No se encontró la reservación solicitada.";
+                    return RedirectToAction("MisReservas");
+                }
+
+                string estadoActual = resultadoEstado.ToString()?.Trim().ToLower() ?? "";
+
+                if (estadoActual != "pendiente" && estadoActual != "confirmada")
+                {
+                    TempData["Mensaje"] = "Solo se pueden cancelar reservaciones pendientes o confirmadas.";
+                    return RedirectToAction("MisReservas");
+                }
+
+                string consulta = @"
+                    UPDATE reserva
+                    SET estado = 'cancelada'
+                    WHERE id_reserva = @id
+                      AND id_clipro = @id_clipro
+                      AND estado IN ('pendiente', 'confirmada');";
+
+                using var comando = new MySqlCommand(consulta, conexion);
+                comando.Parameters.AddWithValue("@id", id);
+                comando.Parameters.AddWithValue("@id_clipro", idCliproSesion);
+
+                int filas = comando.ExecuteNonQuery();
+
+                if (filas == 0)
+                {
+                    TempData["Mensaje"] = "No se pudo cancelar la reservación.";
+                }
+                else
+                {
+                    TempData["Exito"] = "Reservación cancelada correctamente.";
+                }
+            }
+            catch (Exception ex)
+            {
+                TempData["Mensaje"] = "Ocurrió un error al cancelar la reservación: " + ex.Message;
+            }
+
+            return RedirectToAction("MisReservas");
+        }
+
+        // ============================================================
+        // DETALLE ADMINISTRATIVO
+        // ============================================================
+
         [HttpGet]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public IActionResult Detalle(int id)
+        {
+            IActionResult? acceso = ValidarAccesoSoloAdministrativo();
+            if (acceso != null)
+            {
+                return acceso;
+            }
+
+            try
+            {
+                using var conexion = _conexionBD.ObtenerConexion();
+                conexion.Open();
+
+                ReservaDetalleViewModel? modelo = ObtenerReservaDetallePorId(conexion, id);
+
+                if (modelo == null)
+                {
+                    TempData["Mensaje"] = "No se encontró la reserva solicitada.";
+                    return RedirectToAction("Index");
+                }
+
+                try
+                {
+                    using var conexionPagos = _conexionBD.ObtenerConexion();
+                    conexionPagos.Open();
+                    modelo.TotalPagado = ObtenerTotalPagadoReserva(conexionPagos, id);
+                }
+                catch
+                {
+                    modelo.TotalPagado = 0;
+                }
+
+                return View(modelo);
+            }
+            catch (Exception ex)
+            {
+                TempData["Mensaje"] = "Error al cargar el detalle de la reserva: " + ex.Message;
+                return RedirectToAction("Index");
+            }
+        }
+
+        // ============================================================
+        // CONFIRMACION CLIENTE
+        // ============================================================
+
+        [HttpGet]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        public IActionResult ConfirmacionCliente(int id)
         {
             IActionResult? acceso = ValidarSesion();
             if (acceso != null)
@@ -583,81 +1188,37 @@ namespace MiHotel.Controllers
                 return acceso;
             }
 
-            ReservaDetalleViewModel modelo = new ReservaDetalleViewModel();
+            if (!EsClienteSesion())
+            {
+                return RedirectToAction("Detalle", new { id });
+            }
 
             try
             {
                 using var conexion = _conexionBD.ObtenerConexion();
                 conexion.Open();
 
-                string consulta = @"
-                    SELECT
-                        r.id_reserva,
-                        c.nombre AS cliente,
-                        p.codigo AS habitacion,
-                        r.fecha_entrada,
-                        r.fecha_salida,
-                        r.cantidad_personas,
-                        r.total_reserva,
-                        r.saldo_pendiente,
-                        r.estado,
-                        r.observaciones
-                    FROM reserva r
-                    INNER JOIN clipro c ON r.id_clipro = c.id_clipro
-                    INNER JOIN proser p ON r.id_habitacion = p.id_proser
-                    WHERE r.id_reserva = @id
-                    LIMIT 1;";
+                ReservaDetalleViewModel? modelo = ObtenerReservaDetallePorId(conexion, id, ObtenerIdClienteSesion());
 
-                using var comando = new MySqlCommand(consulta, conexion);
-                comando.Parameters.AddWithValue("@id", id);
-
-                using var lector = comando.ExecuteReader();
-
-                if (!lector.Read())
+                if (modelo == null)
                 {
                     TempData["Mensaje"] = "No se encontró la reserva solicitada.";
-                    return RedirectToAction("Index");
+                    return RedirectToAction("Index", "Panel");
                 }
 
-                modelo = new ReservaDetalleViewModel
-                {
-                    IdReserva = Convert.ToInt32(lector["id_reserva"]),
-                    Cliente = lector["cliente"]?.ToString() ?? "",
-                    Habitacion = lector["habitacion"]?.ToString() ?? "",
-                    FechaEntrada = Convert.ToDateTime(lector["fecha_entrada"]),
-                    FechaSalida = Convert.ToDateTime(lector["fecha_salida"]),
-                    CantidadPersonas = Convert.ToInt32(lector["cantidad_personas"]),
-                    TotalReserva = Convert.ToDecimal(lector["total_reserva"]),
-                    SaldoPendiente = Convert.ToDecimal(lector["saldo_pendiente"]),
-                    Estado = lector["estado"]?.ToString() ?? "",
-                    Observaciones = lector["observaciones"] == DBNull.Value
-                        ? null
-                        : lector["observaciones"]?.ToString()
-                };
+                return View(modelo);
             }
             catch (Exception ex)
             {
-                TempData["Mensaje"] = "Error al cargar el detalle de la reserva: " + ex.Message;
-                return RedirectToAction("Index");
+                TempData["Mensaje"] = "Ocurrió un error al cargar la confirmación de la reserva: " + ex.Message;
+                return RedirectToAction("Index", "Panel");
             }
-
-            try
-            {
-                using var conexionPagos = _conexionBD.ObtenerConexion();
-                conexionPagos.Open();
-                modelo.TotalPagado = ObtenerTotalPagadoReserva(conexionPagos, id);
-            }
-            catch
-            {
-                modelo.TotalPagado = 0;
-            }
-
-            return View(modelo);
         }
 
-        // ===============================
-        // CREAR RESERVA - VISTA
-        // ===============================
+        // ============================================================
+        // CREAR RESERVA
+        // ============================================================
+
         [HttpGet]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public IActionResult Crear(
@@ -685,69 +1246,61 @@ namespace MiHotel.Controllers
                 return RedirectToAction("Index", "Disponibilidad");
             }
 
-            CargarCombos(fechaEntrada, fechaSalida, idHabitacion);
-            CargarFormasPago();
-
             ReservaFormViewModel modelo = new ReservaFormViewModel();
 
-            if (fechaEntrada.HasValue)
-            {
-                modelo.FechaEntrada = fechaEntrada.Value;
-            }
-
-            if (fechaSalida.HasValue)
-            {
-                modelo.FechaSalida = fechaSalida.Value;
-            }
-
-            if (idHabitacion.HasValue)
-            {
-                modelo.IdHabitacion = idHabitacion.Value;
-            }
-
-            if (cantidadPersonas.HasValue)
-            {
-                modelo.CantidadPersonas = cantidadPersonas.Value;
-            }
-
-            if (montoPagoInicial.HasValue)
-            {
-                modelo.MontoPagoInicial = montoPagoInicial.Value;
-            }
-
-            if (idFormaPagoInicial.HasValue)
-            {
-                modelo.IdFormaPagoInicial = idFormaPagoInicial.Value;
-            }
-
-            if (!string.IsNullOrWhiteSpace(observaciones))
-            {
-                modelo.Observaciones = observaciones;
-            }
+            if (fechaEntrada.HasValue) modelo.FechaEntrada = fechaEntrada.Value;
+            if (fechaSalida.HasValue) modelo.FechaSalida = fechaSalida.Value;
+            if (idHabitacion.HasValue) modelo.IdHabitacion = idHabitacion.Value;
+            if (cantidadPersonas.HasValue) modelo.CantidadPersonas = cantidadPersonas.Value;
+            if (montoPagoInicial.HasValue) modelo.MontoPagoInicial = montoPagoInicial.Value;
+            if (idFormaPagoInicial.HasValue) modelo.IdFormaPagoInicial = idFormaPagoInicial.Value;
+            if (!string.IsNullOrWhiteSpace(observaciones)) modelo.Observaciones = observaciones;
 
             if (esCliente)
             {
                 modelo.IdClipro = ObtenerIdClienteSesion();
-                ViewBag.NombreClienteSesion = ObtenerNombreUsuarioSesion();
+
+                if (!ClienteTieneFlujoCrearValido(modelo, out string mensajeFlujo))
+                {
+                    TempData["Mensaje"] = mensajeFlujo;
+                    return RedirectToAction("Index", "Disponibilidad");
+                }
+
+                if (!HabitacionSigueDisponibleParaCrear(modelo.IdHabitacion, modelo.FechaEntrada, modelo.FechaSalida))
+                {
+                    TempData["Mensaje"] = "La habitación seleccionada ya no está disponible para esas fechas.";
+                    return RedirectToAction("Index", "Disponibilidad");
+                }
+
+                string tokenFlujoCliente = GenerarTokenFlujoCliente(
+                    modelo.IdHabitacion,
+                    modelo.FechaEntrada,
+                    modelo.FechaSalida
+                );
+
+                CargarCombos(modelo.FechaEntrada, modelo.FechaSalida, modelo.IdHabitacion);
+                CargarFormasPago();
+                ConfigurarVistaCrear(modelo, true, tokenFlujoCliente);
+
+                return View(modelo);
             }
-            else if (idClipro.HasValue)
+
+            if (idClipro.HasValue)
             {
                 modelo.IdClipro = idClipro.Value;
             }
 
-            ViewBag.EsClienteSesion = esCliente;
-            ViewBag.BloquearHabitacion = esCliente && idHabitacion.HasValue;
+            CargarCombos(modelo.FechaEntrada, modelo.FechaSalida, modelo.IdHabitacion);
+            CargarFormasPago();
+            ConfigurarVistaCrear(modelo, false);
 
             return View(modelo);
         }
 
-        // ===============================
-        // CREAR RESERVA - GUARDAR
-        // ===============================
         [HttpPost]
         [ValidateAntiForgeryToken]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
-        public IActionResult Crear(ReservaFormViewModel modelo)
+        public IActionResult Crear(ReservaFormViewModel modelo, string? tokenFlujoCliente = null)
         {
             IActionResult? acceso = ValidarSesion();
             if (acceso != null)
@@ -760,14 +1313,39 @@ namespace MiHotel.Controllers
             if (esCliente)
             {
                 modelo.IdClipro = ObtenerIdClienteSesion();
-                ViewBag.NombreClienteSesion = ObtenerNombreUsuarioSesion();
             }
-
-            ViewBag.EsClienteSesion = esCliente;
-            ViewBag.BloquearHabitacion = esCliente && modelo.IdHabitacion > 0;
 
             CargarCombos(modelo.FechaEntrada, modelo.FechaSalida, modelo.IdHabitacion);
             CargarFormasPago();
+            ConfigurarVistaCrear(modelo, esCliente, tokenFlujoCliente);
+
+            if (esCliente)
+            {
+                if (!ClienteTieneFlujoCrearValido(modelo, out string mensajeFlujo))
+                {
+                    TempData["Mensaje"] = mensajeFlujo;
+                    return RedirectToAction("Index", "Disponibilidad");
+                }
+
+                if (!TokenFlujoClienteEsValido(
+                    tokenFlujoCliente,
+                    modelo.IdHabitacion,
+                    modelo.FechaEntrada,
+                    modelo.FechaSalida))
+                {
+                    TempData["Mensaje"] = "El flujo de la reserva no es válido o fue alterado. Seleccione nuevamente la habitación desde disponibilidad.";
+                    return RedirectToAction("Index", "Disponibilidad");
+                }
+
+                if (!HabitacionSigueDisponibleParaCrear(
+                    modelo.IdHabitacion,
+                    modelo.FechaEntrada,
+                    modelo.FechaSalida))
+                {
+                    TempData["Mensaje"] = "La habitación seleccionada ya no está disponible para esas fechas.";
+                    return RedirectToAction("Index", "Disponibilidad");
+                }
+            }
 
             if (!ModelState.IsValid)
             {
@@ -779,15 +1357,9 @@ namespace MiHotel.Controllers
                 using var conexion = _conexionBD.ObtenerConexion();
                 conexion.Open();
 
-                if (modelo.FechaEntrada.Date < DateTime.Today)
+                if (!FechasReservaSonValidas(modelo.FechaEntrada, modelo.FechaSalida, out string mensajeFechas))
                 {
-                    ModelState.AddModelError("", "La fecha de entrada no puede ser menor a hoy.");
-                    return View(modelo);
-                }
-
-                if (modelo.FechaSalida.Date <= modelo.FechaEntrada.Date)
-                {
-                    ModelState.AddModelError("", "La fecha de salida debe ser mayor que la fecha de entrada.");
+                    ModelState.AddModelError("", mensajeFechas);
                     return View(modelo);
                 }
 
@@ -856,7 +1428,7 @@ namespace MiHotel.Controllers
                     }
                 }
 
-                bool habitacionDisponible = _disponibilidadService.EstaHabitacionDisponible(
+                bool habitacionDisponible = HabitacionSigueDisponibleParaCrear(
                     modelo.IdHabitacion,
                     modelo.FechaEntrada,
                     modelo.FechaSalida
@@ -865,7 +1437,6 @@ namespace MiHotel.Controllers
                 if (!habitacionDisponible)
                 {
                     ModelState.AddModelError("", "La habitación ya no está disponible en esas fechas.");
-                    CargarCombos(modelo.FechaEntrada, modelo.FechaSalida, modelo.IdHabitacion);
                     return View(modelo);
                 }
 
@@ -947,7 +1518,7 @@ namespace MiHotel.Controllers
                     idReservaGenerada = Convert.ToInt32(comandoInsertar.LastInsertedId);
                 }
 
-                int idUsuario = ObtenerIdUsuarioSesion();
+                int idUsuario = ObtenerIdUsuarioValidoParaMovimiento(conexion);
                 int idTipoMovimientoReserva = ObtenerIdTipoMovimiento(conexion, "reserva");
                 int idTipoMovimientoCxc = ObtenerIdTipoMovimiento(conexion, "cuenta_por_cobrar");
 
@@ -992,7 +1563,7 @@ namespace MiHotel.Controllers
                 if (esCliente)
                 {
                     TempData["Exito"] = "Su reserva fue creada correctamente.";
-                    return RedirectToAction("Index", "Panel");
+                    return RedirectToAction("ConfirmacionCliente", new { id = idReservaGenerada });
                 }
 
                 TempData["Exito"] = "Reserva creada correctamente.";
@@ -1005,14 +1576,15 @@ namespace MiHotel.Controllers
             }
         }
 
-        // ===============================
-        // EDITAR RESERVA - VISTA
-        // ===============================
+        // ============================================================
+        // EDITAR RESERVA - ADMIN
+        // ============================================================
+
         [HttpGet]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public IActionResult Editar(int id)
         {
-            IActionResult? acceso = ValidarSesion();
+            IActionResult? acceso = ValidarAccesoSoloAdministrativo();
             if (acceso != null)
             {
                 return acceso;
@@ -1072,7 +1644,6 @@ namespace MiHotel.Controllers
                 };
 
                 CargarCombos(modelo.FechaEntrada, modelo.FechaSalida, modelo.IdHabitacion);
-
                 return View(modelo);
             }
             catch (Exception ex)
@@ -1082,15 +1653,12 @@ namespace MiHotel.Controllers
             }
         }
 
-        // ===============================
-        // EDITAR RESERVA - GUARDAR
-        // ===============================
         [HttpPost]
         [ValidateAntiForgeryToken]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public IActionResult Editar(ReservaFormViewModel modelo)
         {
-            IActionResult? acceso = ValidarSesion();
+            IActionResult? acceso = ValidarAccesoSoloAdministrativo();
             if (acceso != null)
             {
                 return acceso;
@@ -1135,15 +1703,9 @@ namespace MiHotel.Controllers
                     }
                 }
 
-                if (modelo.FechaEntrada.Date < DateTime.Today)
+                if (!FechasReservaSonValidas(modelo.FechaEntrada, modelo.FechaSalida, out string mensajeFechas))
                 {
-                    ModelState.AddModelError("", "La fecha de entrada no puede ser menor a hoy.");
-                    return View(modelo);
-                }
-
-                if (modelo.FechaSalida.Date <= modelo.FechaEntrada.Date)
-                {
-                    ModelState.AddModelError("", "La fecha de salida debe ser mayor que la fecha de entrada.");
+                    ModelState.AddModelError("", mensajeFechas);
                     return View(modelo);
                 }
 
@@ -1210,7 +1772,6 @@ namespace MiHotel.Controllers
                 if (!habitacionDisponible)
                 {
                     ModelState.AddModelError("", "La habitación ya no está disponible en esas fechas.");
-                    CargarCombos(modelo.FechaEntrada, modelo.FechaSalida, modelo.IdHabitacion);
                     return View(modelo);
                 }
 
@@ -1282,14 +1843,15 @@ namespace MiHotel.Controllers
             }
         }
 
-        // ===============================
-        // PAGOS DE RESERVA - VISTA
-        // ===============================
+        // ============================================================
+        // PAGOS - ADMIN
+        // ============================================================
+
         [HttpGet]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public IActionResult Pagos(int id)
         {
-            IActionResult? acceso = ValidarSesion();
+            IActionResult? acceso = ValidarAccesoSoloAdministrativo();
             if (acceso != null)
             {
                 return acceso;
@@ -1306,15 +1868,12 @@ namespace MiHotel.Controllers
             return View(modelo);
         }
 
-        // ===============================
-        // REGISTRAR PAGO DE RESERVA
-        // ===============================
         [HttpPost]
         [ValidateAntiForgeryToken]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public IActionResult RegistrarPago(ReservaPagoViewModel modelo)
         {
-            IActionResult? acceso = ValidarSesion();
+            IActionResult? acceso = ValidarAccesoSoloAdministrativo();
             if (acceso != null)
             {
                 return acceso;
@@ -1441,107 +2000,16 @@ namespace MiHotel.Controllers
             }
         }
 
-        private void CargarDatosPagoReserva(int idReserva)
-        {
-            try
-            {
-                using var conexion = _conexionBD.ObtenerConexion();
-                conexion.Open();
+        // ============================================================
+        // CAMBIOS DE ESTADO - ADMIN
+        // ============================================================
 
-                string consultaReserva = @"
-                    SELECT
-                        r.id_reserva,
-                        c.nombre AS cliente,
-                        p.codigo AS habitacion,
-                        COALESCE(s.nombre_subcategoria, '-') AS tipo_habitacion,
-                        r.total_reserva,
-                        r.saldo_pendiente,
-                        r.estado
-                    FROM reserva r
-                    INNER JOIN clipro c ON r.id_clipro = c.id_clipro
-                    INNER JOIN proser p ON r.id_habitacion = p.id_proser
-                    LEFT JOIN subcategoria s ON p.id_subcategoria = s.id_subcategoria
-                    WHERE r.id_reserva = @id
-                    LIMIT 1;";
-
-                using (var comandoReserva = new MySqlCommand(consultaReserva, conexion))
-                {
-                    comandoReserva.Parameters.AddWithValue("@id", idReserva);
-
-                    using var lectorReserva = comandoReserva.ExecuteReader();
-
-                    if (lectorReserva.Read())
-                    {
-                        ViewBag.Reserva = new
-                        {
-                            IdReserva = Convert.ToInt32(lectorReserva["id_reserva"]),
-                            Cliente = lectorReserva["cliente"]?.ToString() ?? "",
-                            Habitacion = lectorReserva["habitacion"]?.ToString() ?? "",
-                            TipoHabitacion = lectorReserva["tipo_habitacion"]?.ToString() ?? "-",
-                            TotalReserva = Convert.ToDecimal(lectorReserva["total_reserva"]),
-                            SaldoPendiente = Convert.ToDecimal(lectorReserva["saldo_pendiente"]),
-                            Estado = lectorReserva["estado"]?.ToString() ?? ""
-                        };
-                    }
-                }
-
-                decimal totalPagado = ObtenerTotalPagadoReserva(conexion, idReserva);
-                ViewBag.TotalPagado = totalPagado;
-
-                List<dynamic> pagos = new List<dynamic>();
-
-                string consultaPagos = @"
-                    SELECT
-                        m.id_movimiento,
-                        tm.nombre_tipomov,
-                        fp.nombre_forma,
-                        m.fecha_hora,
-                        d.subtotal AS monto,
-                        m.observaciones
-                    FROM movimiento m
-                    INNER JOIN detalle d ON m.id_movimiento = d.id_movimiento
-                    INNER JOIN tipo_movimiento tm ON m.id_tipomov = tm.id_tipomov
-                    INNER JOIN forma_pago fp ON m.id_formapago = fp.id_formapago
-                    WHERE m.id_reserva = @id_reserva
-                      AND m.estado = 'activo'
-                      AND LOWER(tm.nombre_tipomov) = 'reserva'
-                    ORDER BY m.fecha_hora DESC, m.id_movimiento DESC;";
-
-                using (var comandoPagos = new MySqlCommand(consultaPagos, conexion))
-                {
-                    comandoPagos.Parameters.AddWithValue("@id_reserva", idReserva);
-
-                    using var lectorPagos = comandoPagos.ExecuteReader();
-
-                    while (lectorPagos.Read())
-                    {
-                        pagos.Add(new
-                        {
-                            IdMovimiento = Convert.ToInt32(lectorPagos["id_movimiento"]),
-                            NombreForma = lectorPagos["nombre_forma"]?.ToString() ?? "",
-                            FechaHora = Convert.ToDateTime(lectorPagos["fecha_hora"]),
-                            Monto = Convert.ToDecimal(lectorPagos["monto"]),
-                            Observaciones = lectorPagos["observaciones"] == DBNull.Value ? null : lectorPagos["observaciones"]?.ToString()
-                        });
-                    }
-                }
-
-                ViewBag.ListaPagos = pagos;
-            }
-            catch
-            {
-            }
-        }
-
-        // ===============================
-        // CONFIRMAR RESERVA
-        // ===============================
         [HttpPost]
         [ValidateAntiForgeryToken]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public IActionResult Confirmar(int id)
         {
-            IActionResult? acceso = ValidarSesion();
+            IActionResult? acceso = ValidarAccesoSoloAdministrativo();
             if (acceso != null)
             {
                 return acceso;
@@ -1580,31 +2048,15 @@ namespace MiHotel.Controllers
             return RedirectToAction("Index");
         }
 
-        private int ObtenerIdEstadoHabitacion(MySqlConnection conexion, string nombre)
-        {
-            string query = @"
-                SELECT id_tipoestado
-                FROM tipo_estado
-                WHERE LOWER(estado) = @nombre
-                LIMIT 1;";
-
-            using var cmd = new MySqlCommand(query, conexion);
-            cmd.Parameters.AddWithValue("@nombre", nombre.ToLower());
-
-            object? result = cmd.ExecuteScalar();
-
-            if (result == null)
-                throw new Exception($"Estado '{nombre}' no existe.");
-
-            return Convert.ToInt32(result);
-        }
-
         [HttpPost]
         [ValidateAntiForgeryToken]
         public IActionResult CheckIn(int id)
         {
-            IActionResult? acceso = ValidarSesion();
-            if (acceso != null) return acceso;
+            IActionResult? acceso = ValidarAccesoSoloAdministrativo();
+            if (acceso != null)
+            {
+                return acceso;
+            }
 
             try
             {
@@ -1683,15 +2135,15 @@ namespace MiHotel.Controllers
             return RedirectToAction("Index");
         }
 
-        // ===============================
-        // METODO CHECK OUT
-        // ===============================
         [HttpPost]
         [ValidateAntiForgeryToken]
         public IActionResult CheckOut(int id)
         {
-            IActionResult? acceso = ValidarSesion();
-            if (acceso != null) return acceso;
+            IActionResult? acceso = ValidarAccesoSoloAdministrativo();
+            if (acceso != null)
+            {
+                return acceso;
+            }
 
             try
             {
@@ -1770,15 +2222,12 @@ namespace MiHotel.Controllers
             return RedirectToAction("Index");
         }
 
-        // ===============================
-        // CANCELAR RESERVA
-        // ===============================
         [HttpPost]
         [ValidateAntiForgeryToken]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public IActionResult Cancelar(int id)
         {
-            IActionResult? acceso = ValidarSesion();
+            IActionResult? acceso = ValidarAccesoSoloAdministrativo();
             if (acceso != null)
             {
                 return acceso;

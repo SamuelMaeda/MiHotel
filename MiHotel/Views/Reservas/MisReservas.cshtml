@@ -1,0 +1,244 @@
+﻿@model System.Data.DataTable
+
+@{
+    ViewData["Title"] = "Mis Reservas";
+
+    int paginaActual = ViewBag.PaginaActual ?? 1;
+    int totalPaginas = ViewBag.TotalPaginas ?? 1;
+    int totalRegistros = ViewBag.TotalRegistros ?? 0;
+}
+
+<style>
+    .tarjeta-contenido {
+        background-color: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.10);
+    }
+
+    .btn-volver {
+        background-color: #464482;
+        color: white;
+        padding: 10px 16px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+        .btn-volver:hover {
+            background-color: #36366b;
+            color: white;
+        }
+
+    .paginacion {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 20px;
+    }
+
+    .pagina-link {
+        padding: 8px 12px;
+        border-radius: 8px;
+        text-decoration: none;
+        background-color: #E6D3D0;
+        color: #363636;
+    }
+
+        .pagina-link.activa {
+            background-color: #464482;
+            color: white;
+            font-weight: bold;
+        }
+
+    .acciones-contenedor {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .btn-icono {
+        width: 38px;
+        height: 38px;
+        border-radius: 8px;
+        border: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        text-decoration: none;
+        font-size: 16px;
+    }
+
+    .btn-detalle {
+        background-color: #464482;
+    }
+
+    .btn-cancelar {
+        background-color: #6e3f39;
+    }
+
+    .estado-pendiente {
+        color: #856404;
+        font-weight: bold;
+    }
+
+    .estado-confirmada {
+        color: #0f5132;
+        font-weight: bold;
+    }
+
+    .estado-en_curso {
+        color: #0c5460;
+        font-weight: bold;
+    }
+
+    .estado-cancelada {
+        color: #842029;
+        font-weight: bold;
+    }
+
+    .estado-finalizada {
+        color: #0c5460;
+        font-weight: bold;
+    }
+
+    .form-accion {
+        display: inline;
+    }
+</style>
+
+<div class="tarjeta-contenido">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h3 class="m-0">Mis Reservas</h3>
+        <a asp-controller="Panel" asp-action="Index" class="btn-volver">Volver al panel</a>
+    </div>
+
+    @if (TempData["Exito"] != null)
+    {
+        <div class="alert alert-success">@TempData["Exito"]</div>
+    }
+
+    @if (TempData["Mensaje"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Mensaje"]</div>
+    }
+
+    @if (ViewBag.Mensaje != null)
+    {
+        <div class="alert alert-danger">@ViewBag.Mensaje</div>
+    }
+
+    <div class="mb-3">
+        <strong>Total de registros:</strong> @totalRegistros
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped">
+            <thead class="table-dark">
+                <tr>
+                    <th>Habitación</th>
+                    <th>Entrada</th>
+                    <th>Salida</th>
+                    <th>Personas</th>
+                    <th>Total</th>
+                    <th>Pago Pendiente</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @if (Model.Rows.Count == 0)
+                {
+                    <tr>
+                        <td colspan="8" class="text-center">No se encontraron reservas.</td>
+                    </tr>
+                }
+                else
+                {
+                    foreach (System.Data.DataRow fila in Model.Rows)
+                    {
+                        string estado = fila["estado"]?.ToString()?.Trim().ToLower() ?? "";
+                        int idReserva = Convert.ToInt32(fila["id_reserva"]);
+                        bool puedeCancelar = estado == "pendiente" || estado == "confirmada";
+
+                        <tr>
+                            <td>@fila["habitacion"]</td>
+                            <td>@Convert.ToDateTime(fila["fecha_entrada"]).ToString("dd/MM/yyyy")</td>
+                            <td>@Convert.ToDateTime(fila["fecha_salida"]).ToString("dd/MM/yyyy")</td>
+                            <td>@fila["cantidad_personas"]</td>
+                            <td>Q @Convert.ToDecimal(fila["total_reserva"]).ToString("N2")</td>
+                            <td>Q @Convert.ToDecimal(fila["saldo_pendiente"]).ToString("N2")</td>
+
+                            <td>
+                                @if (estado == "pendiente")
+                                {
+                                    <span class="estado-pendiente">Pendiente</span>
+                                }
+                                else if (estado == "confirmada")
+                                {
+                                    <span class="estado-confirmada">Confirmada</span>
+                                }
+                                else if (estado == "en_curso")
+                                {
+                                    <span class="estado-en_curso">En curso</span>
+                                }
+                                else if (estado == "cancelada")
+                                {
+                                    <span class="estado-cancelada">Cancelada</span>
+                                }
+                                else if (estado == "finalizada")
+                                {
+                                    <span class="estado-finalizada">Finalizada</span>
+                                }
+                            </td>
+
+                            <td>
+                                <div class="acciones-contenedor">
+                                    <a asp-controller="Reservas"
+                                       asp-action="MiReservaDetalle"
+                                       asp-route-id="@idReserva"
+                                       class="btn-icono btn-detalle"
+                                       title="Ver detalle">
+                                        <i class="bi bi-eye-fill"></i>
+                                    </a>
+
+                                    @if (puedeCancelar)
+                                    {
+                                        <form asp-controller="Reservas"
+                                              asp-action="CancelarMiReserva"
+                                              asp-route-id="@idReserva"
+                                              method="post"
+                                              class="form-accion"
+                                              onsubmit="return confirm('¿Está seguro de cancelar esta reserva?');">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn-icono btn-cancelar" title="Cancelar reserva">
+                                                <i class="bi bi-x-circle-fill"></i>
+                                            </button>
+                                        </form>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (totalPaginas > 1)
+    {
+        <div class="paginacion">
+            @for (int i = 1; i <= totalPaginas; i++)
+            {
+                <a asp-controller="Reservas"
+                   asp-action="MisReservas"
+                   asp-route-pagina="@i"
+                   class="pagina-link @(i == paginaActual ? "activa" : "")">
+                    @i
+                </a>
+            }
+        </div>
+    }
+</div>
