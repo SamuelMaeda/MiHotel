@@ -123,7 +123,11 @@ namespace MiHotel.Controllers
 
             CargarTiposHabitacion();
 
-            DisponibilidadConsultaViewModel modelo = new DisponibilidadConsultaViewModel();
+            DisponibilidadConsultaViewModel modelo = new DisponibilidadConsultaViewModel
+            {
+                FechaEntrada = DateTime.Today,
+                FechaSalida = DateTime.Today.AddDays(1)
+            };
 
             return View(modelo);
         }

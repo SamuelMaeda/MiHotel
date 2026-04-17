@@ -89,25 +89,28 @@
 
     <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
 
-    <form asp-controller="Clientes" asp-action="Editar" method="post">
+    <form asp-action="Editar" method="post" novalidate>
         @Html.AntiForgeryToken()
-
         <input asp-for="IdClipro" type="hidden" />
 
         <div class="row">
-            <div class="col-md-6 mb-3">
-                <label asp-for="Nombre" class="form-label">Nombre</label>
-                <input asp-for="Nombre" class="form-control" placeholder="Ingrese el nombre del cliente" />
+            <div class="col-12 col-lg-6 mb-3">
+                <label asp-for="Nombre" class="form-label">
+                    Nombre
+                </label>
+                <input asp-for="Nombre" class="form-control" />
                 <span asp-validation-for="Nombre" class="text-danger"></span>
             </div>
 
-            <div class="col-md-6 mb-3">
-                <label asp-for="Telefono" class="form-label">Teléfono</label>
+            <div class="col-12 col-lg-6 mb-3">
+                <label asp-for="Telefono" class="form-label">
+                    Teléfono
+                </label>
                 <input asp-for="Telefono" id="Telefono" class="form-control" maxlength="9" placeholder="1234 5678" />
                 <span asp-validation-for="Telefono" class="text-danger"></span>
             </div>
 
-            <div class="col-md-6 mb-3">
+            <div class="col-12 col-lg-6 mb-3">
                 <label asp-for="Nit" class="form-label">
                     NIT <span class="etiqueta-opcional">(Opcional)</span>
                 </label>
@@ -115,7 +118,7 @@
                 <span asp-validation-for="Nit" class="text-danger"></span>
             </div>
 
-            <div class="col-md-6 mb-3">
+            <div class="col-12 col-lg-6 mb-3">
                 <label asp-for="Correo" class="form-label">
                     Correo <span class="etiqueta-opcional">(Opcional)</span>
                 </label>

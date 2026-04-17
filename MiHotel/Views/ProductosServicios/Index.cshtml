@@ -1,0 +1,327 @@
+﻿@model System.Data.DataTable
+
+@{
+    ViewData["Title"] = "Productos y Servicios";
+
+    string busqueda = ViewBag.Busqueda ?? "";
+    string ordenarPor = ViewBag.OrdenarPor ?? "codigo";
+    string direccion = ViewBag.Direccion ?? "asc";
+    string vista = ViewBag.Vista ?? "activos";
+    int paginaActual = ViewBag.PaginaActual ?? 1;
+    int totalPaginas = ViewBag.TotalPaginas ?? 1;
+    int totalRegistros = ViewBag.TotalRegistros ?? 0;
+
+    string SiguienteDireccion(string columna)
+    {
+        if (ordenarPor == columna && direccion == "asc")
+        {
+            return "desc";
+        }
+        return "asc";
+    }
+
+    string IconoOrden(string columna)
+    {
+        if (ordenarPor != columna)
+        {
+            return "bi-arrow-down-up";
+        }
+        return direccion == "asc" ? "bi-sort-alpha-down" : "bi-sort-alpha-up";
+    }
+}
+
+<style>
+    .tarjeta-contenido {
+        background-color: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.10);
+    }
+
+    .btn-crear {
+        background-color: #464482;
+        color: white;
+        padding: 10px 16px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    .tabs-vista {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+
+    .tab-vista {
+        text-decoration: none;
+        padding: 10px 14px;
+        border-radius: 8px;
+        background-color: #E6D3D0;
+        color: #363636;
+        font-weight: 500;
+    }
+
+        .tab-vista.activa {
+            background-color: #824B44;
+            color: white;
+        }
+
+    .paginacion {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 20px;
+    }
+
+    .pagina-link {
+        padding: 8px 12px;
+        border-radius: 8px;
+        text-decoration: none;
+        background-color: #E6D3D0;
+        color: #363636;
+    }
+
+        .pagina-link.activa {
+            background-color: #464482;
+            color: white;
+            font-weight: bold;
+        }
+
+    .encabezado-orden {
+        color: inherit;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-weight: 600;
+    }
+
+    .acciones-contenedor {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .btn-icono {
+        width: 38px;
+        height: 38px;
+        border-radius: 8px;
+        border: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        text-decoration: none;
+        font-size: 16px;
+    }
+
+    .btn-detalle {
+        background-color: #464482;
+    }
+
+    .btn-editar {
+        background-color: #824B44;
+    }
+
+    .btn-activar {
+        background-color: #198754;
+    }
+
+    .btn-inactivar {
+        background-color: #6e3f39;
+    }
+
+    .estado-activo {
+        color: #0f5132;
+        font-weight: bold;
+    }
+
+    .estado-inactivo {
+        color: #842029;
+        font-weight: bold;
+    }
+
+    .form-accion {
+        display: inline;
+    }
+</style>
+
+<div class="tarjeta-contenido">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h3 class="m-0">Gestión de Productos y Servicios</h3>
+        <a asp-controller="ProductosServicios" asp-action="Crear" class="btn-crear">Nuevo Producto o Servicio</a>
+    </div>
+
+    <div class="tabs-vista">
+        <a asp-controller="ProductosServicios" asp-action="Index" asp-route-vista="activos" asp-route-busqueda="@busqueda" asp-route-ordenarPor="@ordenarPor" asp-route-direccion="@direccion" class="tab-vista @(vista == "activos" ? "activa" : "")">Activos</a>
+        <a asp-controller="ProductosServicios" asp-action="Index" asp-route-vista="inactivos" asp-route-busqueda="@busqueda" asp-route-ordenarPor="@ordenarPor" asp-route-direccion="@direccion" class="tab-vista @(vista == "inactivos" ? "activa" : "")">Inactivos</a>
+    </div>
+
+    @if (TempData["Exito"] != null)
+    {
+        <div class="alert alert-success">@TempData["Exito"]</div>
+    }
+
+    @if (TempData["Mensaje"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Mensaje"]</div>
+    }
+
+    @if (ViewBag.Mensaje != null)
+    {
+        <div class="alert alert-danger">@ViewBag.Mensaje</div>
+    }
+
+    <form id="formBusqueda" asp-controller="ProductosServicios" asp-action="Index" method="get" class="mb-4" novalidate>
+        <input type="hidden" name="vista" value="@vista" />
+        <input type="hidden" name="ordenarPor" value="@ordenarPor" />
+        <input type="hidden" name="direccion" value="@direccion" />
+
+        <label class="form-label">Buscar producto o servicio</label>
+        <input type="text"
+               id="busqueda"
+               name="busqueda"
+               value="@busqueda"
+               class="form-control"
+               placeholder="Buscar por código, nombre, tipo, estado o descripción" />
+    </form>
+
+    <div class="mb-3">
+        <strong>Total de registros:</strong> @totalRegistros
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped">
+            <thead class="table-dark">
+                <tr>
+                    <th>
+                        <a asp-controller="ProductosServicios" asp-action="Index" asp-route-busqueda="@busqueda" asp-route-ordenarPor="codigo" asp-route-direccion="@SiguienteDireccion("codigo")" asp-route-vista="@vista" class="encabezado-orden">
+                            Código <i class="bi @IconoOrden("codigo")"></i>
+                        </a>
+                    </th>
+                    <th>
+                        <a asp-controller="ProductosServicios" asp-action="Index" asp-route-busqueda="@busqueda" asp-route-ordenarPor="nombre" asp-route-direccion="@SiguienteDireccion("nombre")" asp-route-vista="@vista" class="encabezado-orden">
+                            Nombre <i class="bi @IconoOrden("nombre")"></i>
+                        </a>
+                    </th>
+                    <th>
+                        <a asp-controller="ProductosServicios" asp-action="Index" asp-route-busqueda="@busqueda" asp-route-ordenarPor="tipo" asp-route-direccion="@SiguienteDireccion("tipo")" asp-route-vista="@vista" class="encabezado-orden">
+                            Tipo <i class="bi @IconoOrden("tipo")"></i>
+                        </a>
+                    </th>
+                    <th>
+                        <a asp-controller="ProductosServicios" asp-action="Index" asp-route-busqueda="@busqueda" asp-route-ordenarPor="precio" asp-route-direccion="@SiguienteDireccion("precio")" asp-route-vista="@vista" class="encabezado-orden">
+                            Precio <i class="bi @IconoOrden("precio")"></i>
+                        </a>
+                    </th>
+                    <th>
+                        <a asp-controller="ProductosServicios" asp-action="Index" asp-route-busqueda="@busqueda" asp-route-ordenarPor="stock" asp-route-direccion="@SiguienteDireccion("stock")" asp-route-vista="@vista" class="encabezado-orden">
+                            Stock <i class="bi @IconoOrden("stock")"></i>
+                        </a>
+                    </th>
+                    <th>
+                        <a asp-controller="ProductosServicios" asp-action="Index" asp-route-busqueda="@busqueda" asp-route-ordenarPor="estado" asp-route-direccion="@SiguienteDireccion("estado")" asp-route-vista="@vista" class="encabezado-orden">
+                            Estado <i class="bi @IconoOrden("estado")"></i>
+                        </a>
+                    </th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @if (Model.Rows.Count == 0)
+                {
+                    <tr>
+                        <td colspan="7" class="text-center">No se encontraron productos o servicios.</td>
+                    </tr>
+                }
+                else
+                {
+                    foreach (System.Data.DataRow fila in Model.Rows)
+                    {
+                        string estado = fila["estado"]?.ToString()?.Trim().ToLower() ?? "";
+
+                        <tr>
+                            <td>@fila["codigo"]</td>
+                            <td>@fila["nombre_proser"]</td>
+                            <td>@fila["tipo"]</td>
+                            <td>Q @Convert.ToDecimal(fila["precio"]).ToString("N2")</td>
+                            <td>@fila["stock"]</td>
+                            <td>
+                                @if (estado == "activo")
+                                {
+                                    <span class="estado-activo">Activo</span>
+                                }
+                                else
+                                {
+                                    <span class="estado-inactivo">Inactivo</span>
+                                }
+                            </td>
+                            <td>
+                                <div class="acciones-contenedor">
+                                    <a asp-controller="ProductosServicios" asp-action="Detalle" asp-route-id="@fila["id_proser"]" class="btn-icono btn-detalle" title="Ver detalle">
+                                        <i class="bi bi-eye-fill"></i>
+                                    </a>
+
+                                    <a asp-controller="ProductosServicios" asp-action="Editar" asp-route-id="@fila["id_proser"]" class="btn-icono btn-editar" title="Editar producto o servicio">
+                                        <i class="bi bi-pencil-fill"></i>
+                                    </a>
+
+                                    <form asp-controller="ProductosServicios" asp-action="CambiarEstado" method="post" class="form-accion">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@fila["id_proser"]" />
+                                        <input type="hidden" name="vista" value="@vista" />
+                                        <input type="hidden" name="busqueda" value="@busqueda" />
+                                        <input type="hidden" name="ordenarPor" value="@ordenarPor" />
+                                        <input type="hidden" name="direccion" value="@direccion" />
+                                        <input type="hidden" name="pagina" value="@paginaActual" />
+
+                                        @if (vista == "activos")
+                                        {
+                                            <button type="submit" class="btn-icono btn-inactivar" title="Inactivar producto o servicio">
+                                                <i class="bi bi-x-circle-fill"></i>
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button type="submit" class="btn-icono btn-activar" title="Activar producto o servicio">
+                                                <i class="bi bi-check-circle-fill"></i>
+                                            </button>
+                                        }
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (totalPaginas > 1)
+    {
+        <div class="paginacion">
+            @for (int i = 1; i <= totalPaginas; i++)
+            {
+                <a asp-controller="ProductosServicios" asp-action="Index" asp-route-busqueda="@busqueda" asp-route-ordenarPor="@ordenarPor" asp-route-direccion="@direccion" asp-route-vista="@vista" asp-route-pagina="@i" class="pagina-link @(i == paginaActual ? "activa" : "")">
+                    @i
+                </a>
+            }
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        let temporizador;
+
+        document.getElementById("busqueda").addEventListener("input", function () {
+            clearTimeout(temporizador);
+            temporizador = setTimeout(function () {
+                document.getElementById("formBusqueda").submit();
+            }, 350);
+        });
+    </script>
+}

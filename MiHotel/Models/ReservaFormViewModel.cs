@@ -1,8 +1,4 @@
-﻿// ===============================
-// VIEWMODEL DE RESERVA
-// ===============================
-
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace MiHotel.Models
 {
@@ -35,5 +31,12 @@ namespace MiHotel.Models
         public int? IdFormaPagoInicial { get; set; }
 
         public string? Observaciones { get; set; }
+
+        // ===============================
+        // SOPORTE PARA PRECIO HISTORICO
+        // ===============================
+        public int IdHabitacionAnterior { get; set; }
+
+        public decimal PrecioNocheAplicado { get; set; } = 0;
     }
 }

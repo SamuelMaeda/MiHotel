@@ -99,7 +99,7 @@
 
     <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
 
-    <form asp-controller="Disponibilidad" asp-action="Consultar" method="post">
+    <form asp-controller="Disponibilidad" asp-action="Consultar" method="post" novalidate>
         @Html.AntiForgeryToken()
 
         <div class="row">
@@ -118,7 +118,7 @@
             <div class="col-md-4 mb-3">
                 <label asp-for="IdSubcategoria" class="form-label">Tipo de habitación</label>
                 <select asp-for="IdSubcategoria" class="form-select">
-                    <option value="">Todos los tipos</option>
+                    <option value="">Todos</option>
                     @foreach (var tipo in tiposHabitacion)
                     {
                         <option value="@tipo.IdSubcategoria">@tipo.Nombre</option>
@@ -134,36 +134,33 @@
         </div>
     </form>
 
-    @if (Model.Consultado)
+    @if (Model.Consultado && Model.HabitacionesDisponibles != null)
     {
-        <hr class="my-4" />
-
-        @if (Model.HabitacionesDisponibles != null && Model.HabitacionesDisponibles.Any())
-        {
-            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                <h5 class="m-0">Habitaciones disponibles dentro del intervalo de fechas</h5>
-                <span class="text-muted">@Model.HabitacionesDisponibles.Count resultado(s)</span>
-            </div>
-
-            <div class="table-responsive">
-                <table class="table table-bordered align-middle tabla-resultados">
-                    <thead>
+        <div class="table-responsive mt-4">
+            <table class="table table-bordered table-striped tabla-resultados">
+                <thead>
+                    <tr>
+                        <th>Habitación</th>
+                        <th>Tipo</th>
+                        <th>Precio por noche</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.HabitacionesDisponibles.Any())
+                    {
                         <tr>
-                            <th>Habitación</th>
-                            <th>Tipo</th>
-                            <th>Precio por noche</th>
-                            <th>Estado</th>
-                            <th>Acción</th>
+                            <td colspan="4" class="text-center">No se encontraron habitaciones disponibles para esas fechas.</td>
                         </tr>
-                    </thead>
-                    <tbody>
+                    }
+                    else
+                    {
                         @foreach (var habitacion in Model.HabitacionesDisponibles)
                         {
                             <tr>
-                                <td>Habitación @habitacion.NumeroHabitacion</td>
+                                <td>@habitacion.NumeroHabitacion</td>
                                 <td>@habitacion.TipoHabitacion</td>
                                 <td>Q @habitacion.Precio.ToString("N2")</td>
-                                <td>@habitacion.Estado</td>
                                 <td>
                                     <a asp-controller="Reservas"
                                        asp-action="Crear"
@@ -176,16 +173,10 @@
                                 </td>
                             </tr>
                         }
-                    </tbody>
-                </table>
-            </div>
-        }
-        else
-        {
-            <div class="alert alert-warning mt-3">
-                No hay habitaciones disponibles en las fechas indicadas.
-            </div>
-        }
+                    }
+                </tbody>
+            </table>
+        </div>
     }
 </div>
 

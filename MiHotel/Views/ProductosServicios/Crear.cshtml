@@ -1,0 +1,214 @@
+﻿@model MiHotel.Models.ProductoServicioFormViewModel
+
+@{
+    ViewData["Title"] = "Nuevo Producto o Servicio";
+    var tipos = ViewBag.TiposProser as List<dynamic> ?? new List<dynamic>();
+    var categorias = ViewBag.Categorias as List<dynamic> ?? new List<dynamic>();
+    var subcategorias = ViewBag.Subcategorias as List<dynamic> ?? new List<dynamic>();
+    var marcas = ViewBag.Marcas as List<dynamic> ?? new List<dynamic>();
+    var unidades = ViewBag.Unidades as List<dynamic> ?? new List<dynamic>();
+    var estados = ViewBag.Estados as List<dynamic> ?? new List<dynamic>();
+}
+
+<style>
+    .tarjeta-contenido {
+        background-color: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.10);
+    }
+
+    .btn-guardar {
+        background-color: #464482;
+        color: white;
+        padding: 10px 16px;
+        border-radius: 8px;
+        border: none;
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+        .btn-guardar:hover {
+            background-color: #36366b;
+            color: white;
+        }
+
+    .btn-volver {
+        background-color: #824B44;
+        color: white;
+        padding: 10px 16px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 500;
+        display: inline-block;
+    }
+
+        .btn-volver:hover {
+            background-color: #6e3f39;
+            color: white;
+        }
+
+    .acciones-formulario {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 20px;
+    }
+
+    .campo-solo-lectura {
+        background-color: #f8f9fa;
+    }
+</style>
+
+<div class="tarjeta-contenido">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h3 class="m-0">Nuevo Producto o Servicio</h3>
+    </div>
+
+    @if (ViewBag.Mensaje != null)
+    {
+        <div class="alert alert-danger">@ViewBag.Mensaje</div>
+    }
+
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+    <form asp-controller="ProductosServicios" asp-action="Crear" method="post" novalidate>
+        @Html.AntiForgeryToken()
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label asp-for="IdTipoProser" class="form-label"></label>
+                <select asp-for="IdTipoProser" class="form-select" id="IdTipoProser">
+                    <option value="">Seleccione</option>
+                    @foreach (var item in tipos)
+                    {
+                        <option value="@item.Id">@item.Nombre</option>
+                    }
+                </select>
+                <span asp-validation-for="IdTipoProser" class="text-danger"></span>
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Código</label>
+                <input type="text" class="form-control campo-solo-lectura" value="Se asignará automáticamente al guardar" readonly />
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label asp-for="NombreProser" class="form-label"></label>
+                <input asp-for="NombreProser" class="form-control" />
+                <span asp-validation-for="NombreProser" class="text-danger"></span>
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label asp-for="IdTipoEstado" class="form-label"></label>
+                <select asp-for="IdTipoEstado" class="form-select">
+                    <option value="">Seleccione</option>
+                    @foreach (var item in estados)
+                    {
+                        <option value="@item.Id">@item.Nombre</option>
+                    }
+                </select>
+                <span asp-validation-for="IdTipoEstado" class="text-danger"></span>
+            </div>
+
+            <div class="col-md-6 mb-3 campo-producto">
+                <label asp-for="IdCategoria" class="form-label"></label>
+                <select asp-for="IdCategoria" class="form-select">
+                    <option value="">Seleccione</option>
+                    @foreach (var item in categorias)
+                    {
+                        <option value="@item.Id">@item.Nombre</option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-md-6 mb-3 campo-producto">
+                <label asp-for="IdSubcategoria" class="form-label"></label>
+                <select asp-for="IdSubcategoria" class="form-select">
+                    <option value="">Seleccione</option>
+                    @foreach (var item in subcategorias)
+                    {
+                        <option value="@item.Id">@item.Nombre</option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-md-6 mb-3 campo-producto">
+                <label asp-for="IdMarca" class="form-label"></label>
+                <select asp-for="IdMarca" class="form-select">
+                    <option value="">Seleccione</option>
+                    @foreach (var item in marcas)
+                    {
+                        <option value="@item.Id">@item.Nombre</option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-md-6 mb-3 campo-producto">
+                <label asp-for="IdUnidadMedida" class="form-label"></label>
+                <select asp-for="IdUnidadMedida" class="form-select">
+                    <option value="">Seleccione</option>
+                    @foreach (var item in unidades)
+                    {
+                        <option value="@item.Id">@item.Nombre</option>
+                    }
+                </select>
+                <span asp-validation-for="IdUnidadMedida" class="text-danger"></span>
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label asp-for="Precio" class="form-label"></label>
+                <input asp-for="Precio" class="form-control" type="number" step="0.01" min="0.01" />
+                <span asp-validation-for="Precio" class="text-danger"></span>
+            </div>
+
+            <div class="col-md-6 mb-3 campo-producto">
+                <label asp-for="Stock" class="form-label"></label>
+                <input asp-for="Stock" class="form-control" type="number" min="0" />
+                <span asp-validation-for="Stock" class="text-danger"></span>
+                <small class="text-muted">Aquí puede definir únicamente el stock inicial.</small>
+            </div>
+
+            <div class="col-12 mb-3">
+                <label asp-for="Descripcion" class="form-label"></label>
+                <textarea asp-for="Descripcion" class="form-control" rows="4"></textarea>
+                <span asp-validation-for="Descripcion" class="text-danger"></span>
+            </div>
+
+            <div class="col-12 mb-3" id="notaServicio" style="display:none;">
+                <small class="text-muted">Nota: Cuando se cree un servicio, únicamente se podrá modificar el nombre y el precio.</small>
+            </div>
+        </div>
+
+        <div class="acciones-formulario">
+            <button type="submit" class="btn-guardar">Guardar producto o servicio</button>
+            <a asp-controller="ProductosServicios" asp-action="Index" class="btn-volver">Volver al listado</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const selectTipo = document.getElementById("IdTipoProser");
+            const camposProducto = document.querySelectorAll(".campo-producto");
+            const notaServicio = document.getElementById("notaServicio");
+
+            function actualizarVistaTipo() {
+                const textoSeleccionado = selectTipo.options[selectTipo.selectedIndex]?.text?.trim().toLowerCase() ?? "";
+                const esServicio = textoSeleccionado === "servicio";
+
+                camposProducto.forEach(campo => {
+                    campo.style.display = esServicio ? "none" : "";
+                });
+
+                notaServicio.style.display = esServicio ? "" : "none";
+            }
+
+            selectTipo.addEventListener("change", actualizarVistaTipo);
+            actualizarVistaTipo();
+        });
+    </script>
+}

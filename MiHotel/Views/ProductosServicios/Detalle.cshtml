@@ -1,0 +1,180 @@
+﻿@model MiHotel.Models.ProductoServicioDetalleViewModel
+
+@{
+    ViewData["Title"] = "Detalle de Producto o Servicio";
+
+    string MostrarTexto(string? valor)
+    {
+        return string.IsNullOrWhiteSpace(valor) ? "-" : valor;
+    }
+
+    string estado = (Model.Estado ?? "").Trim().ToLower();
+}
+
+<style>
+    .tarjeta-contenido {
+        background-color: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.10);
+        max-width: 900px;
+    }
+
+    .detalle-label {
+        font-weight: 600;
+        color: #363636;
+        margin-bottom: 6px;
+    }
+
+    .detalle-valor {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 10px 12px;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        color: #363636;
+    }
+
+    .estado-activo {
+        color: #0f5132;
+        font-weight: bold;
+    }
+
+    .estado-inactivo {
+        color: #842029;
+        font-weight: bold;
+    }
+
+    .btn-volver {
+        background-color: #824B44;
+        color: white;
+        text-decoration: none;
+        padding: 10px 18px;
+        border-radius: 8px;
+        font-weight: 500;
+        display: inline-block;
+    }
+
+        .btn-volver:hover {
+            background-color: #6e3f39;
+            color: white;
+        }
+
+    .btn-editar {
+        background-color: #464482;
+        color: white;
+        text-decoration: none;
+        padding: 10px 18px;
+        border-radius: 8px;
+        font-weight: 500;
+        display: inline-block;
+    }
+
+        .btn-editar:hover {
+            background-color: #36366b;
+            color: white;
+        }
+
+    .acciones-formulario {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 20px;
+    }
+</style>
+
+<div class="tarjeta-contenido">
+    <h3 class="mb-4">Detalle de Producto o Servicio</h3>
+
+    @if (TempData["Mensaje"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Mensaje"]</div>
+    }
+
+    @if (ViewBag.Mensaje != null)
+    {
+        <div class="alert alert-danger">@ViewBag.Mensaje</div>
+    }
+
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <div class="detalle-label">Código</div>
+            <div class="detalle-valor">@MostrarTexto(Model.Codigo)</div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <div class="detalle-label">Nombre</div>
+            <div class="detalle-valor">@MostrarTexto(Model.NombreProser)</div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <div class="detalle-label">Tipo</div>
+            <div class="detalle-valor">@MostrarTexto(Model.Tipo)</div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <div class="detalle-label">Estado</div>
+            <div class="detalle-valor">
+                @if (estado == "activo")
+                {
+                    <span class="estado-activo">Activo</span>
+                }
+                else if (estado == "inactivo")
+                {
+                    <span class="estado-inactivo">Inactivo</span>
+                }
+                else
+                {
+                    @MostrarTexto(Model.Estado)
+                }
+            </div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <div class="detalle-label">Precio</div>
+            <div class="detalle-valor">Q @Model.Precio.ToString("N2")</div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <div class="detalle-label">Stock</div>
+            <div class="detalle-valor">@(Model.EsServicio ? "No aplica" : Model.Stock.ToString())</div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <div class="detalle-label">Categoría</div>
+            <div class="detalle-valor">@MostrarTexto(Model.EsServicio ? "No aplica" : Model.Categoria)</div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <div class="detalle-label">Subcategoría</div>
+            <div class="detalle-valor">@MostrarTexto(Model.EsServicio ? "No aplica" : Model.Subcategoria)</div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <div class="detalle-label">Marca</div>
+            <div class="detalle-valor">@MostrarTexto(Model.EsServicio ? "No aplica" : Model.Marca)</div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <div class="detalle-label">Unidad de medida</div>
+            <div class="detalle-valor">@MostrarTexto(Model.EsServicio ? "No aplica" : Model.UnidadMedida)</div>
+        </div>
+
+        <div class="col-12 mb-3">
+            <div class="detalle-label">Descripción</div>
+            <div class="detalle-valor">@MostrarTexto(Model.Descripcion)</div>
+        </div>
+    </div>
+
+    <div class="acciones-formulario">
+        <a asp-controller="ProductosServicios" asp-action="Editar" asp-route-id="@Model.IdProser" class="btn-editar">
+            Editar producto o servicio
+        </a>
+
+        <a asp-controller="ProductosServicios" asp-action="Index" class="btn-volver">
+            Volver al listado
+        </a>
+    </div>
+</div>

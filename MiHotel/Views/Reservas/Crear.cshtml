@@ -1,4 +1,5 @@
 ﻿@model MiHotel.Models.ReservaFormViewModel
+@using System.Text.Json
 
 @{
     ViewData["Title"] = "Nueva Reserva";
@@ -11,6 +12,14 @@
     bool bloquearFechas = ViewBag.BloquearFechas != null && (bool)ViewBag.BloquearFechas;
     string nombreClienteSesion = ViewBag.NombreClienteSesion?.ToString() ?? "";
     string tokenFlujoCliente = ViewBag.TokenFlujoCliente?.ToString() ?? "";
+
+    var clientesJson = JsonSerializer.Serialize(
+        clientes.Select(c => new
+        {
+            id = c.Id,
+            nombre = c.Nombre?.ToString() ?? ""
+        })
+    );
 }
 
 <style>
@@ -347,14 +356,8 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-            const esClienteSesion = @esClienteSesion.ToString().ToLower();
-            const clientes = [
-                @for (int i = 0; i < clientes.Count; i++)
-                {
-                        var cliente = clientes[i];
-                        @:{ id: @cliente.Id, nombre: "@Html.Raw((cliente.Nombre?.ToString() ?? "").Replace("\"", "\\\""))" }@(i < clientes.Count - 1 ? "," : "")
-                }
-            ];
+            const esClienteSesion = @Html.Raw(esClienteSesion.ToString().ToLower());
+            const clientes = @Html.Raw(clientesJson);
 
             const inputCliente = document.getElementById("clienteBusqueda");
             const hiddenIdClipro = document.getElementById("IdClipro");
@@ -397,9 +400,9 @@
                     return;
                 }
 
-                const coincidencias = clientes.filter(c =>
-                    c.nombre.toLowerCase().includes(textoNormalizado)
-                );
+                const coincidencias = clientes.filter(function (c) {
+                    return c.nombre.toLowerCase().includes(textoNormalizado);
+                });
 
                 if (coincidencias.length === 0) {
                     const sinResultados = document.createElement("div");
@@ -410,7 +413,7 @@
                     return;
                 }
 
-                coincidencias.forEach(cliente => {
+                coincidencias.forEach(function (cliente) {
                     const item = document.createElement("div");
                     item.className = "item-sugerencia";
                     item.textContent = cliente.nombre;
@@ -437,12 +440,11 @@
                 }
 
                 const opcionSeleccionada = selectHabitacion.options[selectHabitacion.selectedIndex];
-
-                const precio = opcionSeleccionada?.getAttribute("data-precio");
-                const tipo = opcionSeleccionada?.getAttribute("data-tipo");
+                const precio = opcionSeleccionada ? opcionSeleccionada.getAttribute("data-precio") : null;
+                const tipo = opcionSeleccionada ? opcionSeleccionada.getAttribute("data-tipo") : null;
 
                 precioHabitacion.value = precio ? "Q " + parseFloat(precio).toFixed(2) : "";
-                tipoHabitacion.value = tipo ?? "";
+                tipoHabitacion.value = tipo ? tipo : "";
             }
 
             function cargarClienteSeleccionadoInicial() {
@@ -456,7 +458,9 @@
                     return;
                 }
 
-                const clienteSeleccionado = clientes.find(c => c.id.toString() === idClienteActual.toString());
+                const clienteSeleccionado = clientes.find(function (c) {
+                    return c.id.toString() === idClienteActual.toString();
+                });
 
                 if (clienteSeleccionado) {
                     inputCliente.value = clienteSeleccionado.nombre;

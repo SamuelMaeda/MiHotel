@@ -417,6 +417,31 @@ namespace MiHotel.Controllers
         }
 
         // ============================================================
+        // PRECIO HISTORICO DE HABITACION
+        // ============================================================
+
+        private decimal ObtenerPrecioHabitacion(MySqlConnection conexion, int idHabitacion)
+        {
+            string consulta = @"
+                SELECT precio
+                FROM proser
+                WHERE id_proser = @id_habitacion
+                LIMIT 1;";
+
+            using var comando = new MySqlCommand(consulta, conexion);
+            comando.Parameters.AddWithValue("@id_habitacion", idHabitacion);
+
+            object? resultado = comando.ExecuteScalar();
+
+            if (resultado == null || resultado == DBNull.Value)
+            {
+                throw new Exception("No se pudo obtener el precio de la habitación seleccionada.");
+            }
+
+            return Convert.ToDecimal(resultado);
+        }
+
+        // ============================================================
         // CARGA DE COMBOS
         // ============================================================
 
@@ -1239,17 +1264,18 @@ namespace MiHotel.Controllers
 
             bool esCliente = EsClienteSesion();
 
-            if (esCliente &&
-                (!idHabitacion.HasValue || !fechaEntrada.HasValue || !fechaSalida.HasValue))
+            if (esCliente && !idHabitacion.HasValue)
             {
                 TempData["Mensaje"] = "Para crear una reserva debe seleccionar primero una habitación disponible.";
                 return RedirectToAction("Index", "Disponibilidad");
             }
 
-            ReservaFormViewModel modelo = new ReservaFormViewModel();
+            ReservaFormViewModel modelo = new ReservaFormViewModel
+            {
+                FechaEntrada = fechaEntrada ?? DateTime.Today,
+                FechaSalida = fechaSalida ?? DateTime.Today.AddDays(1)
+            };
 
-            if (fechaEntrada.HasValue) modelo.FechaEntrada = fechaEntrada.Value;
-            if (fechaSalida.HasValue) modelo.FechaSalida = fechaSalida.Value;
             if (idHabitacion.HasValue) modelo.IdHabitacion = idHabitacion.Value;
             if (cantidadPersonas.HasValue) modelo.CantidadPersonas = cantidadPersonas.Value;
             if (montoPagoInicial.HasValue) modelo.MontoPagoInicial = montoPagoInicial.Value;
@@ -1440,27 +1466,9 @@ namespace MiHotel.Controllers
                     return View(modelo);
                 }
 
-                string consultaPrecio = @"
-                    SELECT precio
-                    FROM proser
-                    WHERE id_proser = @id_habitacion
-                    LIMIT 1;";
-
-                decimal precioPorNoche = 0;
-
-                using (var comandoPrecio = new MySqlCommand(consultaPrecio, conexion))
-                {
-                    comandoPrecio.Parameters.AddWithValue("@id_habitacion", modelo.IdHabitacion);
-
-                    object? resultadoPrecio = comandoPrecio.ExecuteScalar();
-
-                    if (resultadoPrecio != null && resultadoPrecio != DBNull.Value)
-                    {
-                        precioPorNoche = Convert.ToDecimal(resultadoPrecio);
-                    }
-                }
-
-                decimal totalReserva = precioPorNoche * noches;
+                decimal precioPorNoche = ObtenerPrecioHabitacion(conexion, modelo.IdHabitacion);
+                decimal precioHistorico = precioPorNoche;
+                decimal totalReserva = precioHistorico * noches;
 
                 if (modelo.MontoPagoInicial > totalReserva)
                 {
@@ -1477,6 +1485,7 @@ namespace MiHotel.Controllers
                     (
                         id_clipro,
                         id_habitacion,
+                        precio_noche_aplicado,
                         fecha_entrada,
                         fecha_salida,
                         cantidad_personas,
@@ -1489,6 +1498,7 @@ namespace MiHotel.Controllers
                     (
                         @id_clipro,
                         @id_habitacion,
+                        @precio_noche_aplicado,
                         @fecha_entrada,
                         @fecha_salida,
                         @cantidad_personas,
@@ -1504,6 +1514,7 @@ namespace MiHotel.Controllers
                 {
                     comandoInsertar.Parameters.AddWithValue("@id_clipro", modelo.IdClipro);
                     comandoInsertar.Parameters.AddWithValue("@id_habitacion", modelo.IdHabitacion);
+                    comandoInsertar.Parameters.AddWithValue("@precio_noche_aplicado", precioHistorico);
                     comandoInsertar.Parameters.AddWithValue("@fecha_entrada", modelo.FechaEntrada.Date);
                     comandoInsertar.Parameters.AddWithValue("@fecha_salida", modelo.FechaSalida.Date);
                     comandoInsertar.Parameters.AddWithValue("@cantidad_personas", modelo.CantidadPersonas);
@@ -1600,6 +1611,7 @@ namespace MiHotel.Controllers
                         id_reserva,
                         id_clipro,
                         id_habitacion,
+                        precio_noche_aplicado,
                         fecha_entrada,
                         fecha_salida,
                         cantidad_personas,
@@ -1634,6 +1646,8 @@ namespace MiHotel.Controllers
                     IdReserva = Convert.ToInt32(lector["id_reserva"]),
                     IdClipro = Convert.ToInt32(lector["id_clipro"]),
                     IdHabitacion = Convert.ToInt32(lector["id_habitacion"]),
+                    IdHabitacionAnterior = Convert.ToInt32(lector["id_habitacion"]),
+                    PrecioNocheAplicado = Convert.ToDecimal(lector["precio_noche_aplicado"]),
                     FechaEntrada = Convert.ToDateTime(lector["fecha_entrada"]),
                     FechaSalida = Convert.ToDateTime(lector["fecha_salida"]),
                     CantidadPersonas = Convert.ToInt32(lector["cantidad_personas"]),
@@ -1677,10 +1691,17 @@ namespace MiHotel.Controllers
                 conexion.Open();
 
                 string consultaReservaActual = @"
-                    SELECT id_reserva, estado
+                    SELECT
+                        id_reserva,
+                        id_habitacion,
+                        precio_noche_aplicado,
+                        estado
                     FROM reserva
                     WHERE id_reserva = @id_reserva
                     LIMIT 1;";
+
+                int idHabitacionAnteriorBd = 0;
+                decimal precioHistoricoBd = 0;
 
                 using (var comandoEstado = new MySqlCommand(consultaReservaActual, conexion))
                 {
@@ -1701,7 +1722,13 @@ namespace MiHotel.Controllers
                         TempData["Mensaje"] = "Solo se pueden editar reservas pendientes o confirmadas.";
                         return RedirectToAction("Index");
                     }
+
+                    idHabitacionAnteriorBd = Convert.ToInt32(lector["id_habitacion"]);
+                    precioHistoricoBd = Convert.ToDecimal(lector["precio_noche_aplicado"]);
                 }
+
+                modelo.IdHabitacionAnterior = idHabitacionAnteriorBd;
+                modelo.PrecioNocheAplicado = precioHistoricoBd;
 
                 if (!FechasReservaSonValidas(modelo.FechaEntrada, modelo.FechaSalida, out string mensajeFechas))
                 {
@@ -1775,24 +1802,17 @@ namespace MiHotel.Controllers
                     return View(modelo);
                 }
 
-                string consultaPrecio = @"
-                    SELECT precio
-                    FROM proser
-                    WHERE id_proser = @id_habitacion
-                    LIMIT 1;";
+                bool cambioHabitacion = modelo.IdHabitacion != modelo.IdHabitacionAnterior;
 
-                decimal precioPorNoche = 0;
+                decimal precioPorNoche;
 
-                using (var comandoPrecio = new MySqlCommand(consultaPrecio, conexion))
+                if (cambioHabitacion)
                 {
-                    comandoPrecio.Parameters.AddWithValue("@id_habitacion", modelo.IdHabitacion);
-
-                    object? resultadoPrecio = comandoPrecio.ExecuteScalar();
-
-                    if (resultadoPrecio != null && resultadoPrecio != DBNull.Value)
-                    {
-                        precioPorNoche = Convert.ToDecimal(resultadoPrecio);
-                    }
+                    precioPorNoche = ObtenerPrecioHabitacion(conexion, modelo.IdHabitacion);
+                }
+                else
+                {
+                    precioPorNoche = modelo.PrecioNocheAplicado;
                 }
 
                 decimal totalReserva = precioPorNoche * noches;
@@ -1809,6 +1829,7 @@ namespace MiHotel.Controllers
                     UPDATE reserva
                     SET id_clipro = @id_clipro,
                         id_habitacion = @id_habitacion,
+                        precio_noche_aplicado = @precio_noche_aplicado,
                         fecha_entrada = @fecha_entrada,
                         fecha_salida = @fecha_salida,
                         cantidad_personas = @cantidad_personas,
@@ -1820,6 +1841,7 @@ namespace MiHotel.Controllers
                 using var comandoActualizar = new MySqlCommand(actualizar, conexion);
                 comandoActualizar.Parameters.AddWithValue("@id_clipro", modelo.IdClipro);
                 comandoActualizar.Parameters.AddWithValue("@id_habitacion", modelo.IdHabitacion);
+                comandoActualizar.Parameters.AddWithValue("@precio_noche_aplicado", precioPorNoche);
                 comandoActualizar.Parameters.AddWithValue("@fecha_entrada", modelo.FechaEntrada.Date);
                 comandoActualizar.Parameters.AddWithValue("@fecha_salida", modelo.FechaSalida.Date);
                 comandoActualizar.Parameters.AddWithValue("@cantidad_personas", modelo.CantidadPersonas);
