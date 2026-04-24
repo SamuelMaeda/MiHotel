@@ -817,10 +817,12 @@ namespace MiHotel.Controllers
                 }
 
                 string consultaSubcategorias = @"
-                    SELECT id_subcategoria, nombre_subcategoria
-                    FROM subcategoria
-                    WHERE nombre_subcategoria NOT IN ('Sencilla', 'Doble', 'Suite', 'Familiar')
-                    ORDER BY nombre_subcategoria;";
+                SELECT s.id_subcategoria, s.nombre_subcategoria
+                FROM subcategoria s
+                INNER JOIN categoria c ON s.id_categoria = c.id_categoria
+                WHERE LOWER(c.nombre_categoria) <> 'habitaciones'
+                  AND LOWER(s.estado) = 'activo'
+                ORDER BY s.nombre_subcategoria;";
 
                 using (var comando = new MySqlCommand(consultaSubcategorias, conexion))
                 using (var lector = comando.ExecuteReader())

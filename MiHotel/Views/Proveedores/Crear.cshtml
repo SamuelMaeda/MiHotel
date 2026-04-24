@@ -1,0 +1,236 @@
+﻿@model MiHotel.Models.ClienteAdmin
+
+@{
+    ViewData["Title"] = "Registrar Proveedor";
+    string? returnUrl = ViewBag.ReturnUrl as string;
+}
+
+<style>
+    .tarjeta-contenido {
+        background-color: white;
+        border-radius: 15px;
+        padding: 20px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.10);
+    }
+
+    @@media (min-width: 768px) {
+        .tarjeta-contenido {
+            padding: 25px;
+        }
+    }
+
+    .btn-guardar {
+        background-color: #464482;
+        color: white;
+        padding: 10px 16px;
+        border-radius: 8px;
+        border: none;
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+        .btn-guardar:hover {
+            background-color: #36366b;
+            color: white;
+        }
+
+    .btn-volver {
+        background-color: #824B44;
+        color: white;
+        padding: 10px 16px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 500;
+        display: inline-block;
+    }
+
+        .btn-volver:hover {
+            background-color: #6e3f39;
+            color: white;
+        }
+
+    .acciones-formulario {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 20px;
+    }
+
+    .etiqueta-opcional {
+        font-size: 13px;
+        color: #6c757d;
+        font-weight: normal;
+        margin-left: 6px;
+    }
+
+    .texto-ayuda {
+        font-size: 13px;
+        color: #6c757d;
+    }
+
+    .nota-discreta {
+        background-color: #f8f9fa;
+        color: #495057;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 10px 12px;
+        margin-bottom: 20px;
+        font-size: 14px;
+    }
+
+    @@media (max-width: 768px) {
+        .tarjeta-contenido {
+            padding: 15px;
+        }
+
+        .btn-volver,
+        .btn-guardar {
+            width: 100%;
+            text-align: center;
+        }
+    }
+</style>
+
+<div class="container-fluid px-3 px-md-4 py-4">
+    <div class="row justify-content-center">
+        <div class="col-12 col-xl-10">
+            <div class="tarjeta-contenido">
+                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                    <h3 class="m-0">Registrar Proveedor</h3>
+                </div>
+
+                @if (ViewBag.Mensaje != null)
+                {
+                    <div class="alert alert-danger">@ViewBag.Mensaje</div>
+                }
+
+                @if (TempData["Exito"] != null)
+                {
+                    <div class="alert alert-success">@TempData["Exito"]</div>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(returnUrl))
+                {
+                    <div class="nota-discreta">
+                        Nota: Luego de registrar el proveedor, será redirigido al módulo anterior.
+                    </div>
+                }
+
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+                <form asp-action="Crear" method="post" novalidate>
+                    @Html.AntiForgeryToken()
+
+                    @if (!string.IsNullOrWhiteSpace(returnUrl))
+                    {
+                        <input type="hidden" name="returnUrl" value="@returnUrl" />
+                    }
+
+                    <div class="row">
+
+                        <div class="col-12 col-lg-6 mb-3">
+                            <label asp-for="Nombre" class="form-label">Nombre</label>
+                            <input asp-for="Nombre" class="form-control" />
+                            <span asp-validation-for="Nombre" class="text-danger"></span>
+                        </div>
+
+                        <div class="col-12 col-lg-6 mb-3">
+                            <label asp-for="Telefono" class="form-label">Teléfono</label>
+                            <input asp-for="Telefono" id="Telefono" class="form-control" maxlength="9" placeholder="1234 5678" />
+                            <span asp-validation-for="Telefono" class="text-danger"></span>
+                        </div>
+
+                        <div class="col-12 col-lg-6 mb-3">
+                            <label asp-for="Nit" class="form-label">
+                                NIT <span class="etiqueta-opcional">(Opcional)</span>
+                            </label>
+                            <input asp-for="Nit" class="form-control" placeholder="Opcional" />
+                            <span asp-validation-for="Nit" class="text-danger"></span>
+                        </div>
+
+                        <div class="col-12 col-lg-6 mb-3">
+                            <label asp-for="Correo" class="form-label">
+                                Correo <span class="etiqueta-opcional">(Opcional)</span>
+                            </label>
+                            <input asp-for="Correo" class="form-control" placeholder="Opcional" />
+                            <span asp-validation-for="Correo" class="text-danger"></span>
+                        </div>
+
+                        <div class="col-12 mb-3">
+                            <label asp-for="Direccion" class="form-label">
+                                Dirección <span class="etiqueta-opcional">(Opcional)</span>
+                            </label>
+                            <input asp-for="Direccion" class="form-control" placeholder="Opcional" />
+                            <span asp-validation-for="Direccion" class="text-danger"></span>
+                        </div>
+
+                        <div class="col-12 col-lg-6 mb-3">
+                            <label asp-for="NombreEmpresa" class="form-label">
+                                Nombre de empresa <span class="etiqueta-opcional">(Opcional)</span>
+                            </label>
+                            <input asp-for="NombreEmpresa" class="form-control" placeholder="Opcional" />
+                            <span asp-validation-for="NombreEmpresa" class="text-danger"></span>
+                        </div>
+
+                        <div class="col-12 col-lg-6 mb-2">
+                            <label asp-for="NumeroEmpresa" class="form-label">
+                                Teléfono de empresa <span class="etiqueta-opcional">(Opcional)</span>
+                            </label>
+                            <input asp-for="NumeroEmpresa" id="NumeroEmpresa" class="form-control" maxlength="9" placeholder="1234 5678" />
+                            <span asp-validation-for="NumeroEmpresa" class="text-danger"></span>
+                        </div>
+
+                        <div class="col-12 mb-2">
+                            <div class="texto-ayuda">
+                                Si llena el nombre de empresa, también debe completar el teléfono de empresa, y viceversa.
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="acciones-formulario">
+                        <button type="submit" class="btn-guardar">
+                            Guardar proveedor
+                        </button>
+
+                        <a asp-controller="Proveedores" asp-action="Index" class="btn-volver">
+                            Volver al listado
+                        </a>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        function formatearTelefono(input) {
+            let valor = input.value.replace(/\D/g, "").substring(0, 8);
+
+            if (valor.length > 4) {
+                valor = valor.substring(0, 4) + " " + valor.substring(4);
+            }
+
+            input.value = valor;
+        }
+
+        const telefono = document.getElementById("Telefono");
+        const numeroEmpresa = document.getElementById("NumeroEmpresa");
+
+        if (telefono) {
+            telefono.addEventListener("input", function () {
+                formatearTelefono(this);
+            });
+        }
+
+        if (numeroEmpresa) {
+            numeroEmpresa.addEventListener("input", function () {
+                formatearTelefono(this);
+            });
+        }
+    </script>
+}

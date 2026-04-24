@@ -1,0 +1,175 @@
+﻿@model MiHotel.Models.ClienteDetalleViewModel
+
+@{
+    ViewData["Title"] = "Detalle del Proveedor";
+
+    string MostrarTexto(string? valor)
+    {
+        return string.IsNullOrWhiteSpace(valor) ? "-" : valor;
+    }
+}
+
+<style>
+    .tarjeta-contenido {
+        background-color: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.10);
+        max-width: 850px;
+    }
+
+    .detalle-label {
+        font-weight: 600;
+        color: #363636;
+        margin-bottom: 6px;
+    }
+
+    .detalle-valor {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 10px 12px;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        color: #363636;
+    }
+
+    .estado-activo {
+        color: green;
+        font-weight: bold;
+    }
+
+    .estado-inactivo {
+        color: red;
+        font-weight: bold;
+    }
+
+    .btn-volver {
+        background-color: #6c757d;
+        color: white;
+        text-decoration: none;
+        padding: 10px 18px;
+        border-radius: 8px;
+        font-weight: 500;
+        display: inline-block;
+    }
+
+        .btn-volver:hover {
+            background-color: #5a6268;
+            color: white;
+        }
+
+    .btn-editar {
+        background-color: #824B44;
+        color: white;
+        text-decoration: none;
+        padding: 10px 18px;
+        border-radius: 8px;
+        font-weight: 500;
+        display: inline-block;
+    }
+
+        .btn-editar:hover {
+            background-color: #6d3f39;
+            color: white;
+        }
+
+    .acciones-formulario {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 20px;
+    }
+
+    @@media (max-width: 768px) {
+        .tarjeta-contenido {
+            padding: 15px;
+        }
+
+        .btn-volver,
+        .btn-editar {
+            width: 100%;
+            text-align: center;
+        }
+    }
+</style>
+
+<div class="tarjeta-contenido">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <h3 class="m-0">Detalle del Proveedor</h3>
+    </div>
+
+    @if (ViewBag.Mensaje != null)
+    {
+        <div class="alert alert-danger">
+            @ViewBag.Mensaje
+        </div>
+    }
+
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <div class="detalle-label">Nombre</div>
+            <div class="detalle-valor">@MostrarTexto(Model.Nombre)</div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <div class="detalle-label">Teléfono</div>
+            <div class="detalle-valor">@MostrarTexto(Model.Telefono)</div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <div class="detalle-label">NIT</div>
+            <div class="detalle-valor">@MostrarTexto(Model.Nit)</div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <div class="detalle-label">Correo</div>
+            <div class="detalle-valor">@MostrarTexto(Model.Correo)</div>
+        </div>
+
+        <div class="col-12 mb-3">
+            <div class="detalle-label">Dirección</div>
+            <div class="detalle-valor">@MostrarTexto(Model.Direccion)</div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <div class="detalle-label">Nombre de empresa</div>
+            <div class="detalle-valor">@MostrarTexto(Model.NombreEmpresa)</div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <div class="detalle-label">Número de empresa</div>
+            <div class="detalle-valor">@MostrarTexto(Model.NumeroEmpresa)</div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <div class="detalle-label">Estado</div>
+            <div class="detalle-valor">
+                @if ((Model.Estado ?? "").ToLower() == "activo")
+                {
+                    <span class="estado-activo">Activo</span>
+                }
+                else
+                {
+                    <span class="estado-inactivo">Inactivo</span>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="acciones-formulario">
+        <a asp-controller="Proveedores"
+           asp-action="Editar"
+           asp-route-id="@Model.IdClipro"
+           class="btn-editar">
+            Editar proveedor
+        </a>
+
+        <a asp-controller="Proveedores"
+           asp-action="Index"
+           class="btn-volver">
+            Volver al listado
+        </a>
+    </div>
+</div>

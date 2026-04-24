@@ -1,0 +1,364 @@
+﻿@model System.Data.DataTable
+
+@{
+    ViewData["Title"] = "Proveedores";
+
+    string busqueda = ViewBag.Busqueda ?? "";
+    string ordenarPor = ViewBag.OrdenarPor ?? "nombre";
+    string direccion = ViewBag.Direccion ?? "asc";
+    string vista = ViewBag.Vista ?? "activos";
+    int paginaActual = ViewBag.PaginaActual ?? 1;
+    int totalPaginas = ViewBag.TotalPaginas ?? 1;
+    int totalRegistros = ViewBag.TotalRegistros ?? 0;
+
+    string FormatearTelefono(object? telefonoObj)
+    {
+        string telefono = telefonoObj?.ToString() ?? "";
+
+        if (telefono.Length == 8)
+        {
+            return telefono.Substring(0, 4) + " " + telefono.Substring(4, 4);
+        }
+
+        return telefono;
+    }
+
+    string SiguienteDireccion(string columna)
+    {
+        if (ordenarPor == columna && direccion == "asc")
+        {
+            return "desc";
+        }
+
+        return "asc";
+    }
+
+    string IconoOrden(string columna)
+    {
+        if (ordenarPor != columna)
+        {
+            return "bi-arrow-down-up";
+        }
+
+        return direccion == "asc" ? "bi-sort-alpha-down" : "bi-sort-alpha-up";
+    }
+}
+
+<style>
+    .tarjeta-contenido {
+        background-color: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.10);
+    }
+
+    .btn-crear {
+        background-color: #464482;
+        color: white;
+        padding: 10px 16px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+        .btn-crear:hover {
+            background-color: #36366b;
+            color: white;
+        }
+
+    .estado-activo {
+        color: green;
+        font-weight: bold;
+    }
+
+    .estado-inactivo {
+        color: red;
+        font-weight: bold;
+    }
+
+    .acciones-contenedor {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .btn-icono {
+        width: 38px;
+        height: 38px;
+        border-radius: 8px;
+        border: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        text-decoration: none;
+        font-size: 16px;
+    }
+
+    .btn-detalle {
+        background-color: #464482;
+    }
+
+    .btn-editar {
+        background-color: #824B44;
+    }
+
+    .btn-estado {
+        background-color: #363636;
+    }
+
+    .btn-icono:hover {
+        opacity: 0.9;
+        color: white;
+    }
+
+    .form-estado {
+        display: inline;
+    }
+
+    .tabs-vista {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+
+    .tab-vista {
+        text-decoration: none;
+        padding: 10px 14px;
+        border-radius: 8px;
+        background-color: #E6D3D0;
+        color: #363636;
+        font-weight: 500;
+    }
+
+        .tab-vista.activa {
+            background-color: #824B44;
+            color: white;
+        }
+
+    .paginacion {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 20px;
+    }
+
+    .pagina-link {
+        padding: 8px 12px;
+        border-radius: 8px;
+        text-decoration: none;
+        background-color: #E6D3D0;
+        color: #363636;
+    }
+
+        .pagina-link.activa {
+            background-color: #464482;
+            color: white;
+            font-weight: bold;
+        }
+
+    .encabezado-orden {
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-weight: 600;
+    }
+</style>
+
+<div class="tarjeta-contenido">
+
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h3 class="m-0">Gestión de Proveedores</h3>
+
+        <a asp-controller="Proveedores" asp-action="Crear" class="btn-crear">
+            Nuevo Proveedor
+        </a>
+    </div>
+
+    <div class="tabs-vista">
+        <a asp-controller="Proveedores"
+           asp-action="Index"
+           asp-route-vista="activos"
+           asp-route-busqueda="@busqueda"
+           asp-route-ordenarPor="@ordenarPor"
+           asp-route-direccion="@direccion"
+           class="tab-vista @(vista == "activos" ? "activa" : "")">
+            Activos
+        </a>
+
+        <a asp-controller="Proveedores"
+           asp-action="Index"
+           asp-route-vista="inactivos"
+           asp-route-busqueda="@busqueda"
+           asp-route-ordenarPor="@ordenarPor"
+           asp-route-direccion="@direccion"
+           class="tab-vista @(vista == "inactivos" ? "activa" : "")">
+            Inactivos
+        </a>
+    </div>
+
+    @if (TempData["Exito"] != null)
+    {
+        <div class="alert alert-success">
+            @TempData["Exito"]
+        </div>
+    }
+
+    @if (TempData["Mensaje"] != null)
+    {
+        <div class="alert alert-danger">
+            @TempData["Mensaje"]
+        </div>
+    }
+
+    @if (ViewBag.Mensaje != null)
+    {
+        <div class="alert alert-danger">
+            @ViewBag.Mensaje
+        </div>
+    }
+
+    <form id="formBusquedaProveedores" asp-controller="Proveedores" asp-action="Index" method="get" class="mb-4">
+        <input type="hidden" name="vista" value="@vista" />
+        <input type="hidden" name="ordenarPor" value="@ordenarPor" />
+        <input type="hidden" name="direccion" value="@direccion" />
+
+        <label class="form-label">Buscar proveedor</label>
+        <input type="text"
+               id="busquedaProveedores"
+               name="busqueda"
+               value="@busqueda"
+               class="form-control"
+               placeholder="Buscar por nombre, NIT, teléfono, correo o empresa" />
+    </form>
+
+    <div class="mb-3">
+        <strong>Total de registros:</strong> @totalRegistros
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped">
+            <thead class="table-dark">
+                <tr>
+                    <th>Nombre</th>
+                    <th>NIT</th>
+                    <th>Teléfono</th>
+                    <th>Correo</th>
+                    <th>Empresa</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @if (Model.Rows.Count == 0)
+                {
+                    <tr>
+                        <td colspan="7" class="text-center">
+                            No se encontraron proveedores en esta vista.
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    foreach (System.Data.DataRow fila in Model.Rows)
+                    {
+                        string estado = fila["estado"]?.ToString()?.ToLower() ?? "";
+                        string tituloEstado = estado == "activo" ? "Desactivar proveedor" : "Activar proveedor";
+                        string iconoEstado = estado == "activo" ? "bi-person-x-fill" : "bi-person-check-fill";
+
+                        <tr>
+                            <td>@fila["nombre"]</td>
+                            <td>@(string.IsNullOrWhiteSpace(fila["nit"]?.ToString()) ? "-" : fila["nit"])</td>
+                            <td>@FormatearTelefono(fila["telefono"])</td>
+                            <td>@(string.IsNullOrWhiteSpace(fila["correo"]?.ToString()) ? "-" : fila["correo"])</td>
+                            <td>@(string.IsNullOrWhiteSpace(fila["nombre_empresa"]?.ToString()) ? "-" : fila["nombre_empresa"])</td>
+
+                            <td>
+                                @if (estado == "activo")
+                                {
+                                    <span class="estado-activo">Activo</span>
+                                }
+                                else
+                                {
+                                    <span class="estado-inactivo">Inactivo</span>
+                                }
+                            </td>
+
+                            <td>
+                                <div class="acciones-contenedor">
+
+                                    <a asp-controller="Proveedores"
+                                       asp-action="Detalle"
+                                       asp-route-id="@fila["id_clipro"]"
+                                       class="btn-icono btn-detalle"
+                                       title="Ver detalle">
+                                        <i class="bi bi-eye-fill"></i>
+                                    </a>
+
+                                    <a asp-controller="Proveedores"
+                                       asp-action="Editar"
+                                       asp-route-id="@fila["id_clipro"]"
+                                       class="btn-icono btn-editar"
+                                       title="Editar proveedor">
+                                        <i class="bi bi-pencil-fill"></i>
+                                    </a>
+
+                                    <form asp-controller="Proveedores"
+                                          asp-action="CambiarEstado"
+                                          asp-route-id="@fila["id_clipro"]"
+                                          method="post"
+                                          class="form-estado">
+                                        @Html.AntiForgeryToken()
+
+                                        <button type="submit"
+                                                class="btn-icono btn-estado"
+                                                title="@tituloEstado">
+                                            <i class="bi @iconoEstado"></i>
+                                        </button>
+                                    </form>
+
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (totalPaginas > 1)
+    {
+        <div class="paginacion">
+            @for (int i = 1; i <= totalPaginas; i++)
+            {
+                <a asp-controller="Proveedores"
+                   asp-action="Index"
+                   asp-route-busqueda="@busqueda"
+                   asp-route-ordenarPor="@ordenarPor"
+                   asp-route-direccion="@direccion"
+                   asp-route-vista="@vista"
+                   asp-route-pagina="@i"
+                   class="pagina-link @(i == paginaActual ? "activa" : "")">
+                    @i
+                </a>
+            }
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        let temporizadorBusqueda;
+
+        document.getElementById("busquedaProveedores").addEventListener("input", function () {
+            clearTimeout(temporizadorBusqueda);
+
+            temporizadorBusqueda = setTimeout(function () {
+                document.getElementById("formBusquedaProveedores").submit();
+            }, 350);
+        });
+    </script>
+}

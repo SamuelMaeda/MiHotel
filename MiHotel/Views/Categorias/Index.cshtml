@@ -1,0 +1,348 @@
+﻿@model System.Data.DataTable
+
+@{
+    ViewData["Title"] = "Categorías";
+
+    string busqueda = ViewBag.Busqueda ?? "";
+    string ordenarPor = ViewBag.OrdenarPor ?? "nombre";
+    string direccion = ViewBag.Direccion ?? "asc";
+    string vista = ViewBag.Vista ?? "activos";
+    int paginaActual = ViewBag.PaginaActual ?? 1;
+    int totalPaginas = ViewBag.TotalPaginas ?? 1;
+    int totalRegistros = ViewBag.TotalRegistros ?? 0;
+
+    string SiguienteDireccion(string columna)
+    {
+        if (ordenarPor == columna && direccion == "asc")
+        {
+            return "desc";
+        }
+
+        return "asc";
+    }
+
+    string IconoOrden(string columna)
+    {
+        if (ordenarPor != columna)
+        {
+            return "bi-arrow-down-up";
+        }
+
+        return direccion == "asc" ? "bi-sort-alpha-down" : "bi-sort-alpha-up";
+    }
+}
+
+<style>
+    .tarjeta-contenido {
+        background-color: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.10);
+    }
+
+    .btn-crear {
+        background-color: #464482;
+        color: white;
+        padding: 10px 16px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+        .btn-crear:hover {
+            background-color: #36366b;
+            color: white;
+        }
+
+    .estado-activo {
+        color: green;
+        font-weight: bold;
+    }
+
+    .estado-inactivo {
+        color: red;
+        font-weight: bold;
+    }
+
+    .acciones-contenedor {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .btn-icono {
+        width: 38px;
+        height: 38px;
+        border-radius: 8px;
+        border: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        text-decoration: none;
+        font-size: 16px;
+    }
+
+    .btn-detalle {
+        background-color: #464482;
+    }
+
+    .btn-editar {
+        background-color: #824B44;
+    }
+
+    .btn-estado {
+        background-color: #363636;
+    }
+
+    .btn-icono:hover {
+        opacity: 0.9;
+        color: white;
+    }
+
+    .form-estado {
+        display: inline;
+    }
+
+    .tabs-vista {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+
+    .tab-vista {
+        text-decoration: none;
+        padding: 10px 14px;
+        border-radius: 8px;
+        background-color: #E6D3D0;
+        color: #363636;
+        font-weight: 500;
+    }
+
+        .tab-vista.activa {
+            background-color: #824B44;
+            color: white;
+        }
+
+    .paginacion {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 20px;
+    }
+
+    .pagina-link {
+        padding: 8px 12px;
+        border-radius: 8px;
+        text-decoration: none;
+        background-color: #E6D3D0;
+        color: #363636;
+    }
+
+        .pagina-link.activa {
+            background-color: #464482;
+            color: white;
+            font-weight: bold;
+        }
+
+    .encabezado-orden {
+        color: inherit;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-weight: 600;
+    }
+
+        .encabezado-orden:hover {
+            color: inherit;
+        }
+</style>
+
+<div class="tarjeta-contenido">
+
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h3 class="m-0">Gestión de Categorías</h3>
+
+        <a asp-controller="Categorias" asp-action="Crear" class="btn-crear">
+            Nueva Categoría
+        </a>
+    </div>
+
+    <div class="tabs-vista">
+        <a asp-controller="Categorias"
+           asp-action="Index"
+           asp-route-vista="activos"
+           asp-route-busqueda="@busqueda"
+           asp-route-ordenarPor="@ordenarPor"
+           asp-route-direccion="@direccion"
+           class="tab-vista @(vista == "activos" ? "activa" : "")">
+            Activos
+        </a>
+
+        <a asp-controller="Categorias"
+           asp-action="Index"
+           asp-route-vista="inactivos"
+           asp-route-busqueda="@busqueda"
+           asp-route-ordenarPor="@ordenarPor"
+           asp-route-direccion="@direccion"
+           class="tab-vista @(vista == "inactivos" ? "activa" : "")">
+            Inactivos
+        </a>
+    </div>
+
+    @if (TempData["Exito"] != null)
+    {
+        <div class="alert alert-success">@TempData["Exito"]</div>
+    }
+
+    @if (TempData["Mensaje"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Mensaje"]</div>
+    }
+
+    <form id="formBusquedaCategorias" asp-controller="Categorias" asp-action="Index" method="get" class="mb-4">
+        <input type="hidden" name="vista" value="@vista" />
+        <input type="hidden" name="ordenarPor" value="@ordenarPor" />
+        <input type="hidden" name="direccion" value="@direccion" />
+
+        <label class="form-label">Buscar categoría</label>
+        <input type="text"
+               id="busquedaCategorias"
+               name="busqueda"
+               value="@busqueda"
+               class="form-control"
+               placeholder="Buscar por nombre de categoría" />
+    </form>
+
+    <div class="mb-3">
+        <strong>Total de registros:</strong> @totalRegistros
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped">
+            <thead class="table-dark">
+                <tr>
+                    <th>
+                        <a asp-controller="Categorias"
+                           asp-action="Index"
+                           asp-route-busqueda="@busqueda"
+                           asp-route-ordenarPor="nombre"
+                           asp-route-direccion="@SiguienteDireccion("nombre")"
+                           asp-route-vista="@vista"
+                           class="encabezado-orden">
+                            Nombre
+                            <i class="bi @IconoOrden("nombre")"></i>
+                        </a>
+                    </th>
+
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @if (Model.Rows.Count == 0)
+                {
+                    <tr>
+                        <td colspan="3" class="text-center">
+                            No se encontraron categorías en esta vista.
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    foreach (System.Data.DataRow fila in Model.Rows)
+                    {
+                        string estado = fila["estado"]?.ToString()?.ToLower() ?? "";
+                        bool esSistema = Convert.ToInt32(fila["es_sistema"]) == 1;
+
+                        <tr>
+                            <td>@fila["nombre_categoria"]</td>
+
+                            <td>
+                                @if (estado == "activo")
+                                {
+                                    <span class="estado-activo">Activo</span>
+                                }
+                                else
+                                {
+                                    <span class="estado-inactivo">Inactivo</span>
+                                }
+                            </td>
+
+                            <td>
+                                <div class="acciones-contenedor">
+
+                                    @if (!esSistema)
+                                    {
+                                        <a asp-controller="Categorias"
+                                           asp-action="Editar"
+                                           asp-route-id="@fila["id_categoria"]"
+                                           class="btn-icono btn-editar"
+                                           title="Editar categoría">
+                                            <i class="bi bi-pencil-fill"></i>
+                                        </a>
+
+                                        <form asp-controller="Categorias"
+                                              asp-action="CambiarEstado"
+                                              asp-route-id="@fila["id_categoria"]"
+                                              method="post"
+                                              class="form-estado">
+                                            @Html.AntiForgeryToken()
+
+                                            <button type="submit"
+                                                    class="btn-icono btn-estado"
+                                                    title="Cambiar estado">
+                                                <i class="bi bi-arrow-repeat"></i>
+                                            </button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">Sistema</span>
+                                    }
+
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (totalPaginas > 1)
+    {
+        <div class="paginacion">
+            @for (int i = 1; i <= totalPaginas; i++)
+            {
+                <a asp-controller="Categorias"
+                   asp-action="Index"
+                   asp-route-busqueda="@busqueda"
+                   asp-route-ordenarPor="@ordenarPor"
+                   asp-route-direccion="@direccion"
+                   asp-route-vista="@vista"
+                   asp-route-pagina="@i"
+                   class="pagina-link @(i == paginaActual ? "activa" : "")">
+                    @i
+                </a>
+            }
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        let temporizadorBusquedaCategorias;
+
+        document.getElementById("busquedaCategorias").addEventListener("input", function () {
+            clearTimeout(temporizadorBusquedaCategorias);
+
+            temporizadorBusquedaCategorias = setTimeout(function () {
+                document.getElementById("formBusquedaCategorias").submit();
+            }, 350);
+        });
+    </script>
+}

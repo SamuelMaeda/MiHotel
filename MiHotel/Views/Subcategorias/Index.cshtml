@@ -1,0 +1,291 @@
+﻿@model System.Data.DataTable
+
+@{
+    ViewData["Title"] = "Subcategorías";
+
+    string busqueda = ViewBag.Busqueda ?? "";
+    string ordenarPor = ViewBag.OrdenarPor ?? "subcategoria";
+    string direccion = ViewBag.Direccion ?? "asc";
+    string vista = ViewBag.Vista ?? "activos";
+    string tipo = ViewBag.Tipo ?? "habitaciones";
+
+    int paginaActual = ViewBag.PaginaActual ?? 1;
+    int totalPaginas = ViewBag.TotalPaginas ?? 1;
+    int totalRegistros = ViewBag.TotalRegistros ?? 0;
+
+    string SiguienteDireccion(string columna)
+    {
+        if (ordenarPor == columna && direccion == "asc")
+        {
+            return "desc";
+        }
+
+        return "asc";
+    }
+
+    string IconoOrden(string columna)
+    {
+        if (ordenarPor != columna)
+        {
+            return "bi-arrow-down-up";
+        }
+
+        return direccion == "asc" ? "bi-sort-alpha-down" : "bi-sort-alpha-up";
+    }
+}
+
+<style>
+    .tarjeta-contenido {
+        background-color: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.10);
+    }
+
+    .btn-crear {
+        background-color: #464482;
+        color: white;
+        padding: 10px 16px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+        .btn-crear:hover {
+            background-color: #36366b;
+            color: white;
+        }
+
+    .estado-activo {
+        color: green;
+        font-weight: bold;
+    }
+
+    .estado-inactivo {
+        color: red;
+        font-weight: bold;
+    }
+
+    .acciones-contenedor {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .btn-icono {
+        width: 38px;
+        height: 38px;
+        border-radius: 8px;
+        border: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        text-decoration: none;
+        font-size: 16px;
+    }
+
+    .btn-editar {
+        background-color: #824B44;
+    }
+
+    .btn-estado {
+        background-color: #363636;
+    }
+
+    .tabs-vista {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+        flex-wrap: wrap;
+    }
+
+    .tab-vista {
+        text-decoration: none;
+        padding: 10px 14px;
+        border-radius: 8px;
+        background-color: #E6D3D0;
+        color: #363636;
+        font-weight: 500;
+    }
+
+        .tab-vista.activa {
+            background-color: #824B44;
+            color: white;
+        }
+
+    .paginacion {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 20px;
+    }
+
+    .pagina-link {
+        padding: 8px 12px;
+        border-radius: 8px;
+        text-decoration: none;
+        background-color: #E6D3D0;
+        color: #363636;
+    }
+
+        .pagina-link.activa {
+            background-color: #464482;
+            color: white;
+            font-weight: bold;
+        }
+
+    .encabezado-orden {
+        color: inherit;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-weight: 600;
+    }
+</style>
+
+<div class="tarjeta-contenido">
+
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h3 class="m-0">Gestión de Subcategorías</h3>
+
+        <a asp-controller="Subcategorias" asp-action="Crear" class="btn-crear">
+            Nueva Subcategoría
+        </a>
+    </div>
+
+    <!-- TABS TIPO -->
+    <div class="tabs-vista">
+        <a asp-action="Index" asp-route-tipo="habitaciones" class="tab-vista @(tipo == "habitaciones" ? "activa" : "")">
+            Habitaciones
+        </a>
+
+        <a asp-action="Index" asp-route-tipo="productos" class="tab-vista @(tipo == "productos" ? "activa" : "")">
+            Productos
+        </a>
+
+       
+    </div>
+
+    <!-- TABS ESTADO -->
+    <div class="tabs-vista">
+        <a asp-action="Index"
+           asp-route-tipo="@tipo"
+           asp-route-vista="activos"
+           class="tab-vista @(vista == "activos" ? "activa" : "")">
+            Activos
+        </a>
+
+        <a asp-action="Index"
+           asp-route-tipo="@tipo"
+           asp-route-vista="inactivos"
+           class="tab-vista @(vista == "inactivos" ? "activa" : "")">
+            Inactivos
+        </a>
+    </div>
+
+    <form method="get" class="mb-4">
+        <input type="hidden" name="tipo" value="@tipo" />
+        <input type="hidden" name="vista" value="@vista" />
+        <input type="hidden" name="ordenarPor" value="@ordenarPor" />
+        <input type="hidden" name="direccion" value="@direccion" />
+
+        <label class="form-label">Buscar subcategoría</label>
+        <input type="text" name="busqueda" value="@busqueda" class="form-control" />
+    </form>
+
+    <div class="mb-3">
+        <strong>Total de registros:</strong> @totalRegistros
+    </div>
+
+    <table class="table table-bordered table-striped">
+        <thead class="table-dark">
+            <tr>
+                <th>
+                    <a asp-action="Index"
+                       asp-route-tipo="@tipo"
+                       asp-route-vista="@vista"
+                       asp-route-busqueda="@busqueda"
+                       asp-route-ordenarPor="subcategoria"
+                       asp-route-direccion="@SiguienteDireccion("subcategoria")"
+                       class="encabezado-orden">
+                        Subcategoría
+                        <i class="bi @IconoOrden("subcategoria")"></i>
+                    </a>
+                </th>
+
+                <th>
+                    <a asp-action="Index"
+                       asp-route-tipo="@tipo"
+                       asp-route-vista="@vista"
+                       asp-route-busqueda="@busqueda"
+                       asp-route-ordenarPor="categoria"
+                       asp-route-direccion="@SiguienteDireccion("categoria")"
+                       class="encabezado-orden">
+                        Categoría
+                        <i class="bi @IconoOrden("categoria")"></i>
+                    </a>
+                </th>
+                <th>Estado</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @if (Model.Rows.Count == 0)
+            {
+                <tr>
+                    <td colspan="4" class="text-center">
+                        No se encontraron subcategorías.
+                    </td>
+                </tr>
+            }
+            else
+            {
+                foreach (System.Data.DataRow fila in Model.Rows)
+                {
+                    string estado = fila["estado"]?.ToString()?.ToLower() ?? "";
+
+                    <tr>
+                        <td>@fila["nombre_subcategoria"]</td>
+                        <td>@fila["nombre_categoria"]</td>
+
+                        <td>
+                            @if (estado == "activo")
+                            {
+                                <span class="estado-activo">Activo</span>
+                            }
+                            else
+                            {
+                                <span class="estado-inactivo">Inactivo</span>
+                            }
+                        </td>
+
+                        <td>
+                            <div class="acciones-contenedor">
+
+                                <a asp-action="Editar"
+                                   asp-route-id="@fila["id_subcategoria"]"
+                                   class="btn-icono btn-editar">
+                                    <i class="bi bi-pencil-fill"></i>
+                                </a>
+
+                                <form asp-action="CambiarEstado"
+                                      asp-route-id="@fila["id_subcategoria"]"
+                                      method="post">
+                                    @Html.AntiForgeryToken()
+                                    <button class="btn-icono btn-estado">
+                                        <i class="bi bi-arrow-repeat"></i>
+                                    </button>
+                                </form>
+
+                            </div>
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+
+</div>

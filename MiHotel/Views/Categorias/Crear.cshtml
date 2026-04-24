@@ -1,0 +1,122 @@
+﻿@{
+    ViewData["Title"] = "Registrar Categoría";
+}
+
+<style>
+    .tarjeta-contenido {
+        background-color: white;
+        border-radius: 15px;
+        padding: 20px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.10);
+    }
+
+    @@media (min-width: 768px) {
+        .tarjeta-contenido {
+            padding: 25px;
+        }
+    }
+
+    .btn-guardar {
+        background-color: #464482;
+        color: white;
+        padding: 10px 16px;
+        border-radius: 8px;
+        border: none;
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+        .btn-guardar:hover {
+            background-color: #36366b;
+            color: white;
+        }
+
+    .btn-volver {
+        background-color: #824B44;
+        color: white;
+        padding: 10px 16px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 500;
+        display: inline-block;
+    }
+
+        .btn-volver:hover {
+            background-color: #6e3f39;
+            color: white;
+        }
+
+    .acciones-formulario {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 20px;
+    }
+
+    @@media (max-width: 768px) {
+        .tarjeta-contenido {
+            padding: 15px;
+        }
+
+        .btn-volver,
+        .btn-guardar {
+            width: 100%;
+            text-align: center;
+        }
+    }
+</style>
+
+<div class="container-fluid px-3 px-md-4 py-4">
+    <div class="row justify-content-center">
+        <div class="col-12 col-xl-8">
+            <div class="tarjeta-contenido">
+
+                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                    <h3 class="m-0">Registrar Categoría</h3>
+                </div>
+
+                @if (ViewBag.Mensaje != null)
+                {
+                    <div class="alert alert-danger">@ViewBag.Mensaje</div>
+                }
+
+                @if (TempData["Exito"] != null)
+                {
+                    <div class="alert alert-success">@TempData["Exito"]</div>
+                }
+
+                <form asp-action="Crear" method="post" novalidate>
+                    @Html.AntiForgeryToken()
+
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <label class="form-label">
+                                Nombre de la categoría
+                            </label>
+
+                            <input type="text"
+                                   name="nombre_categoria"
+                                   class="form-control"
+                                   placeholder="Ejemplo: Bebidas, Limpieza, Habitaciones"
+                                   required />
+
+                        </div>
+                    </div>
+
+                    <div class="acciones-formulario">
+                        <button type="submit" class="btn-guardar">
+                            Guardar categoría
+                        </button>
+
+                        <a asp-controller="Categorias"
+                           asp-action="Index"
+                           class="btn-volver">
+                            Volver al listado
+                        </a>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+    </div>
+</div>

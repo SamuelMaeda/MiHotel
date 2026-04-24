@@ -57,12 +57,19 @@
         <a asp-controller="PuntoVenta" asp-action="Index" class="opcion-menu">Punto de Venta</a>
         // <a asp-controller="PuntoVenta" asp-action="Index" class="text-decoration-none">
         <a asp-controller="ProductosServicios" asp-action="Index" class="opcion-menu">Productos y Servicios</a>
+        <a asp-controller="Proveedores" asp-action="Index" class="opcion-menu">Proveedores</a>
+
         <a href="#" class="opcion-menu">Cuentas por Cobrar</a>
         <a href="#" class="opcion-menu">Cuentas por Pagar</a>
         <a href="#" class="opcion-menu">Reportes</a>
+        <a asp-controller="Categorias" asp-action="Index" class="opcion-menu">Categorias</a>
+        <a asp-controller="Subcategorias" asp-action="Index" class="opcion-menu">Subcategorias</a>
         <a asp-controller="Habitaciones" asp-action="Index" class="opcion-menu">Habitaciones</a>
         <a asp-controller="Clientes" asp-action="Index" class="opcion-menu">Clientes</a>
         <a asp-controller="Disponibilidad" asp-action="Index" class="opcion-menu">Disponibilidad</a>
+
+
+
     }
     else if (nombreRol.ToLower() == "recepcionista")
     {
