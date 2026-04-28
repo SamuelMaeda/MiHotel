@@ -423,10 +423,11 @@ namespace MiHotel.Controllers
         private decimal ObtenerPrecioHabitacion(MySqlConnection conexion, int idHabitacion)
         {
             string consulta = @"
-                SELECT precio
-                FROM proser
-                WHERE id_proser = @id_habitacion
-                LIMIT 1;";
+            SELECT s.precio
+            FROM proser p
+            INNER JOIN subcategoria s ON p.id_subcategoria = s.id_subcategoria
+            WHERE p.id_proser = @id_habitacion
+            LIMIT 1;";
 
             using var comando = new MySqlCommand(consulta, conexion);
             comando.Parameters.AddWithValue("@id_habitacion", idHabitacion);
@@ -435,7 +436,7 @@ namespace MiHotel.Controllers
 
             if (resultado == null || resultado == DBNull.Value)
             {
-                throw new Exception("No se pudo obtener el precio de la habitación seleccionada.");
+                throw new Exception("No se pudo obtener el precio de la subcategoría de la habitación seleccionada.");
             }
 
             return Convert.ToDecimal(resultado);

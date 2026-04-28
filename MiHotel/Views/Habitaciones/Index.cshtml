@@ -440,7 +440,19 @@
                                                                 ? "-"
                                                                 : fila["tipo_habitacion"])
                                                                                       </td>
-                                                                                      <td>Q @Convert.ToDecimal(fila["precio"]).ToString("N2")</td>
+                        <td>
+                            @{
+                                        if (fila["precio"] == DBNull.Value)
+                                        {
+                                            @("-")
+                                        }
+                                        else
+                                        {
+                                            decimal precio = Convert.ToDecimal(fila["precio"]);
+                                            @($"Q {precio:N2}")
+                                        }
+                                    }
+                        </td>
                                                                                       <td>
                                                                                           <span class="@claseEstado">@fila["estado"]</span>
                                                                                       </td>

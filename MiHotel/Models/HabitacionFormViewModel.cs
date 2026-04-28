@@ -19,11 +19,6 @@ namespace MiHotel.Models
         [Display(Name = "Estado")]
         public int IdTipoEstado { get; set; }
 
-        [Required(ErrorMessage = "El precio por noche es obligatorio.")]
-        [Range(0.01, 999999.99, ErrorMessage = "Debe ingresar un precio válido.")]
-        [Display(Name = "Precio por noche")]
-        public decimal Precio { get; set; }
-
         [StringLength(255, ErrorMessage = "La descripción no puede exceder 255 caracteres.")]
         public string? Descripcion { get; set; }
     }

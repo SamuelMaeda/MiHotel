@@ -32,7 +32,6 @@ namespace MiHotel.Controllers
 
             string estado = vista == "inactivos" ? "inactivo" : "activo";
 
-            // ================= FILTRO POR TIPO =================
             string filtroTipo = "";
 
             if (tipo == "habitaciones")
@@ -43,12 +42,7 @@ namespace MiHotel.Controllers
             {
                 filtroTipo = "AND c.nombre_categoria <> 'Habitaciones'";
             }
-            else if (tipo == "servicios")
-            {
-                filtroTipo = "AND c.nombre_categoria = 'Servicios'";
-            }
 
-            // ================= ORDENAMIENTO =================
             string columnaOrden = ordenarPor switch
             {
                 "subcategoria" => "s.nombre_subcategoria",
@@ -59,17 +53,18 @@ namespace MiHotel.Controllers
             string direccionOrden = direccion == "desc" ? "DESC" : "ASC";
 
             string sql = $@"
-        SELECT s.id_subcategoria,
-               s.nombre_subcategoria,
-               s.estado,
-               c.nombre_categoria
-        FROM subcategoria s
-        INNER JOIN categoria c ON s.id_categoria = c.id_categoria
-        WHERE s.estado = @estado
-        AND s.nombre_subcategoria LIKE @busqueda
-        {filtroTipo}
-        ORDER BY {columnaOrden} {direccionOrden}
-    ";
+                SELECT s.id_subcategoria,
+                       s.nombre_subcategoria,
+                       s.estado,
+                       s.precio,
+                       c.nombre_categoria
+                FROM subcategoria s
+                INNER JOIN categoria c ON s.id_categoria = c.id_categoria
+                WHERE s.estado = @estado
+                AND s.nombre_subcategoria LIKE @busqueda
+                {filtroTipo}
+                ORDER BY {columnaOrden} {direccionOrden}
+            ";
 
             using var cmd = new MySqlCommand(sql, conexion);
             cmd.Parameters.AddWithValue("@estado", estado);
@@ -96,7 +91,7 @@ namespace MiHotel.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult Crear(string nombre_subcategoria, int id_categoria)
+        public IActionResult Crear(string nombre_subcategoria, int id_categoria, decimal precio)
         {
             if (string.IsNullOrWhiteSpace(nombre_subcategoria) || id_categoria == 0)
             {
@@ -124,12 +119,13 @@ namespace MiHotel.Controllers
                 return View();
             }
 
-            string insertar = @"INSERT INTO subcategoria (nombre_subcategoria, id_categoria, estado)
-                                VALUES (@nombre, @categoria, 'activo')";
+            string insertar = @"INSERT INTO subcategoria (nombre_subcategoria, id_categoria, estado, precio)
+                                VALUES (@nombre, @categoria, 'activo', @precio)";
 
             using var cmd = new MySqlCommand(insertar, conexion);
             cmd.Parameters.AddWithValue("@nombre", nombre_subcategoria.Trim());
             cmd.Parameters.AddWithValue("@categoria", id_categoria);
+            cmd.Parameters.AddWithValue("@precio", precio);
 
             cmd.ExecuteNonQuery();
 
@@ -138,79 +134,87 @@ namespace MiHotel.Controllers
             return RedirectToAction("Index");
         }
 
-        // ================= EDITAR =================
+        // ================= EDITAR (GET) =================
         [HttpGet]
         public IActionResult Editar(int id)
         {
             using var conexion = _conexionBD.ObtenerConexion();
             conexion.Open();
 
-            string sql = @"SELECT * FROM subcategoria WHERE id_subcategoria = @id";
+            string consulta = @"
+                SELECT id_subcategoria, nombre_subcategoria, id_categoria, precio
+                FROM subcategoria
+                WHERE id_subcategoria = @id";
 
-            using var cmd = new MySqlCommand(sql, conexion);
+            using var cmd = new MySqlCommand(consulta, conexion);
             cmd.Parameters.AddWithValue("@id", id);
 
-            using var dr = cmd.ExecuteReader();
+            using var reader = cmd.ExecuteReader();
 
-            if (!dr.Read())
-                return RedirectToAction("Index");
+            if (reader.Read())
+            {
+                ViewBag.Id = reader["id_subcategoria"];
+                ViewBag.Nombre = reader["nombre_subcategoria"];
+                ViewBag.IdCategoria = reader["id_categoria"];
+                ViewBag.Precio = reader["precio"];
+            }
 
-            ViewBag.Id = id;
-            ViewBag.Nombre = dr["nombre_subcategoria"].ToString();
-            ViewBag.IdCategoria = Convert.ToInt32(dr["id_categoria"]);
+            reader.Close();
 
             CargarCategorias();
 
             return View();
         }
 
+        // ================= EDITAR (POST) =================
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult Editar(int id, string nombre_subcategoria, int id_categoria)
+        public IActionResult Editar(int id, string nombre_subcategoria, int id_categoria, decimal precio)
         {
-            if (string.IsNullOrWhiteSpace(nombre_subcategoria) || id_categoria == 0)
-            {
-                ViewBag.Mensaje = "Todos los campos son obligatorios.";
-                ViewBag.Id = id;
-                CargarCategorias();
-                return View();
-            }
-
             using var conexion = _conexionBD.ObtenerConexion();
             conexion.Open();
 
-            string verificar = @"SELECT COUNT(*) 
-                                 FROM subcategoria 
-                                 WHERE LOWER(nombre_subcategoria) = LOWER(@nombre)
-                                 AND id_subcategoria != @id";
+            string consultaCategoria = @"
+                SELECT nombre_categoria
+                FROM categoria  
+                WHERE id_categoria = @id_categoria";
 
-            using var cmdVerificar = new MySqlCommand(verificar, conexion);
-            cmdVerificar.Parameters.AddWithValue("@nombre", nombre_subcategoria.Trim());
-            cmdVerificar.Parameters.AddWithValue("@id", id);
+            using var cmdCategoria = new MySqlCommand(consultaCategoria, conexion);
+            cmdCategoria.Parameters.AddWithValue("@id_categoria", id_categoria);
 
-            int existe = Convert.ToInt32(cmdVerificar.ExecuteScalar());
+            string nombreCategoria = cmdCategoria.ExecuteScalar()?.ToString()?.ToLower() ?? "";
 
-            if (existe > 0)
+            bool esHabitacion = nombreCategoria == "habitaciones";
+
+            string sql;
+
+            if (esHabitacion)
             {
-                ViewBag.Mensaje = "Ya existe otra subcategoría con ese nombre.";
-                ViewBag.Id = id;
-                CargarCategorias();
-                return View();
+                sql = @"UPDATE subcategoria 
+                        SET nombre_subcategoria = @nombre,
+                            id_categoria = @categoria,
+                            precio = @precio
+                        WHERE id_subcategoria = @id";
+            }
+            else
+            {
+                sql = @"UPDATE subcategoria 
+                        SET nombre_subcategoria = @nombre,
+                            id_categoria = @categoria
+                        WHERE id_subcategoria = @id";
             }
 
-            string sql = @"UPDATE subcategoria
-                           SET nombre_subcategoria = @nombre,
-                               id_categoria = @categoria
-                           WHERE id_subcategoria = @id";
-
             using var cmd = new MySqlCommand(sql, conexion);
-            cmd.Parameters.AddWithValue("@nombre", nombre_subcategoria.Trim());
+            cmd.Parameters.AddWithValue("@nombre", nombre_subcategoria);
             cmd.Parameters.AddWithValue("@categoria", id_categoria);
             cmd.Parameters.AddWithValue("@id", id);
 
-            cmd.ExecuteNonQuery();
+            if (esHabitacion)
+            {
+                cmd.Parameters.AddWithValue("@precio", precio);
+            }
 
-            TempData["Exito"] = "Subcategoría actualizada correctamente.";
+            cmd.ExecuteNonQuery();
 
             return RedirectToAction("Index");
         }
@@ -243,7 +247,6 @@ namespace MiHotel.Controllers
             return RedirectToAction("Index");
         }
 
-        // ================= MÉTODO AUXILIAR =================
         private void CargarCategorias()
         {
             DataTable tabla = new DataTable();

@@ -164,8 +164,6 @@
         <a asp-action="Index" asp-route-tipo="productos" class="tab-vista @(tipo == "productos" ? "activa" : "")">
             Productos
         </a>
-
-       
     </div>
 
     <!-- TABS ESTADO -->
@@ -185,6 +183,11 @@
         </a>
     </div>
 
+    <!-- NOTA -->
+    <div style="font-size: 0.9rem; color: #6c757d; margin-bottom: 10px;">
+        Nota: En este módulo se podrán modificar únicamente los precios de las habitaciones. Los precios de productos y servicios tendrán que ser modificados en el módulo de "Gestión de Productos y Servicios”.
+    </div>
+
     <form method="get" class="mb-4">
         <input type="hidden" name="tipo" value="@tipo" />
         <input type="hidden" name="vista" value="@vista" />
@@ -202,31 +205,9 @@
     <table class="table table-bordered table-striped">
         <thead class="table-dark">
             <tr>
-                <th>
-                    <a asp-action="Index"
-                       asp-route-tipo="@tipo"
-                       asp-route-vista="@vista"
-                       asp-route-busqueda="@busqueda"
-                       asp-route-ordenarPor="subcategoria"
-                       asp-route-direccion="@SiguienteDireccion("subcategoria")"
-                       class="encabezado-orden">
-                        Subcategoría
-                        <i class="bi @IconoOrden("subcategoria")"></i>
-                    </a>
-                </th>
-
-                <th>
-                    <a asp-action="Index"
-                       asp-route-tipo="@tipo"
-                       asp-route-vista="@vista"
-                       asp-route-busqueda="@busqueda"
-                       asp-route-ordenarPor="categoria"
-                       asp-route-direccion="@SiguienteDireccion("categoria")"
-                       class="encabezado-orden">
-                        Categoría
-                        <i class="bi @IconoOrden("categoria")"></i>
-                    </a>
-                </th>
+                <th>Subcategoría</th>
+                <th>Categoría</th>
+                <th>Precio</th>
                 <th>Estado</th>
                 <th>Acciones</th>
             </tr>
@@ -236,7 +217,7 @@
             @if (Model.Rows.Count == 0)
             {
                 <tr>
-                    <td colspan="4" class="text-center">
+                    <td colspan="5" class="text-center">
                         No se encontraron subcategorías.
                     </td>
                 </tr>
@@ -246,10 +227,24 @@
                 foreach (System.Data.DataRow fila in Model.Rows)
                 {
                     string estado = fila["estado"]?.ToString()?.ToLower() ?? "";
+                    string categoria = fila["nombre_categoria"]?.ToString()?.ToLower() ?? "";
+                    decimal precio = Convert.ToDecimal(fila["precio"]);
 
                     <tr>
                         <td>@fila["nombre_subcategoria"]</td>
                         <td>@fila["nombre_categoria"]</td>
+
+                        <!-- 🔴 CAMBIO QUIRÚRGICO REAL -->
+                        <td>
+                            @if (categoria == "habitaciones")
+                            {
+                                @($"Q {precio:0.00}")
+                            }
+                            else
+                            {
+                                @("-")
+                            }
+                        </td>
 
                         <td>
                             @if (estado == "activo")
@@ -264,7 +259,6 @@
 
                         <td>
                             <div class="acciones-contenedor">
-
                                 <a asp-action="Editar"
                                    asp-route-id="@fila["id_subcategoria"]"
                                    class="btn-icono btn-editar">
@@ -279,7 +273,6 @@
                                         <i class="bi bi-arrow-repeat"></i>
                                     </button>
                                 </form>
-
                             </div>
                         </td>
                     </tr>

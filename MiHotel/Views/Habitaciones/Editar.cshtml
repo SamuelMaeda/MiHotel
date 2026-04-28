@@ -1,7 +1,7 @@
 ﻿@model MiHotel.Models.HabitacionFormViewModel
 
 @{
-    ViewData["Title"] = "Editar Habitación";
+    ViewData["Title"] = "Crear Habitación";
 }
 
 <style>
@@ -29,7 +29,7 @@
 
 <div class="tarjeta-contenido">
 
-    <h3 class="mb-4">Editar habitación</h3>
+    <h3 class="mb-4">Crear nueva habitación</h3>
 
     @if (ViewBag.Mensaje != null)
     {
@@ -38,10 +38,8 @@
         </div>
     }
 
-    <form asp-action="Editar" method="post">
+    <form asp-action="Crear" method="post">
         @Html.AntiForgeryToken()
-
-        <input asp-for="IdProser" type="hidden" />
 
         <div class="mb-3">
             <label class="form-label">Número de habitación</label>
@@ -64,11 +62,7 @@
             <span asp-validation-for="IdSubcategoria" class="text-danger"></span>
         </div>
 
-        <div class="mb-3">
-            <label class="form-label">Precio por noche</label>
-            <input asp-for="Precio" class="form-control" type="number" step="0.01" min="0.01" />
-            <span asp-validation-for="Precio" class="text-danger"></span>
-        </div>
+        <!-- CAMBIO: SE ELIMINÓ PRECIO -->
 
         <div class="mb-3">
             <label class="form-label">Estado</label>
@@ -93,7 +87,7 @@
 
         <div class="mt-4">
             <button type="submit" class="btn-guardar">
-                Guardar cambios
+                Guardar habitación
             </button>
 
             <a asp-controller="Habitaciones" asp-action="Index" class="btn btn-secondary ms-2">

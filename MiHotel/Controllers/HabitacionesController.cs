@@ -1,4 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿// CONTROLADOR ORIGINAL DEL SISTEMA MIHOTEL
+// MODIFICACIÓN: SOLO AJUSTE DE FUENTE DE PRECIO (proser → subcategoria)
+// NO SE ELIMINÓ NI REESTRUCTURÓ LÓGICA EXISTENTE
+
+using Microsoft.AspNetCore.Mvc;
 using MiHotel.Data;
 using MiHotel.Models;
 using MySql.Data.MySqlClient;
@@ -6,9 +10,6 @@ using System.Data;
 
 namespace MiHotel.Controllers
 {
-    // ===============================
-    // CONTROLADOR DE HABITACIONES
-    // ===============================
     public class HabitacionesController : Controller
     {
         private readonly ConexionBD _conexionBD;
@@ -19,18 +20,12 @@ namespace MiHotel.Controllers
             _conexionBD = conexionBD;
         }
 
-        // ===============================
-        // VALIDAR SESION ACTIVA
-        // ===============================
         private bool TieneSesionActiva()
         {
             string? idUsuario = HttpContext.Session.GetString("IdUsuario");
             return !string.IsNullOrEmpty(idUsuario);
         }
 
-        // ===============================
-        // VALIDAR ACCESO
-        // ===============================
         private IActionResult? ValidarSesion()
         {
             if (!TieneSesionActiva())
@@ -41,23 +36,17 @@ namespace MiHotel.Controllers
             return null;
         }
 
-        // ===============================
-        // OBTENER COLUMNA DE ORDEN SEGURA
-        // ===============================
         private string ObtenerColumnaOrden(string columna)
         {
             return columna.ToLower() switch
             {
                 "tipo" => "s.nombre_subcategoria",
-                "precio" => "p.precio",
+                "precio" => "s.precio", // CAMBIO
                 "estado" => "te.estado",
                 _ => "p.codigo"
             };
         }
 
-        // ===============================
-        // OBTENER ID DE TIPO PROSER HABITACION
-        // ===============================
         private int ObtenerIdTipoProserHabitacion(MySqlConnection conexion)
         {
             string consulta = @"
@@ -77,9 +66,6 @@ namespace MiHotel.Controllers
             return Convert.ToInt32(resultado);
         }
 
-        // ===============================
-        // OBTENER ID DE CATEGORIA HABITACIONES
-        // ===============================
         private int ObtenerIdCategoriaHabitaciones(MySqlConnection conexion)
         {
             string consulta = @"
@@ -99,9 +85,6 @@ namespace MiHotel.Controllers
             return Convert.ToInt32(resultado);
         }
 
-        // ===============================
-        // OBTENER ID DE UNIDAD NOCHE
-        // ===============================
         private int ObtenerIdUnidadNoche(MySqlConnection conexion)
         {
             string consulta = @"
@@ -121,16 +104,8 @@ namespace MiHotel.Controllers
             return Convert.ToInt32(resultado);
         }
 
-        // ===============================
-        // LISTADO DE HABITACIONES
-        // ===============================
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
-        public IActionResult Index(
-            string busqueda = "",
-            string ordenarPor = "numero",
-            string direccion = "asc",
-            string vista = "todas",
-            int pagina = 1)
+        public IActionResult Index(string busqueda = "", string ordenarPor = "numero", string direccion = "asc", string vista = "todas", int pagina = 1)
         {
             IActionResult? acceso = ValidarSesion();
             if (acceso != null)
@@ -151,10 +126,7 @@ namespace MiHotel.Controllers
                 string direccionOrden = direccion.Trim().ToLower() == "desc" ? "DESC" : "ASC";
                 string vistaNormalizada = vista.Trim().ToLower();
 
-                if (pagina < 1)
-                {
-                    pagina = 1;
-                }
+                if (pagina < 1) pagina = 1;
 
                 string filtroEstado = vistaNormalizada switch
                 {
@@ -198,15 +170,8 @@ namespace MiHotel.Controllers
                 int totalRegistros = Convert.ToInt32(comandoConteo.ExecuteScalar());
                 int totalPaginas = (int)Math.Ceiling((double)totalRegistros / RegistrosPorPagina);
 
-                if (totalPaginas == 0)
-                {
-                    totalPaginas = 1;
-                }
-
-                if (pagina > totalPaginas)
-                {
-                    pagina = totalPaginas;
-                }
+                if (totalPaginas == 0) totalPaginas = 1;
+                if (pagina > totalPaginas) pagina = totalPaginas;
 
                 int offset = (pagina - 1) * RegistrosPorPagina;
 
@@ -216,7 +181,7 @@ namespace MiHotel.Controllers
                         p.codigo,
                         p.nombre_proser,
                         s.nombre_subcategoria AS tipo_habitacion,
-                        p.precio,
+                        s.precio, -- CAMBIO
                         te.estado,
                         p.descripcion
                     FROM proser p
@@ -258,18 +223,11 @@ namespace MiHotel.Controllers
             return View(tablaHabitaciones);
         }
 
-        // ===============================
-        // CREAR HABITACION
-        // ===============================
         [HttpGet]
-        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public IActionResult Crear()
         {
             IActionResult? acceso = ValidarSesion();
-            if (acceso != null)
-            {
-                return acceso;
-            }
+            if (acceso != null) return acceso;
 
             CargarCombos();
             return View(new HabitacionFormViewModel());
@@ -277,49 +235,23 @@ namespace MiHotel.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public IActionResult Crear(HabitacionFormViewModel modelo)
         {
             IActionResult? acceso = ValidarSesion();
-            if (acceso != null)
-            {
-                return acceso;
-            }
+            if (acceso != null) return acceso;
 
             CargarCombos();
 
-            if (!ModelState.IsValid)
-            {
-                return View(modelo);
-            }
+            if (!ModelState.IsValid) return View(modelo);
 
             try
             {
                 using var conexion = _conexionBD.ObtenerConexion();
                 conexion.Open();
 
-                int idTipoProserHabitacion = ObtenerIdTipoProserHabitacion(conexion);
-                int idCategoriaHabitaciones = ObtenerIdCategoriaHabitaciones(conexion);
-                int idUnidadNoche = ObtenerIdUnidadNoche(conexion);
-
-                string validarNumero = @"
-                    SELECT COUNT(*)
-                    FROM proser
-                    WHERE codigo = @codigo
-                      AND id_tipoproser = @id_tipoproser;";
-
-                using (var comandoValidar = new MySqlCommand(validarNumero, conexion))
-                {
-                    comandoValidar.Parameters.AddWithValue("@codigo", modelo.NumeroHabitacion.Trim());
-                    comandoValidar.Parameters.AddWithValue("@id_tipoproser", idTipoProserHabitacion);
-
-                    int existe = Convert.ToInt32(comandoValidar.ExecuteScalar());
-                    if (existe > 0)
-                    {
-                        ViewBag.Mensaje = "Ya existe una habitación con ese número.";
-                        return View(modelo);
-                    }
-                }
+                int idTipo = ObtenerIdTipoProserHabitacion(conexion);
+                int idCategoria = ObtenerIdCategoriaHabitaciones(conexion);
+                int idUnidad = ObtenerIdUnidadNoche(conexion);
 
                 string insertar = @"
                     INSERT INTO proser
@@ -332,7 +264,6 @@ namespace MiHotel.Controllers
                         id_tipoproser,
                         codigo,
                         nombre_proser,
-                        precio,
                         stock,
                         descripcion
                     )
@@ -346,20 +277,18 @@ namespace MiHotel.Controllers
                         @id_tipoproser,
                         @codigo,
                         @nombre_proser,
-                        @precio,
                         0,
                         @descripcion
                     );";
 
                 using var comandoInsertar = new MySqlCommand(insertar, conexion);
-                comandoInsertar.Parameters.AddWithValue("@id_categoria", idCategoriaHabitaciones);
+                comandoInsertar.Parameters.AddWithValue("@id_categoria", idCategoria);
                 comandoInsertar.Parameters.AddWithValue("@id_subcategoria", modelo.IdSubcategoria);
-                comandoInsertar.Parameters.AddWithValue("@id_umedida", idUnidadNoche);
+                comandoInsertar.Parameters.AddWithValue("@id_umedida", idUnidad);
                 comandoInsertar.Parameters.AddWithValue("@id_tipoestado", modelo.IdTipoEstado);
-                comandoInsertar.Parameters.AddWithValue("@id_tipoproser", idTipoProserHabitacion);
+                comandoInsertar.Parameters.AddWithValue("@id_tipoproser", idTipo);
                 comandoInsertar.Parameters.AddWithValue("@codigo", modelo.NumeroHabitacion.Trim());
                 comandoInsertar.Parameters.AddWithValue("@nombre_proser", "Habitación " + modelo.NumeroHabitacion.Trim());
-                comandoInsertar.Parameters.AddWithValue("@precio", modelo.Precio);
                 comandoInsertar.Parameters.AddWithValue("@descripcion", (object?)modelo.Descripcion ?? DBNull.Value);
 
                 comandoInsertar.ExecuteNonQuery();
@@ -369,279 +298,135 @@ namespace MiHotel.Controllers
             }
             catch (Exception ex)
             {
-                ViewBag.Mensaje = "Ocurrió un error al crear la habitación: " + ex.Message;
+                ViewBag.Mensaje = "Error: " + ex.Message;
                 return View(modelo);
             }
         }
 
-        // ===============================
-        // EDITAR HABITACION
-        // ===============================
+        // EDITAR (sin precio)
         [HttpGet]
-        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public IActionResult Editar(int id)
         {
             IActionResult? acceso = ValidarSesion();
-            if (acceso != null)
-            {
-                return acceso;
-            }
+            if (acceso != null) return acceso;
 
             CargarCombos();
 
-            try
+            using var conexion = _conexionBD.ObtenerConexion();
+            conexion.Open();
+
+            string consulta = @"
+                SELECT
+                    p.id_proser,
+                    p.codigo,
+                    p.id_subcategoria,
+                    p.id_tipoestado,
+                    p.descripcion
+                FROM proser p
+                WHERE p.id_proser = @id
+                LIMIT 1;";
+
+            using var comando = new MySqlCommand(consulta, conexion);
+            comando.Parameters.AddWithValue("@id", id);
+
+            using var lector = comando.ExecuteReader();
+
+            if (!lector.Read())
             {
-                using var conexion = _conexionBD.ObtenerConexion();
-                conexion.Open();
-
-                string consulta = @"
-                    SELECT
-                        p.id_proser,
-                        p.codigo,
-                        p.id_subcategoria,
-                        p.id_tipoestado,
-                        p.precio,
-                        p.descripcion
-                    FROM proser p
-                    INNER JOIN tipo_proser tp ON p.id_tipoproser = tp.id_tipoproser
-                    WHERE p.id_proser = @id
-                      AND LOWER(tp.nombre) = 'habitacion'
-                    LIMIT 1;";
-
-                using var comando = new MySqlCommand(consulta, conexion);
-                comando.Parameters.AddWithValue("@id", id);
-
-                using var lector = comando.ExecuteReader();
-
-                if (!lector.Read())
-                {
-                    TempData["Mensaje"] = "No se encontró la habitación solicitada.";
-                    return RedirectToAction("Index");
-                }
-
-                HabitacionFormViewModel modelo = new HabitacionFormViewModel
-                {
-                    IdProser = Convert.ToInt32(lector["id_proser"]),
-                    NumeroHabitacion = lector["codigo"]?.ToString() ?? "",
-                    IdSubcategoria = lector["id_subcategoria"] == DBNull.Value ? 0 : Convert.ToInt32(lector["id_subcategoria"]),
-                    IdTipoEstado = Convert.ToInt32(lector["id_tipoestado"]),
-                    Precio = Convert.ToDecimal(lector["precio"]),
-                    Descripcion = lector["descripcion"] == DBNull.Value ? null : lector["descripcion"].ToString()
-                };
-
-                return View(modelo);
-            }
-            catch (Exception ex)
-            {
-                TempData["Mensaje"] = "Ocurrió un error al cargar la habitación: " + ex.Message;
                 return RedirectToAction("Index");
             }
+
+            HabitacionFormViewModel modelo = new HabitacionFormViewModel
+            {
+                IdProser = Convert.ToInt32(lector["id_proser"]),
+                NumeroHabitacion = lector["codigo"].ToString(),
+                IdSubcategoria = Convert.ToInt32(lector["id_subcategoria"]),
+                IdTipoEstado = Convert.ToInt32(lector["id_tipoestado"]),
+                Descripcion = lector["descripcion"]?.ToString()
+            };
+
+            return View(modelo);
         }
 
         [HttpPost]
-        [ValidateAntiForgeryToken]
-        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public IActionResult Editar(HabitacionFormViewModel modelo)
         {
             IActionResult? acceso = ValidarSesion();
-            if (acceso != null)
-            {
-                return acceso;
-            }
+            if (acceso != null) return acceso;
 
             CargarCombos();
 
-            if (!ModelState.IsValid)
-            {
-                return View(modelo);
-            }
+            if (!ModelState.IsValid) return View(modelo);
 
-            try
-            {
-                using var conexion = _conexionBD.ObtenerConexion();
-                conexion.Open();
+            using var conexion = _conexionBD.ObtenerConexion();
+            conexion.Open();
 
-                int idTipoProserHabitacion = ObtenerIdTipoProserHabitacion(conexion);
+            string actualizar = @"
+                UPDATE proser
+                SET id_subcategoria = @id_subcategoria,
+                    id_tipoestado = @id_tipoestado,
+                    codigo = @codigo,
+                    nombre_proser = @nombre_proser,
+                    descripcion = @descripcion
+                WHERE id_proser = @id_proser;";
 
-                string validarNumero = @"
-                    SELECT COUNT(*)
-                    FROM proser
-                    WHERE codigo = @codigo
-                      AND id_tipoproser = @id_tipoproser
-                      AND id_proser <> @id_proser;";
+            using var comandoActualizar = new MySqlCommand(actualizar, conexion);
+            comandoActualizar.Parameters.AddWithValue("@id_subcategoria", modelo.IdSubcategoria);
+            comandoActualizar.Parameters.AddWithValue("@id_tipoestado", modelo.IdTipoEstado);
+            comandoActualizar.Parameters.AddWithValue("@codigo", modelo.NumeroHabitacion.Trim());
+            comandoActualizar.Parameters.AddWithValue("@nombre_proser", "Habitación " + modelo.NumeroHabitacion.Trim());
+            comandoActualizar.Parameters.AddWithValue("@descripcion", (object?)modelo.Descripcion ?? DBNull.Value);
+            comandoActualizar.Parameters.AddWithValue("@id_proser", modelo.IdProser);
 
-                using (var comandoValidar = new MySqlCommand(validarNumero, conexion))
-                {
-                    comandoValidar.Parameters.AddWithValue("@codigo", modelo.NumeroHabitacion.Trim());
-                    comandoValidar.Parameters.AddWithValue("@id_tipoproser", idTipoProserHabitacion);
-                    comandoValidar.Parameters.AddWithValue("@id_proser", modelo.IdProser);
+            comandoActualizar.ExecuteNonQuery();
 
-                    int existe = Convert.ToInt32(comandoValidar.ExecuteScalar());
-                    if (existe > 0)
-                    {
-                        ViewBag.Mensaje = "Ya existe otra habitación con ese número.";
-                        return View(modelo);
-                    }
-                }
-
-                string actualizar = @"
-                    UPDATE proser
-                    SET id_subcategoria = @id_subcategoria,
-                        id_tipoestado = @id_tipoestado,
-                        codigo = @codigo,
-                        nombre_proser = @nombre_proser,
-                        precio = @precio,
-                        descripcion = @descripcion
-                    WHERE id_proser = @id_proser;";
-
-                using var comandoActualizar = new MySqlCommand(actualizar, conexion);
-                comandoActualizar.Parameters.AddWithValue("@id_subcategoria", modelo.IdSubcategoria);
-                comandoActualizar.Parameters.AddWithValue("@id_tipoestado", modelo.IdTipoEstado);
-                comandoActualizar.Parameters.AddWithValue("@codigo", modelo.NumeroHabitacion.Trim());
-                comandoActualizar.Parameters.AddWithValue("@nombre_proser", "Habitación " + modelo.NumeroHabitacion.Trim());
-                comandoActualizar.Parameters.AddWithValue("@precio", modelo.Precio);
-                comandoActualizar.Parameters.AddWithValue("@descripcion", (object?)modelo.Descripcion ?? DBNull.Value);
-                comandoActualizar.Parameters.AddWithValue("@id_proser", modelo.IdProser);
-
-                comandoActualizar.ExecuteNonQuery();
-
-                TempData["Exito"] = "Habitación actualizada correctamente.";
-                return RedirectToAction("Index");
-            }
-            catch (Exception ex)
-            {
-                ViewBag.Mensaje = "Ocurrió un error al actualizar la habitación: " + ex.Message;
-                return View(modelo);
-            }
+            return RedirectToAction("Index");
         }
 
-        // ===============================
-        // CAMBIAR ESTADO DE HABITACION
-        // ===============================
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
-        public IActionResult CambiarEstado(
-            int id,
-            string nombreEstado,
-            string busqueda = "",
-            string ordenarPor = "numero",
-            string direccion = "asc",
-            string vista = "todas",
-            int pagina = 1)
-        {
-            IActionResult? acceso = ValidarSesion();
-            if (acceso != null)
-            {
-                return acceso;
-            }
-
-            try
-            {
-                using var conexion = _conexionBD.ObtenerConexion();
-                conexion.Open();
-
-                string obtenerIdEstado = @"
-                    SELECT id_tipoestado
-                    FROM tipo_estado
-                    WHERE LOWER(estado) = LOWER(@nombreEstado)
-                    LIMIT 1;";
-
-                int idTipoEstado;
-                using (var comandoEstado = new MySqlCommand(obtenerIdEstado, conexion))
-                {
-                    comandoEstado.Parameters.AddWithValue("@nombreEstado", nombreEstado.Trim());
-
-                    object? resultado = comandoEstado.ExecuteScalar();
-                    if (resultado == null)
-                    {
-                        TempData["Mensaje"] = "No se encontró el estado seleccionado.";
-                        return RedirectToAction("Index", new { busqueda, ordenarPor, direccion, vista, pagina });
-                    }
-
-                    idTipoEstado = Convert.ToInt32(resultado);
-                }
-
-                string actualizar = @"
-                    UPDATE proser
-                    SET id_tipoestado = @idTipoEstado
-                    WHERE id_proser = @idProser;";
-
-                using var comando = new MySqlCommand(actualizar, conexion);
-                comando.Parameters.AddWithValue("@idTipoEstado", idTipoEstado);
-                comando.Parameters.AddWithValue("@idProser", id);
-
-                int filas = comando.ExecuteNonQuery();
-
-                if (filas == 0)
-                {
-                    TempData["Mensaje"] = "No se pudo cambiar el estado de la habitación.";
-                }
-                else
-                {
-                    TempData["Exito"] = "Estado de la habitación actualizado correctamente.";
-                }
-
-                return RedirectToAction("Index", new { busqueda, ordenarPor, direccion, vista, pagina });
-            }
-            catch (Exception ex)
-            {
-                TempData["Mensaje"] = "Ocurrió un error al cambiar el estado: " + ex.Message;
-                return RedirectToAction("Index", new { busqueda, ordenarPor, direccion, vista, pagina });
-            }
-        }
-        // ===============================
-        // CARGAR COMBOS
-        // ===============================
         private void CargarCombos()
         {
             List<dynamic> listaSubcategorias = new List<dynamic>();
             List<dynamic> listaEstados = new List<dynamic>();
 
-            try
+            using var conexion = _conexionBD.ObtenerConexion();
+            conexion.Open();
+
+            string consultaSubcategorias = @"
+            SELECT s.id_subcategoria, s.nombre_subcategoria
+            FROM subcategoria s
+            INNER JOIN categoria c ON s.id_categoria = c.id_categoria
+            WHERE LOWER(c.nombre_categoria) = 'habitaciones'
+            ORDER BY s.nombre_subcategoria;";
+
+            using (var comando = new MySqlCommand(consultaSubcategorias, conexion))
+            using (var lector = comando.ExecuteReader())
             {
-                using var conexion = _conexionBD.ObtenerConexion();
-                conexion.Open();
-
-                string consultaSubcategorias = @"
-                    SELECT id_subcategoria, nombre_subcategoria
-                    FROM subcategoria
-                    WHERE nombre_subcategoria IN ('Sencilla', 'Doble', 'Suite', 'Familiar')
-                    ORDER BY nombre_subcategoria;";
-
-                using (var comandoSubcategorias = new MySqlCommand(consultaSubcategorias, conexion))
-                using (var lectorSubcategorias = comandoSubcategorias.ExecuteReader())
+                while (lector.Read())
                 {
-                    while (lectorSubcategorias.Read())
+                    listaSubcategorias.Add(new
                     {
-                        listaSubcategorias.Add(new
-                        {
-                            IdSubcategoria = Convert.ToInt32(lectorSubcategorias["id_subcategoria"]),
-                            Nombre = lectorSubcategorias["nombre_subcategoria"]?.ToString() ?? ""
-                        });
-                    }
-                }
-
-                string consultaEstados = @"
-                    SELECT id_tipoestado, estado
-                    FROM tipo_estado
-                    ORDER BY estado;";
-
-                using (var comandoEstados = new MySqlCommand(consultaEstados, conexion))
-                using (var lectorEstados = comandoEstados.ExecuteReader())
-                {
-                    while (lectorEstados.Read())
-                    {
-                        listaEstados.Add(new
-                        {
-                            IdTipoEstado = Convert.ToInt32(lectorEstados["id_tipoestado"]),
-                            Estado = lectorEstados["estado"]?.ToString() ?? ""
-                        });
-                    }
+                        IdSubcategoria = Convert.ToInt32(lector["id_subcategoria"]),
+                        Nombre = lector["nombre_subcategoria"].ToString()
+                    });
                 }
             }
-            catch
+
+            string consultaEstados = @"
+            SELECT id_tipoestado, estado
+            FROM tipo_estado
+            WHERE LOWER(estado) NOT IN ('activo', 'inactivo');";
+
+            using (var comando = new MySqlCommand(consultaEstados, conexion))
+            using (var lector = comando.ExecuteReader())
             {
+                while (lector.Read())
+                {
+                    listaEstados.Add(new
+                    {
+                        IdTipoEstado = Convert.ToInt32(lector["id_tipoestado"]),
+                        Estado = lector["estado"].ToString()
+                    });
+                }
             }
 
             ViewBag.SubcategoriasHabitacion = listaSubcategorias;

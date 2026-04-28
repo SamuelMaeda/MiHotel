@@ -49,11 +49,6 @@
         display: inline-block;
     }
 
-        .btn-volver:hover {
-            background-color: #5a6268;
-            color: white;
-        }
-
     .acciones-formulario {
         display: flex;
         gap: 10px;
@@ -75,7 +70,8 @@
         </div>
     }
 
-    <form method="post">
+    <!-- 🔴 CAMBIO CLAVE: asp-action="Editar" -->
+    <form asp-action="Editar" method="post">
         @Html.AntiForgeryToken()
 
         <input type="hidden" name="id" value="@ViewBag.Id" />
@@ -101,6 +97,41 @@
                     </option>
                 }
             </select>
+        </div>
+
+        <!-- ================= PRECIO CONTROLADO ================= -->
+        <div class="mb-3">
+            <div class="form-label-custom">Precio</div>
+
+            @{
+                string categoriaNombre = "";
+
+                foreach (System.Data.DataRow fila in categorias.Rows)
+                {
+                    if ((int)fila["id_categoria"] == (int)ViewBag.IdCategoria)
+                    {
+                        categoriaNombre = fila["nombre_categoria"].ToString().ToLower();
+                        break;
+                    }
+                }
+
+                bool esHabitacion = categoriaNombre == "habitaciones";
+            }
+
+            <input type="number"
+                   name="precio"
+                   value="@ViewBag.Precio"
+                   class="form-control-custom"
+                   step="0.01"
+                   min="0"
+                   @(esHabitacion ? "" : "readonly") />
+
+            @if (!esHabitacion)
+            {
+                <small style="color:#6c757d;">
+                    El precio se gestiona desde el módulo de Productos y Servicios.
+                </small>
+            }
         </div>
 
         <div class="acciones-formulario">
