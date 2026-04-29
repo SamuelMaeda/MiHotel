@@ -1,0 +1,169 @@
+﻿@{
+    ViewData["Title"] = "Punto de Venta";
+    var productos = ViewBag.Productos as System.Data.DataTable;
+}
+
+<style>
+    .contenedor-pos {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 20px;
+    }
+
+    .tarjeta {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.10);
+    }
+
+    .producto {
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        padding: 10px;
+        cursor: pointer;
+    }
+
+        .producto:hover {
+            background: #f2f2f2;
+        }
+
+    .carrito-item {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+    }
+
+    .btn-confirmar {
+        background: #198754;
+        color: white;
+        border: none;
+        padding: 10px;
+        width: 100%;
+        border-radius: 8px;
+    }
+</style>
+
+<div class="contenedor-pos">
+
+    <!-- PRODUCTOS -->
+    <div class="tarjeta">
+        <h4>Productos</h4>
+
+        <div class="row">
+            @foreach (System.Data.DataRow fila in productos.Rows)
+            {
+                <div class="col-4 mb-2">
+                    <div class="producto"
+                         onclick="agregarProducto(
+                                @fila["id_proser"],
+                                '@fila["nombre_proser"]',
+                                @fila["precio"],
+                                @fila["stock"]
+                             )">
+
+                        <strong>@fila["nombre_proser"]</strong><br />
+                        Q @fila["precio"]<br />
+                        Stock: @fila["stock"]
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- CARRITO -->
+    <div class="tarjeta">
+        <h4>Carrito</h4>
+
+        <div id="carrito"></div>
+
+        <hr />
+
+        <h5>Total: Q <span id="total">0.00</span></h5>
+
+        <form method="post" asp-action="GuardarVenta">
+            <input type="hidden" id="detalleJson" name="detalleJson" />
+
+            <button type="submit" class="btn-confirmar" onclick="prepararEnvio()">
+                Confirmar Venta
+            </button>
+        </form>
+    </div>
+
+</div>
+
+<script>
+    let carrito = [];
+
+    function agregarProducto(id, nombre, precio, stock) {
+        let item = carrito.find(p => p.id === id);
+
+        if (item) {
+            if (item.cantidad >= stock) {
+                alert("Stock máximo alcanzado");
+                return;
+            }
+            item.cantidad++;
+        } else {
+            carrito.push({
+                id,
+                nombre,
+                precio,
+                cantidad: 1,
+                stock
+            });
+        }
+
+        renderCarrito();
+    }
+
+    function cambiarCantidad(id, delta) {
+        let item = carrito.find(p => p.id === id);
+
+        if (!item) return;
+
+        item.cantidad += delta;
+
+        if (item.cantidad <= 0) {
+            carrito = carrito.filter(p => p.id !== id);
+        }
+
+        if (item.cantidad > item.stock) {
+            item.cantidad = item.stock;
+        }
+
+        renderCarrito();
+    }
+
+    function renderCarrito() {
+        let contenedor = document.getElementById("carrito");
+        contenedor.innerHTML = "";
+
+        let total = 0;
+
+        carrito.forEach(p => {
+            let subtotal = p.precio * p.cantidad;
+            total += subtotal;
+
+            contenedor.innerHTML += `
+                <div class="carrito-item">
+                    <div>
+                        ${p.nombre}<br>
+                        Q ${p.precio} x ${p.cantidad}
+                    </div>
+
+                    <div>
+                        <button onclick="cambiarCantidad(${p.id}, -1)">-</button>
+                        <button onclick="cambiarCantidad(${p.id}, 1)">+</button>
+                    </div>
+                </div>
+            `;
+        });
+
+        document.getElementById("total").innerText = total.toFixed(2);
+    }
+
+    function prepararEnvio() {
+        document.getElementById("detalleJson").value = JSON.stringify(carrito);
+    }
+</script>

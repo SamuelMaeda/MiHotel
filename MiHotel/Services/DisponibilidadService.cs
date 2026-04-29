@@ -63,7 +63,7 @@ namespace MiHotel.Services
                     p.id_proser,
                     p.codigo,
                     COALESCE(s.nombre_subcategoria, '-') AS tipo_habitacion,
-                    p.precio,
+                    COALESCE(s.precio, 0) AS precio,
                     te.estado
                 FROM proser p
                 LEFT JOIN subcategoria s ON p.id_subcategoria = s.id_subcategoria

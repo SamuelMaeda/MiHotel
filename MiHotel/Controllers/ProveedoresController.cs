@@ -61,14 +61,21 @@ namespace MiHotel.Controllers
             conexion.Open();
 
             int tipo = ObtenerIdTipoProveedor(conexion);
+
+
+
             string estado = vista == "inactivos" ? "inactivo" : "activo";
 
-            string sql = @"SELECT * FROM clipro
-                           WHERE id_tipoclipro=@tipo AND estado=@estado";
+            string sql = @"
+            SELECT * FROM clipro
+            WHERE id_tipoclipro=@tipo 
+            AND estado=@estado
+            AND nombre LIKE @busqueda";
 
             using var cmd = new MySqlCommand(sql, conexion);
             cmd.Parameters.AddWithValue("@tipo", tipo);
             cmd.Parameters.AddWithValue("@estado", estado);
+            cmd.Parameters.AddWithValue("@busqueda", "%" + busqueda + "%");
 
             new MySqlDataAdapter(cmd).Fill(tabla);
            
@@ -101,6 +108,27 @@ namespace MiHotel.Controllers
 
             int tipo = ObtenerIdTipoProveedor(conexion);
 
+            // ================= VALIDACIÓN DE DUPLICADOS =================
+            string validar = @"SELECT COUNT(*) 
+                       FROM clipro 
+                       WHERE LOWER(nombre) = LOWER(@nombre)
+                       AND id_tipoclipro = @tipo";
+
+            using (var cmdValidar = new MySqlCommand(validar, conexion))
+            {
+                cmdValidar.Parameters.AddWithValue("@nombre", modelo.Nombre.Trim());
+                cmdValidar.Parameters.AddWithValue("@tipo", tipo);
+
+                int existe = Convert.ToInt32(cmdValidar.ExecuteScalar());
+
+                if (existe > 0)
+                {
+                    ModelState.AddModelError("", "El proveedor ya existe.");
+                    return View(modelo);
+                }
+            }
+            // ============================================================
+
             string sql = @"INSERT INTO clipro
             (id_tipoclipro,nombre,nit,telefono,correo,direccion,nombre_empresa,numero_empresa,estado)
             VALUES (@tipo,@nombre,@nit,@tel,@correo,@dir,@emp,@num,'activo')";
@@ -108,7 +136,7 @@ namespace MiHotel.Controllers
             using var cmd = new MySqlCommand(sql, conexion);
 
             cmd.Parameters.AddWithValue("@tipo", tipo);
-            cmd.Parameters.AddWithValue("@nombre", modelo.Nombre);
+            cmd.Parameters.AddWithValue("@nombre", modelo.Nombre.Trim());
             cmd.Parameters.AddWithValue("@nit", (object?)modelo.Nit ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@tel", NormalizarTelefono(modelo.Telefono));
             cmd.Parameters.AddWithValue("@correo", (object?)modelo.Correo ?? DBNull.Value);
@@ -157,6 +185,31 @@ namespace MiHotel.Controllers
         {
             using var conexion = _conexionBD.ObtenerConexion();
             conexion.Open();
+
+            // ================= VALIDACIÓN DE DUPLICADOS =================
+            int tipo = ObtenerIdTipoProveedor(conexion);
+
+            string validar = @"SELECT COUNT(*) 
+                   FROM clipro 
+                   WHERE LOWER(nombre) = LOWER(@nombre)
+                   AND id_clipro != @id
+                   AND id_tipoclipro = @tipo";
+
+            using (var cmdValidar = new MySqlCommand(validar, conexion))
+            {
+                cmdValidar.Parameters.AddWithValue("@nombre", modelo.Nombre.Trim());
+                cmdValidar.Parameters.AddWithValue("@id", modelo.IdClipro);
+                cmdValidar.Parameters.AddWithValue("@tipo", tipo);
+
+                int existe = Convert.ToInt32(cmdValidar.ExecuteScalar());
+
+                if (existe > 0)
+                {
+                    ModelState.AddModelError("", "Ya existe otro proveedor con ese nombre.");
+                    return View(modelo);
+                }
+            }
+            // ============================================================
 
             string sql = @"UPDATE clipro SET
                 nombre=@n, nit=@nit, telefono=@tel,

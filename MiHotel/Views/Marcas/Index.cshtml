@@ -1,0 +1,194 @@
+﻿@model System.Data.DataTable
+
+@{
+    ViewData["Title"] = "Marcas";
+
+    string busqueda = ViewBag.Busqueda ?? "";
+    string vista = ViewBag.Vista ?? "activos";
+    int totalRegistros = Model.Rows.Count;
+}
+
+<style>
+    .tarjeta-contenido {
+        background-color: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.10);
+    }
+
+    .btn-crear {
+        background-color: #464482;
+        color: white;
+        padding: 10px 16px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+        .btn-crear:hover {
+            background-color: #36366b;
+            color: white;
+        }
+
+    .estado-activo {
+        color: green;
+        font-weight: bold;
+    }
+
+    .estado-inactivo {
+        color: red;
+        font-weight: bold;
+    }
+
+    .acciones-contenedor {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .btn-icono {
+        width: 38px;
+        height: 38px;
+        border-radius: 8px;
+        border: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        text-decoration: none;
+        font-size: 16px;
+    }
+
+    .btn-editar {
+        background-color: #824B44;
+    }
+
+    .btn-estado {
+        background-color: #363636;
+    }
+
+    .tabs-vista {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+        flex-wrap: wrap;
+    }
+
+    .tab-vista {
+        text-decoration: none;
+        padding: 10px 14px;
+        border-radius: 8px;
+        background-color: #E6D3D0;
+        color: #363636;
+        font-weight: 500;
+    }
+
+        .tab-vista.activa {
+            background-color: #824B44;
+            color: white;
+        }
+</style>
+
+<div class="tarjeta-contenido">
+
+    <!-- HEADER -->
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h3 class="m-0">Gestión de Marcas</h3>
+
+        <a asp-action="Crear" class="btn-crear">
+            Nueva Marca
+        </a>
+    </div>
+
+    <!-- TABS ESTADO -->
+    <div class="tabs-vista">
+        <a asp-action="Index"
+           asp-route-vista="activos"
+           class="tab-vista @(vista == "activos" ? "activa" : "")">
+            Activos
+        </a>
+
+        <a asp-action="Index"
+           asp-route-vista="inactivos"
+           class="tab-vista @(vista == "inactivos" ? "activa" : "")">
+            Inactivos
+        </a>
+    </div>
+
+    <!-- BUSCADOR -->
+    <form method="get" class="mb-4">
+        <input type="hidden" name="vista" value="@vista" />
+
+        <label class="form-label">Buscar marca</label>
+        <input type="text" name="busqueda" value="@busqueda" class="form-control" />
+    </form>
+
+    <!-- TOTAL -->
+    <div class="mb-3">
+        <strong>Total de registros:</strong> @totalRegistros
+    </div>
+
+    <!-- TABLA -->
+    <table class="table table-bordered table-striped">
+        <thead class="table-dark">
+            <tr>
+                <th>Marca</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @if (Model.Rows.Count == 0)
+            {
+                <tr>
+                    <td colspan="3" class="text-center">
+                        No se encontraron marcas.
+                    </td>
+                </tr>
+            }
+            else
+            {
+                foreach (System.Data.DataRow fila in Model.Rows)
+                {
+                    string estado = fila["estado"]?.ToString()?.ToLower() ?? "";
+
+                    <tr>
+                        <td>@fila["nombre_marca"]</td>
+
+                        <td>
+                            @if (estado == "activo")
+                            {
+                                <span class="estado-activo">Activo</span>
+                            }
+                            else
+                            {
+                                <span class="estado-inactivo">Inactivo</span>
+                            }
+                        </td>
+
+                        <td>
+                            <div class="acciones-contenedor">
+                                <a asp-action="Editar"
+                                   asp-route-id="@fila["id_marca"]"
+                                   class="btn-icono btn-editar">
+                                    <i class="bi bi-pencil-fill"></i>
+                                </a>
+
+                                <form asp-action="CambiarEstado"
+                                      asp-route-id="@fila["id_marca"]"
+                                      method="post">
+                                    @Html.AntiForgeryToken()
+                                    <button class="btn-icono btn-estado">
+                                        <i class="bi bi-arrow-repeat"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+
+</div>

@@ -1,0 +1,222 @@
+﻿@{
+    ViewData["Title"] = "Compras";
+    var proveedores = ViewBag.Proveedores as System.Data.DataTable;
+    var productos = ViewBag.Productos as System.Data.DataTable;
+}
+
+<style>
+    .tarjeta-contenido {
+        background-color: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.10);
+    }
+
+    .form-label-custom {
+        font-weight: 600;
+        color: #363636;
+        margin-bottom: 6px;
+    }
+
+    .form-control-custom {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 10px 12px;
+        width: 100%;
+    }
+
+    .btn-principal {
+        background-color: #464482;
+        color: white;
+        padding: 10px 16px;
+        border-radius: 8px;
+        border: none;
+        font-weight: 500;
+    }
+
+        .btn-principal:hover {
+            background-color: #36366b;
+        }
+
+    .btn-agregar {
+        background-color: #4a7c59;
+        color: white;
+        border: none;
+        padding: 8px 14px;
+        border-radius: 8px;
+    }
+
+    .btn-eliminar {
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        padding: 6px 10px;
+        border-radius: 6px;
+    }
+
+    table {
+        width: 100%;
+        margin-top: 15px;
+    }
+
+    th {
+        background-color: #212529;
+        color: white;
+    }
+
+    th, td {
+        padding: 10px;
+        text-align: center;
+    }
+</style>
+
+<div class="tarjeta-contenido">
+
+    <!-- ENCABEZADO CONSISTENTE -->
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h3 class="m-0">Registro de Compras</h3>
+    </div>
+
+    <!-- ALERTAS -->
+    @if (TempData["Exito"] != null)
+    {
+        <div class="alert alert-success">
+            @TempData["Exito"]
+        </div>
+    }
+
+    @if (TempData["Mensaje"] != null)
+    {
+        <div class="alert alert-danger">
+            @TempData["Mensaje"]
+        </div>
+    }
+
+    <form method="post">
+
+        <!-- PROVEEDOR -->
+        <div class="mb-4">
+            <div class="form-label-custom">Proveedor</div>
+            <select name="idProveedor" class="form-control-custom" required>
+                <option value="">Seleccione proveedor</option>
+                @foreach (System.Data.DataRow fila in proveedores.Rows)
+                {
+                    <option value="@fila["id_clipro"]">
+                        @fila["nombre"]
+                    </option>
+                }
+            </select>
+        </div>
+
+        <!-- TABLA -->
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped" id="tablaProductos">
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Stock actual</th>
+                        <th>Cantidad</th>
+                        <th>Precio</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <button type="button" class="btn-agregar" onclick="agregarFila()">
+            + Agregar producto
+        </button>
+
+        <div class="mt-4 d-flex gap-2 flex-wrap">
+            <button type="submit" class="btn-principal">
+                Guardar Compra
+            </button>
+        </div>
+
+    </form>
+
+</div>
+
+<script>
+    const productos = [
+        @foreach (System.Data.DataRow fila in productos.Rows)
+        {
+                <text>
+                {
+                    id: @fila["id_proser"],
+                    nombre: "@fila["nombre_proser"]",
+                    stock: @fila["stock"],
+                    precio: @fila["precio"]
+                },
+                </text>
+        }
+    ];
+
+    function productoYaExiste(id, filaActual) {
+        let existe = false;
+
+        document.querySelectorAll("select[name='idProducto']").forEach(sel => {
+            if (sel !== filaActual && sel.value == id) {
+                existe = true;
+            }
+        });
+
+        return existe;
+    }
+
+    function agregarFila() {
+
+        let fila = `
+        <tr>
+            <td>
+                <select name="idProducto" class="form-control-custom" required onchange="actualizarFila(this)">
+                    <option value="">Seleccione</option>
+                    ${productos.map(p => `<option value="${p.id}" data-stock="${p.stock}" data-precio="${p.precio}">${p.nombre}</option>`).join('')}
+                </select>
+            </td>
+
+            <td>
+                <input type="text" class="form-control-custom stock" readonly>
+            </td>
+
+            <td>
+                <input type="number" name="cantidad" class="form-control-custom" min="1" required>
+            </td>
+
+            <td>
+                <input type="number" name="precio" class="form-control-custom precio" readonly>
+            </td>
+
+            <td>
+                <button type="button" class="btn-eliminar" onclick="eliminarFila(this)">X</button>
+            </td>
+        </tr>
+        `;
+
+        document.querySelector("#tablaProductos tbody").insertAdjacentHTML("beforeend", fila);
+    }
+
+    function eliminarFila(btn) {
+        btn.closest("tr").remove();
+    }
+
+    function actualizarFila(select) {
+
+        if (productoYaExiste(select.value, select)) {
+            alert("Este producto ya fue agregado.");
+            select.value = "";
+            return;
+        }
+
+        let option = select.options[select.selectedIndex];
+        let fila = select.closest("tr");
+
+        let stock = parseInt(option.getAttribute("data-stock")) || 0;
+        let precio = parseFloat(option.getAttribute("data-precio")) || 0;
+
+        fila.querySelector(".stock").value = stock;
+        fila.querySelector(".precio").value = precio;
+    }
+</script>

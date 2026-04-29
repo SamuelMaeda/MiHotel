@@ -1,0 +1,95 @@
+﻿@{
+    ViewData["Title"] = "Nueva Marca";
+}
+
+<style>
+    .tarjeta-contenido {
+        background-color: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.10);
+        max-width: 800px;
+    }
+
+    .form-label-custom {
+        font-weight: 600;
+        color: #363636;
+        margin-bottom: 6px;
+    }
+
+    .form-control-custom {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 10px 12px;
+        width: 100%;
+    }
+
+    .btn-guardar {
+        background-color: #4a7c59;
+        color: white;
+        border: none;
+        padding: 10px 18px;
+        border-radius: 8px;
+        font-weight: 500;
+    }
+
+        .btn-guardar:hover {
+            background-color: #3d684a;
+        }
+
+    .btn-volver {
+        background-color: #6c757d;
+        color: white;
+        text-decoration: none;
+        padding: 10px 18px;
+        border-radius: 8px;
+        font-weight: 500;
+        display: inline-block;
+    }
+
+    .acciones-formulario {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 20px;
+    }
+</style>
+
+<div class="tarjeta-contenido">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="m-0">Nueva Marca</h3>
+    </div>
+
+    @if (ViewBag.Mensaje != null)
+    {
+        <div class="alert alert-danger">
+            @ViewBag.Mensaje
+        </div>
+    }
+
+    <form method="post">
+        @Html.AntiForgeryToken()
+
+        <div class="mb-3">
+            <div class="form-label-custom">Nombre de la marca</div>
+            <input type="text"
+                   name="nombre"
+                   class="form-control-custom"
+                   placeholder="Ingrese el nombre"
+                   required />
+        </div>
+
+        <div class="acciones-formulario">
+            <button type="submit" class="btn-guardar">
+                Guardar marca
+            </button>
+
+            <a asp-action="Index" class="btn-volver">
+                Volver al listado
+            </a>
+        </div>
+    </form>
+
+</div>

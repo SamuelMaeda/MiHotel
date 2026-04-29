@@ -1,0 +1,186 @@
+﻿@{
+    ViewData["Title"] = "Inventario";
+    var productos = ViewBag.Productos as System.Data.DataTable;
+    string busqueda = Context.Request.Query["busqueda"];
+    string ordenarPor = Context.Request.Query["ordenarPor"];
+    string direccion = Context.Request.Query["direccion"];
+
+    if (string.IsNullOrEmpty(ordenarPor)) ordenarPor = "nombre";
+    if (string.IsNullOrEmpty(direccion)) direccion = "asc";
+
+    string SiguienteDireccion(string columna)
+    {
+        if (ordenarPor == columna && direccion == "asc")
+        {
+            return "desc";
+        }
+        return "asc";
+    }
+
+    string IconoOrden(string columna)
+    {
+        if (ordenarPor != columna)
+        {
+            return "bi-arrow-down-up";
+        }
+        return direccion == "asc" ? "bi-sort-alpha-down" : "bi-sort-alpha-up";
+    }
+
+    int total = productos != null ? productos.Rows.Count : 0;
+}
+
+<style>
+    .tarjeta-contenido {
+        background-color: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.10);
+    }
+
+    .form-control-custom {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 10px 12px;
+        width: 100%;
+    }
+
+    .encabezado-orden {
+        color: inherit;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-weight: 600;
+    }
+
+    .tabla-custom {
+        border-collapse: collapse;
+        width: 100%;
+    }
+
+        .tabla-custom thead {
+            background-color: #212529;
+            color: white;
+        }
+
+        .tabla-custom th {
+            padding: 12px;
+            text-align: left;
+        }
+
+        .tabla-custom td {
+            padding: 12px;
+        }
+
+        .tabla-custom th,
+        .tabla-custom td {
+            border: none !important;
+        }
+
+        .tabla-custom tbody tr:nth-child(odd) {
+            background-color: #ffffff;
+        }
+
+        .tabla-custom tbody tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
+    .stock-bajo {
+        color: red;
+        font-weight: bold;
+    }
+</style>
+
+<div class="tarjeta-contenido">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="m-0">Gestión de Inventario</h3>
+    </div>
+
+    <form method="get" class="mb-3">
+        <input type="hidden" name="ordenarPor" value="@ordenarPor" />
+        <input type="hidden" name="direccion" value="@direccion" />
+
+        <label>Buscar producto</label>
+        <input type="text" name="busqueda" value="@busqueda"
+               class="form-control-custom"
+               placeholder="Buscar..." />
+    </form>
+
+    <div class="mb-3">
+        <strong>Total de registros: @total</strong>
+    </div>
+
+    <div class="table-responsive">
+        <table class="tabla-custom">
+            <thead>
+                <tr>
+                    <th>
+                        <a asp-action="Index"
+                           asp-route-busqueda="@busqueda"
+                           asp-route-ordenarPor="nombre_proser"
+                           asp-route-direccion="@SiguienteDireccion("nombre_proser")"
+                           class="encabezado-orden">
+                            Producto <i class="bi @IconoOrden("nombre_proser")"></i>
+                        </a>
+                    </th>
+
+                    <th>
+                        <a asp-action="Index"
+                           asp-route-busqueda="@busqueda"
+                           asp-route-ordenarPor="nombre_subcategoria"
+                           asp-route-direccion="@SiguienteDireccion("nombre_subcategoria")"
+                           class="encabezado-orden">
+                            Subcategoría <i class="bi @IconoOrden("nombre_subcategoria")"></i>
+                        </a>
+                    </th>
+
+                    <th>
+                        <a asp-action="Index"
+                           asp-route-busqueda="@busqueda"
+                           asp-route-ordenarPor="precio"
+                           asp-route-direccion="@SiguienteDireccion("precio")"
+                           class="encabezado-orden">
+                            Precio <i class="bi @IconoOrden("precio")"></i>
+                        </a>
+                    </th>
+
+                    <th>
+                        <a asp-action="Index"
+                           asp-route-busqueda="@busqueda"
+                           asp-route-ordenarPor="stock"
+                           asp-route-direccion="@SiguienteDireccion("stock")"
+                           class="encabezado-orden">
+                            Stock <i class="bi @IconoOrden("stock")"></i>
+                        </a>
+                    </th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @if (productos == null || productos.Rows.Count == 0)
+                {
+                    <tr>
+                        <td colspan="4">No hay productos registrados.</td>
+                    </tr>
+                }
+                else
+                {
+                    foreach (System.Data.DataRow fila in productos.Rows)
+                    {
+                        int stock = Convert.ToInt32(fila["stock"]);
+
+                        <tr>
+                            <td>@fila["nombre_proser"]</td>
+                            <td>@fila["nombre_subcategoria"]</td>
+                            <td>Q @Convert.ToDecimal(fila["precio"]).ToString("N2")</td>
+                            <td class="@(stock <= 5 ? "stock-bajo" : "")">@stock</td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+</div>
