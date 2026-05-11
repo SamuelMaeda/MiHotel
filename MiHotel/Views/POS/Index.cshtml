@@ -1,93 +1,245 @@
 ﻿@{
     ViewData["Title"] = "Punto de Venta";
+
     var productos = ViewBag.Productos as System.Data.DataTable;
+    var clientes = ViewBag.Clientes as System.Data.DataTable;
+    var reservas = ViewBag.Reservas as System.Data.DataTable;
 }
 
 <style>
-    .contenedor-pos {
-        display: grid;
-        grid-template-columns: 2fr 1fr;
-        gap: 20px;
-    }
-
-    .tarjeta {
-        background: white;
+    .tarjeta-contenido {
+        background-color: white;
         border-radius: 15px;
-        padding: 20px;
+        padding: 25px;
         box-shadow: 0 4px 10px rgba(0,0,0,0.10);
+        margin-bottom: 20px;
+        height: 100%;
+        max-width: 1000px;
     }
 
-    .producto {
-        border: 1px solid #ddd;
-        border-radius: 10px;
-        padding: 10px;
-        cursor: pointer;
+    /* TITULOS (ENCAPSULADOS) */
+    .pos-container h4 {
+        font-size: 20px;
+        font-weight: 600;
+        margin-bottom: 15px;
+        color: #212529;
     }
 
-        .producto:hover {
-            background: #f2f2f2;
-        }
+    .pos-container h5 {
+        font-size: 18px;
+        font-weight: 600;
+        color: #212529;
+    }
 
-    .carrito-item {
+    /* LABELS (ENCAPSULADOS) */
+    .pos-container label {
+        font-weight: 600;
+        color: #363636;
+        margin-bottom: 6px;
+        display: block;
+        font-size: 14px;
+    }
+
+    .form-control-custom {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 10px 12px;
+        height: 44px;
+        width: 100%;
+        font-size: 14px;
         display: flex;
-        justify-content: space-between;
-        margin-bottom: 10px;
+        align-items: center;
     }
 
-    .btn-confirmar {
-        background: #198754;
+    .btn-agregar {
+        background-color: #4a7c59;
         color: white;
         border: none;
-        padding: 10px;
-        width: 100%;
+        padding: 8px 14px;
         border-radius: 8px;
+    }
+
+    .btn-guardar {
+        background-color: #4a7c59;
+        color: white;
+        border: none;
+        padding: 10px 18px;
+        border-radius: 8px;
+        margin-top: 20px;
+    }
+
+    .btn-cantidad {
+        padding: 4px 10px;
+        border: none;
+        border-radius: 6px;
+        background-color: #dee2e6;
+        margin: 0 3px;
+        font-size: 13px;
+    }
+
+    .btn-eliminar {
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 6px;
+        font-size: 13px;
+    }
+
+    .tabla-pos {
+        width: 100%;
+        table-layout: fixed;
+        margin-top: 10px;
+    }
+
+        .tabla-pos th {
+            background-color: #212529;
+            color: white;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 600;
+            padding: 10px;
+        }
+
+        .tabla-pos td {
+            text-align: center;
+            vertical-align: middle;
+            font-size: 14px;
+            padding: 10px;
+        }
+
+    #total {
+        font-weight: bold;
     }
 </style>
 
-<div class="contenedor-pos">
+<div class="pos-container">
 
-    <!-- PRODUCTOS -->
-    <div class="tarjeta">
-        <h4>Productos</h4>
+    <div class="row">
 
-        <div class="row">
-            @foreach (System.Data.DataRow fila in productos.Rows)
-            {
-                <div class="col-4 mb-2">
-                    <div class="producto"
-                         onclick="agregarProducto(
-                                @fila["id_proser"],
-                                '@fila["nombre_proser"]',
-                                @fila["precio"],
-                                @fila["stock"]
-                             )">
+        <!-- ========================= -->
+        <!-- AGREGAR PRODUCTO -->
+        <!-- ========================= -->
+        <div class="col-md-5">
+            <div class="tarjeta-contenido">
 
-                        <strong>@fila["nombre_proser"]</strong><br />
-                        Q @fila["precio"]<br />
-                        Stock: @fila["stock"]
-                    </div>
+                <h4>Agregar Producto</h4>
+
+                <div>
+                    <label>Cliente</label>
+                    <select id="cliente" class="form-control-custom">
+                        <option value="">Consumidor final</option>
+                        @foreach (System.Data.DataRow c in clientes.Rows)
+                        {
+                            <option value="@c["id_clipro"]">@c["nombre"]</option>
+                        }
+                    </select>
                 </div>
-            }
+
+                <div style="margin-top:10px;">
+                    <label>Reserva</label>
+                    <select id="reserva" class="form-control-custom">
+                        <option value="">Sin reserva</option>
+                        @foreach (System.Data.DataRow r in reservas.Rows)
+                        {
+                            <option value="@r["id_reserva"]" data-cliente="@r["id_clipro"]">
+                                Reserva del @Convert.ToDateTime(r["fecha_entrada"]).ToString("dd/MM")
+                                al @Convert.ToDateTime(r["fecha_salida"]).ToString("dd/MM")
+                            </option>
+                        }
+                    </select>
+                </div>
+
+                <hr />
+
+                <div>
+                    <label>Producto</label>
+                    <select id="producto" class="form-control-custom" onchange="cargarProducto()">
+                        <option value="">Seleccione</option>
+                        @foreach (System.Data.DataRow p in productos.Rows)
+                        {
+                            <option value="@p["id_proser"]"
+                                    data-precio="@p["precio"]"
+                                    data-stock="@p["stock"]">
+                                @p["nombre_proser"]
+                            </option>
+                        }
+                    </select>
+                </div>
+
+                <div style="margin-top:10px;">
+                    <label>Precio</label>
+                    <input type="text" id="precio" class="form-control-custom" readonly />
+                </div>
+
+                <div style="margin-top:10px;">
+                    <label>Stock</label>
+                    <input type="text" id="stock" class="form-control-custom" readonly />
+                </div>
+
+                <div style="margin-top:10px;">
+                    <label>Cantidad</label>
+                    <input type="number" id="cantidad" class="form-control-custom" min="1" />
+                </div>
+
+                <div style="margin-top:15px;">
+                    <button type="button" class="btn-agregar" onclick="agregarProducto()">
+                        + Agregar
+                    </button>
+                </div>
+
+            </div>
         </div>
-    </div>
 
-    <!-- CARRITO -->
-    <div class="tarjeta">
-        <h4>Carrito</h4>
+        <!-- ========================= -->
+        <!-- CARRITO -->
+        <!-- ========================= -->
+        <div class="col-md-7">
+            <div class="tarjeta-contenido">
 
-        <div id="carrito"></div>
+                <h4>Carrito de Compra</h4>
 
-        <hr />
+                <table class="table tabla-pos">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>Cant</th>
+                            <th>Precio</th>
+                            <th>Subtotal</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="carrito">
+                        <tr>
+                            <td colspan="5" style="text-align:center; padding:15px;">
+                                No se han ingresado productos dentro del carrito de compra
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
 
-        <h5>Total: Q <span id="total">0.00</span></h5>
+                <h5>Total: Q <span id="total">0.00</span></h5>
 
-        <form method="post" asp-action="GuardarVenta">
-            <input type="hidden" id="detalleJson" name="detalleJson" />
+                <div style="margin-top:15px;">
+                    <label>Monto pagado</label>
+                    <input type="number" id="montoPagado" class="form-control-custom" step="0.01" value="0" />
+                </div>
 
-            <button type="submit" class="btn-confirmar" onclick="prepararEnvio()">
-                Confirmar Venta
-            </button>
-        </form>
+                <form method="post" asp-action="GuardarVenta">
+                    <input type="hidden" name="detalleJson" id="detalleJson" />
+                    <input type="hidden" name="id_clipro" id="inputCliente" />
+                    <input type="hidden" name="id_reserva" id="inputReserva" />
+                    <input type="hidden" name="montoPagado" id="inputPagado" />
+
+                    <button type="submit" class="btn-guardar" style="margin-top:20px;" onclick="preparar()">
+                        Confirmar Venta
+                    </button>
+                </form>
+
+            </div>
+        </div>
+
     </div>
 
 </div>
@@ -95,75 +247,110 @@
 <script>
     let carrito = [];
 
-    function agregarProducto(id, nombre, precio, stock) {
-        let item = carrito.find(p => p.id === id);
+    function cargarProducto() {
+        let select = document.getElementById("producto");
+        let option = select.options[select.selectedIndex];
+
+        document.getElementById("precio").value = option.getAttribute("data-precio") || "";
+        document.getElementById("stock").value = option.getAttribute("data-stock") || "";
+    }
+
+    function agregarProducto() {
+        let select = document.getElementById("producto");
+
+        let id = select.value;
+        let nombre = select.options[select.selectedIndex].text;
+        let precio = parseFloat(document.getElementById("precio").value);
+        let cantidad = parseInt(document.getElementById("cantidad").value);
+        let stock = parseInt(document.getElementById("stock").value);
+
+        if (!id || !cantidad || cantidad <= 0) return;
+
+        let item = carrito.find(p => p.id == id);
 
         if (item) {
-            if (item.cantidad >= stock) {
-                alert("Stock máximo alcanzado");
+            if (item.cantidad + cantidad > stock) {
+                alert("Stock insuficiente");
                 return;
             }
-            item.cantidad++;
+            item.cantidad += cantidad;
         } else {
-            carrito.push({
-                id,
-                nombre,
-                precio,
-                cantidad: 1,
-                stock
-            });
+            if (cantidad > stock) {
+                alert("Stock insuficiente");
+                return;
+            }
+            carrito.push({ id, nombre, precio, cantidad, stock });
         }
 
-        renderCarrito();
+        render();
     }
 
     function cambiarCantidad(id, delta) {
-        let item = carrito.find(p => p.id === id);
+        let item = carrito.find(p => p.id == id);
 
         if (!item) return;
 
-        item.cantidad += delta;
+        let nuevaCantidad = item.cantidad + delta;
 
-        if (item.cantidad <= 0) {
-            carrito = carrito.filter(p => p.id !== id);
+        if (nuevaCantidad <= 0) {
+            carrito = carrito.filter(p => p.id != id);
+        } else if (nuevaCantidad <= item.stock) {
+            item.cantidad = nuevaCantidad;
+        } else {
+            alert("Stock máximo alcanzado");
         }
 
-        if (item.cantidad > item.stock) {
-            item.cantidad = item.stock;
-        }
-
-        renderCarrito();
+        render();
     }
 
-    function renderCarrito() {
-        let contenedor = document.getElementById("carrito");
-        contenedor.innerHTML = "";
+    function eliminar(id) {
+        carrito = carrito.filter(p => p.id != id);
+        render();
+    }
 
+    function render() {
+        let html = "";
         let total = 0;
 
         carrito.forEach(p => {
-            let subtotal = p.precio * p.cantidad;
-            total += subtotal;
+            let sub = p.precio * p.cantidad;
+            total += sub;
 
-            contenedor.innerHTML += `
-                <div class="carrito-item">
-                    <div>
-                        ${p.nombre}<br>
-                        Q ${p.precio} x ${p.cantidad}
-                    </div>
-
-                    <div>
-                        <button onclick="cambiarCantidad(${p.id}, -1)">-</button>
-                        <button onclick="cambiarCantidad(${p.id}, 1)">+</button>
-                    </div>
-                </div>
-            `;
+            html += `
+            <tr>
+                <td>${p.nombre}</td>
+                <td>
+                    <button class="btn-cantidad" onclick="cambiarCantidad(${p.id}, -1)">-</button>
+                    ${p.cantidad}
+                    <button class="btn-cantidad" onclick="cambiarCantidad(${p.id}, 1)">+</button>
+                </td>
+                <td>Q ${p.precio}</td>
+                <td>Q ${sub.toFixed(2)}</td>
+                <td>
+                    <button class="btn-eliminar" onclick="eliminar(${p.id})">X</button>
+                </td>
+            </tr>`;
         });
 
+        if (carrito.length === 0) {
+            document.getElementById("carrito").innerHTML = `
+                <tr>
+                    <td colspan="5" style="text-align:center; padding:15px;">
+                        No se han ingresado productos dentro del carrito de compra
+                    </td>
+                </tr>`;
+            document.getElementById("total").innerText = "0.00";
+            return;
+        }
+
+        document.getElementById("carrito").innerHTML = html;
         document.getElementById("total").innerText = total.toFixed(2);
     }
 
-    function prepararEnvio() {
+    function preparar() {
         document.getElementById("detalleJson").value = JSON.stringify(carrito);
+        document.getElementById("inputCliente").value = document.getElementById("cliente").value;
+        document.getElementById("inputReserva").value = document.getElementById("reserva").value;
+        document.getElementById("inputPagado").value = document.getElementById("montoPagado").value;
     }
 </script>
