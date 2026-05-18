@@ -335,6 +335,7 @@ namespace MiHotel.Controllers
                     p.codigo AS habitacion,
                     r.fecha_entrada,
                     r.fecha_salida,
+                    r.codigo_seguridad,
                     r.cantidad_personas,
                     r.total_reserva,
                     r.saldo_pendiente,
@@ -375,7 +376,11 @@ namespace MiHotel.Controllers
                 Estado = lector["estado"]?.ToString() ?? "",
                 Observaciones = lector["observaciones"] == DBNull.Value
                     ? null
-                    : lector["observaciones"]?.ToString()
+                    : lector["observaciones"]?.ToString(),
+
+                    CodigoSeguridad = lector["codigo_seguridad"] == DBNull.Value
+                    ? null
+                    : lector["codigo_seguridad"]?.ToString(),
             };
         }
 
@@ -414,6 +419,53 @@ namespace MiHotel.Controllers
             }
 
             return Convert.ToInt32(resultado);
+        }
+
+
+        //
+        // METODO DE VALIDACIÓN DE RESERVAS
+        //
+
+        [HttpGet]
+        public IActionResult BuscarPorCodigo()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult BuscarPorCodigo(string codigo)
+        {
+            if (string.IsNullOrWhiteSpace(codigo))
+            {
+                ViewBag.Mensaje = "Debe ingresar un código de seguridad.";
+                return View();
+            }
+
+            using var conexion = _conexionBD.ObtenerConexion();
+            conexion.Open();
+
+            string query = @"
+        SELECT id_reserva
+        FROM reserva
+        WHERE codigo_seguridad = @codigo
+        LIMIT 1;";
+
+            using var cmd = new MySqlCommand(query, conexion);
+            cmd.Parameters.AddWithValue("@codigo", codigo.Trim());
+
+            var resultado = cmd.ExecuteScalar();
+
+            if (resultado == null)
+            {
+                ViewBag.Mensaje = "No se encontró una reserva con ese código.";
+                return View();
+            }
+
+            int idReserva = Convert.ToInt32(resultado);
+
+            // reutiliza tu método existente
+            return RedirectToAction("Detalle", new { id = idReserva });
         }
 
         // ============================================================
@@ -1530,6 +1582,24 @@ namespace MiHotel.Controllers
                     idReservaGenerada = Convert.ToInt32(comandoInsertar.LastInsertedId);
                 }
 
+                // CÓDIGO DE SEGURIDAD
+                // ===== GENERAR CÓDIGO DE SEGURIDAD =====
+                string codigoSeguridad = GenerarCodigoSeguridad(idReservaGenerada, modelo.IdHabitacion);
+
+                            string actualizarCodigo = @"
+                UPDATE reserva
+                SET codigo_seguridad = @codigo
+                WHERE id_reserva = @id_reserva;";
+
+                using (var cmdCodigo = new MySqlCommand(actualizarCodigo, conexion, transaccion))
+                {
+                    cmdCodigo.Parameters.AddWithValue("@codigo", codigoSeguridad);
+                    cmdCodigo.Parameters.AddWithValue("@id_reserva", idReservaGenerada);
+                    cmdCodigo.ExecuteNonQuery();
+                }
+
+                //FIN DE CÓDIGO DE SEGURIDAD
+
                 int idUsuario = ObtenerIdUsuarioValidoParaMovimiento(conexion);
                 int idTipoMovimientoReserva = ObtenerIdTipoMovimiento(conexion, "reserva");
                 int idTipoMovimientoCxc = ObtenerIdTipoMovimiento(conexion, "cuenta_por_cobrar");
@@ -1586,6 +1656,15 @@ namespace MiHotel.Controllers
                 ViewBag.Mensaje = "Ocurrió un error al guardar la reserva: " + ex.Message;
                 return View(modelo);
             }
+        }
+
+        //Generar código de seguridad
+        private string GenerarCodigoSeguridad(int idReserva, int idHabitacion)
+        {
+            string hora = DateTime.Now.ToString("HHmmss");
+            string random = Random.Shared.Next(100, 999).ToString();
+
+            return $"RES-{idReserva}-H{idHabitacion}-{hora}-{random}";
         }
 
         // ============================================================

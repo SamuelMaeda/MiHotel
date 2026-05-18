@@ -37,7 +37,7 @@
         color: #363636;
         margin-bottom: 6px;
         display: block;
-        font-size: 14px;
+        font-size: 15px;
     }
 
     .form-control-custom {
@@ -47,7 +47,7 @@
         padding: 10px 12px;
         height: 44px;
         width: 100%;
-        font-size: 14px;
+        font-size: 15px;
         display: flex;
         align-items: center;
     }
@@ -97,7 +97,7 @@
             background-color: #212529;
             color: white;
             text-align: center;
-            font-size: 14px;
+            font-size: 15px;
             font-weight: 600;
             padding: 10px;
         }
@@ -105,16 +105,95 @@
         .tabla-pos td {
             text-align: center;
             vertical-align: middle;
-            font-size: 14px;
+            font-size: 15px;
             padding: 10px;
         }
 
     #total {
         font-weight: bold;
     }
+
+    .mensaje-pos-exito {
+        background-color: #dff3e3;
+        border: 1px solid #b7dfc0;
+        color: #1f5130;
+        border-radius: 12px;
+        padding: 14px 18px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    }
+
+        .mensaje-pos-exito strong {
+            display: block;
+            font-size: 15px;
+            margin-bottom: 2px;
+        }
+
+        .mensaje-pos-exito span {
+            font-size: 13px;
+            color: #45634f;
+        }
+
+    .form-control-custom[readonly] {
+        background-color: #e9ecef;
+        color: #495057;
+        cursor: not-allowed;
+        font-weight: 500;
+    }
+
+    .buscador-pos {
+        margin-bottom: 10px;
+    }
+
+    /* EXTRA */
+
+    .contenedor-autocomplete {
+        position: relative;
+    }
+
+    .lista-sugerencias {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background-color: white;
+        border: 1px solid #dee2e6;
+        border-top: none;
+        border-radius: 0 0 8px 8px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+        max-height: 220px;
+        overflow-y: auto;
+        z-index: 50;
+        display: none;
+    }
+
+    .item-sugerencia {
+        padding: 10px 12px;
+        cursor: pointer;
+        border-bottom: 1px solid #f1f1f1;
+        font-size: 15px;
+    }
+
+        .item-sugerencia:hover {
+            background-color: #f8f9fa;
+        }
+
+    .texto-sin-resultados {
+        padding: 10px 12px;
+        color: #6c757d;
+        font-size: 14px;
+    }
+
 </style>
 
 <div class="pos-container">
+    @if (TempData["Exito"] != null)
+    {
+        <div class="mensaje-pos-exito">
+            <strong>@TempData["Exito"]</strong>
+            <span>La transacción fue procesada y almacenada correctamente.</span>
+        </div>
+    }
 
     <div class="row">
 
@@ -128,13 +207,25 @@
 
                 <div>
                     <label>Cliente</label>
-                    <select id="cliente" class="form-control-custom">
+                    <div class="contenedor-autocomplete">
+
+                        <input type="text"
+                               id="buscarCliente"
+                               class="form-control-custom"
+                               placeholder="Buscar cliente..."
+                               autocomplete="off" />
+
+                        <div id="listaClientes" class="lista-sugerencias"></div>
+                    <select id="cliente"
+                            onchange="filtrarReservas()"
+                            style="display:none;">
                         <option value="">Consumidor final</option>
                         @foreach (System.Data.DataRow c in clientes.Rows)
                         {
                             <option value="@c["id_clipro"]">@c["nombre"]</option>
                         }
                     </select>
+                </div>
                 </div>
 
                 <div style="margin-top:10px;">
@@ -155,7 +246,18 @@
 
                 <div>
                     <label>Producto</label>
-                    <select id="producto" class="form-control-custom" onchange="cargarProducto()">
+                        <div class="contenedor-autocomplete">
+
+                            <input type="text"
+                                   id="buscarProducto"
+                                   class="form-control-custom"
+                                   placeholder="Buscar producto..."
+                                   autocomplete="off" />
+
+                            <div id="listaProductos" class="lista-sugerencias"></div>
+                    <select id="producto"
+                            onchange="cargarProducto()"
+                            style="display:none;">
                         <option value="">Seleccione</option>
                         @foreach (System.Data.DataRow p in productos.Rows)
                         {
@@ -166,6 +268,7 @@
                             </option>
                         }
                     </select>
+                </div>
                 </div>
 
                 <div style="margin-top:10px;">
@@ -246,6 +349,121 @@
 
 <script>
     let carrito = [];
+                document.addEventListener("DOMContentLoaded", function () {
+
+                configurarAutocomplete(
+                    "buscarCliente",
+                    "listaClientes",
+                    "cliente",
+                    filtrarReservas
+                );
+
+                configurarAutocomplete(
+                    "buscarProducto",
+                    "listaProductos",
+                    "producto",
+                    cargarProducto
+                );
+            });
+
+            function configurarAutocomplete(inputId, listaId, selectId, callback) {
+
+                const input = document.getElementById(inputId);
+                const lista = document.getElementById(listaId);
+                const select = document.getElementById(selectId);
+
+                input.addEventListener("input", function () {
+
+                    lista.innerHTML = "";
+
+                    const texto = input.value.trim().toLowerCase();
+
+                    if (texto === "") {
+                        lista.style.display = "none";
+                        return;
+                    }
+
+                    let coincidencias = 0;
+
+                    for (let option of select.options) {
+
+                        if (option.value === "") continue;
+
+                        const contenido = option.text.toLowerCase();
+
+                        if (contenido.includes(texto)) {
+
+                            coincidencias++;
+
+                            const item = document.createElement("div");
+
+                            item.className = "item-sugerencia";
+                            item.textContent = option.text;
+
+                            item.addEventListener("click", function () {
+
+                                input.value = option.text;
+                                select.value = option.value;
+
+                                lista.style.display = "none";
+
+                                if (callback) {
+                                    callback();
+                                }
+                            });
+
+                            lista.appendChild(item);
+                        }
+                    }
+
+                    if (coincidencias === 0) {
+
+                        const vacio = document.createElement("div");
+
+                        vacio.className = "texto-sin-resultados";
+                        vacio.textContent = "No se encontraron resultados.";
+
+                        lista.appendChild(vacio);
+                    }
+
+                    lista.style.display = "block";
+                });
+
+                document.addEventListener("click", function (e) {
+
+                    if (!lista.contains(e.target) && e.target !== input) {
+                        lista.style.display = "none";
+                    }
+                });
+            }
+
+            
+
+           function filtrarReservas() {
+
+        let cliente = document.getElementById("cliente").value;
+        let reserva = document.getElementById("reserva");
+
+        reserva.value = "";
+
+        for (let option of reserva.options) {
+
+            if (option.value === "") {
+                option.style.display = "block";
+                continue;
+            }
+
+            let clienteReserva = option.getAttribute("data-cliente");
+
+            if (cliente === "" || clienteReserva === cliente) {
+                option.style.display = "block";
+            } else {
+                option.style.display = "none";
+            }
+        }
+    }
+    
+
 
     function cargarProducto() {
         let select = document.getElementById("producto");
@@ -258,7 +476,7 @@
     function agregarProducto() {
         let select = document.getElementById("producto");
 
-        let id = select.value;
+        let id = parseInt(select.value);
         let nombre = select.options[select.selectedIndex].text;
         let precio = parseFloat(document.getElementById("precio").value);
         let cantidad = parseInt(document.getElementById("cantidad").value);

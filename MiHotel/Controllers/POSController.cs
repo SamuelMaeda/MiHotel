@@ -53,7 +53,7 @@ namespace MiHotel.Controllers
                 fecha_entrada,
                 fecha_salida
             FROM reserva
-            WHERE estado IN ('confirmada','en_curso')", conexion).Fill(dtRes);
+            WHERE estado = 'en_curso'", conexion).Fill(dtRes);
 
             ViewBag.Productos = dtProd;
             ViewBag.Clientes = dtCli;
@@ -93,14 +93,16 @@ namespace MiHotel.Controllers
                     idClienteFinal = id_clipro ?? ObtenerClienteGenerico(conexion, tx);
                 }
 
+                int idUsuario = Convert.ToInt32(HttpContext.Session.GetString("IdUsuario"));
                 int idTipoVenta = ObtenerTipo(conexion, tx, "venta");
                 int idTipoCxC = ObtenerTipo(conexion, tx, "cuenta_por_cobrar");
+                int idFormaPagoEfectivo = 1;
+                int idFormaPagoCredito = 5;
 
                 decimal total = carrito.Sum(x => x.precio * x.cantidad);
 
                 // 🔹 MOVIMIENTO VENTA
-                int idMovimientoVenta = InsertarMovimiento(conexion, tx, idTipoVenta, idClienteFinal, id_reserva);
-
+                int idMovimientoVenta = InsertarMovimiento(conexion, tx, idTipoVenta, idClienteFinal, id_reserva, idUsuario, idFormaPagoEfectivo);
                 foreach (var item in carrito)
                 {
                     InsertarDetalle(conexion, tx, idMovimientoVenta, item);
@@ -122,7 +124,7 @@ namespace MiHotel.Controllers
                 {
                     int idTipoPago = ObtenerTipo(conexion, tx, "reserva");
 
-                    int idMovPago = InsertarMovimiento(conexion, tx, idTipoPago, idClienteFinal, id_reserva);
+                    int idMovPago = InsertarMovimiento(conexion, tx, idTipoPago, idClienteFinal, id_reserva, idUsuario, idFormaPagoEfectivo);
 
                     new MySqlCommand(@"
                         INSERT INTO detalle (id_movimiento, cantidad, precio_unitario, subtotal)
@@ -141,7 +143,7 @@ namespace MiHotel.Controllers
 
                 if (restante > 0)
                 {
-                    int idMovCxC = InsertarMovimiento(conexion, tx, idTipoCxC, idClienteFinal, id_reserva);
+                    int idMovCxC = InsertarMovimiento(conexion, tx, idTipoCxC, idClienteFinal, id_reserva, idUsuario, idFormaPagoCredito);
 
                     new MySqlCommand(@"
                         INSERT INTO detalle (id_movimiento, cantidad, precio_unitario, subtotal)
@@ -156,6 +158,9 @@ namespace MiHotel.Controllers
                 }
 
                 tx.Commit();
+
+                TempData["Exito"] = "La venta fue registrada correctamente.";
+
                 return RedirectToAction("Index");
             }
             catch
@@ -165,16 +170,22 @@ namespace MiHotel.Controllers
             }
         }
 
-        private int InsertarMovimiento(MySqlConnection c, MySqlTransaction tx, int tipo, int cliente, int? reserva)
+        private int InsertarMovimiento(MySqlConnection c, MySqlTransaction tx,
+        int tipo, int cliente, int? reserva, int idUsuario, int idFormaPago)
         {
             var cmd = new MySqlCommand(@"
-                INSERT INTO movimiento (id_tipomov,id_clipro,id_reserva,fecha,estado)
-                VALUES (@t,@c,@r,NOW(),'activo');
-                SELECT LAST_INSERT_ID();", c, tx);
+            INSERT INTO movimiento
+            (id_tipomov,id_clipro,id_reserva,id_usuario,id_formapago,fecha_hora,estado)
+            VALUES
+            (@t,@c,@r,@u,@f,NOW(),'activo');
+
+            SELECT LAST_INSERT_ID();", c, tx);
 
             cmd.Parameters.AddWithValue("@t", tipo);
             cmd.Parameters.AddWithValue("@c", cliente);
             cmd.Parameters.AddWithValue("@r", (object?)reserva ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@u", idUsuario);
+            cmd.Parameters.AddWithValue("@f", idFormaPago);
 
             return Convert.ToInt32(cmd.ExecuteScalar());
         }
@@ -182,8 +193,10 @@ namespace MiHotel.Controllers
         private void InsertarDetalle(MySqlConnection c, MySqlTransaction tx, int mov, ItemCarrito item)
         {
             var cmd = new MySqlCommand(@"
-                INSERT INTO detalle (id_movimiento,id_proser,cantidad,precio_unitario,subtotal)
-                VALUES (@m,@p,@c,@pr,@s)", c, tx);
+        INSERT INTO detalle
+        (id_movimiento,id_proser,cantidad,precio_unitario,subtotal)
+        VALUES
+        (@m,@p,@c,@pr,@s)", c, tx);
 
             cmd.Parameters.AddWithValue("@m", mov);
             cmd.Parameters.AddWithValue("@p", item.id);
@@ -196,7 +209,7 @@ namespace MiHotel.Controllers
 
         private int ObtenerTipo(MySqlConnection c, MySqlTransaction tx, string nombre)
         {
-            var cmd = new MySqlCommand("SELECT id_tipomov FROM tipo_movimiento WHERE LOWER(nombre)=@n LIMIT 1", c, tx);
+            var cmd = new MySqlCommand("SELECT id_tipomov FROM tipo_movimiento WHERE LOWER(nombre_tipomov)=@n LIMIT 1", c, tx);
             cmd.Parameters.AddWithValue("@n", nombre);
             return Convert.ToInt32(cmd.ExecuteScalar());
         }

@@ -1,0 +1,55 @@
+﻿@{
+    ViewData["Title"] = "Buscar Reserva por Código";
+}
+
+<style>
+    .tarjeta {
+        background-color: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.10);
+        max-width: 500px;
+        margin: auto;
+    }
+
+    .form-control {
+        border-radius: 8px;
+        height: 40px;
+    }
+
+    .btn-buscar {
+        background-color: #464482;
+        color: white;
+        border: none;
+        padding: 10px 18px;
+        border-radius: 8px;
+    }
+
+        .btn-buscar:hover {
+            background-color: #36366b;
+        }
+</style>
+
+<div class="container mt-5">
+    <div class="tarjeta">
+        <h4>Buscar Reserva</h4>
+
+        @if (ViewBag.Mensaje != null)
+        {
+            <div class="alert alert-danger">
+                @ViewBag.Mensaje
+            </div>
+        }
+
+        <form method="post">
+            <div class="mb-3">
+                <label>Código de seguridad</label>
+                <input type="text" name="codigo" class="form-control" placeholder="Ej: RES-15-H3-142530-483" />
+            </div>
+
+            <button type="submit" class="btn-buscar">
+                Buscar
+            </button>
+        </form>
+    </div>
+</div>

@@ -70,6 +70,9 @@
         <a asp-controller="Disponibilidad" asp-action="Index" class="opcion-menu">Disponibilidad</a>
 
 
+        <a asp-controller="Reservas" asp-action="BuscarPorCodigo" class="opcion-menu">Buscar Reserva por Código
+        </a>
+
 
     }
     else if (nombreRol.ToLower() == "recepcionista")
@@ -92,6 +95,7 @@
         <a asp-controller="Reservas" asp-action="MisReservas" class="opcion-menu">Mis Reservas</a>
         <a asp-controller="Disponibilidad" asp-action="Index" class="opcion-menu">Disponibilidad</a>
         <a href="#" class="opcion-menu">Mis Pagos</a>
+
 
     }
     else

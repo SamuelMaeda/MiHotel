@@ -13,5 +13,7 @@
         public decimal SaldoPendiente { get; set; }
         public string Estado { get; set; } = "";
         public string? Observaciones { get; set; }
+
+        public string? CodigoSeguridad { get; set; }
     }
 }
