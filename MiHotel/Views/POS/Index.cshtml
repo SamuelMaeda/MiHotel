@@ -206,40 +206,66 @@
                 <h4>Agregar Producto</h4>
 
                 <div>
+                    <label>Habitación</label>
+
+                    <select id="reserva"
+                            class="form-control-custom"
+                            onchange="cargarDatosReserva()">
+
+                        <option value="">Sin habitación</option>
+
+                        @foreach (System.Data.DataRow r in reservas.Rows)
+                        {
+                            <option value="@r["id_reserva"]"
+                                    data-cliente="@r["id_clipro"]"
+                                    data-nombrecliente="@r["cliente"]">
+
+                                @r["habitacion"] - @r["cliente"]
+
+                            </option>
+                        }
+
+                    </select>
+                </div>
+
+                <div id="contenedorClienteAsignado" style="margin-top:10px; display:none;">
+
+                    <label>Cliente asignado</label>
+
+                    <input type="text"
+                           id="clienteVisual"
+                           class="form-control-custom"
+                           readonly />
+                </div>
+
+                <div id="contenedorClienteManual" style="margin-top:10px; display:none;">
+
                     <label>Cliente</label>
+
                     <div class="contenedor-autocomplete">
 
                         <input type="text"
                                id="buscarCliente"
                                class="form-control-custom"
-                               placeholder="Buscar cliente..."
+                               placeholder="Buscar cliente o dejar vacío para consumidor final..."
                                autocomplete="off" />
 
                         <div id="listaClientes" class="lista-sugerencias"></div>
-                    <select id="cliente"
-                            onchange="filtrarReservas()"
-                            style="display:none;">
-                        <option value="">Consumidor final</option>
-                        @foreach (System.Data.DataRow c in clientes.Rows)
-                        {
-                            <option value="@c["id_clipro"]">@c["nombre"]</option>
-                        }
-                    </select>
-                </div>
-                </div>
 
-                <div style="margin-top:10px;">
-                    <label>Reserva</label>
-                    <select id="reserva" class="form-control-custom">
-                        <option value="">Sin reserva</option>
-                        @foreach (System.Data.DataRow r in reservas.Rows)
-                        {
-                            <option value="@r["id_reserva"]" data-cliente="@r["id_clipro"]">
-                                Reserva del @Convert.ToDateTime(r["fecha_entrada"]).ToString("dd/MM")
-                                al @Convert.ToDateTime(r["fecha_salida"]).ToString("dd/MM")
-                            </option>
-                        }
-                    </select>
+                        <select id="cliente" style="display:none;">
+
+                            <option value="">Consumidor final</option>
+
+                            @foreach (System.Data.DataRow c in clientes.Rows)
+                            {
+                                <option value="@c["id_clipro"]">
+                                    @c["nombre"]
+                                </option>
+                            }
+
+                        </select>
+
+                    </div>
                 </div>
 
                 <hr />
@@ -258,14 +284,17 @@
                     <select id="producto"
                             onchange="cargarProducto()"
                             style="display:none;">
-                        <option value="">Seleccione</option>
+                            <option value="" disabled selected hidden>
+                                Seleccione un producto
+                            </option>
                         @foreach (System.Data.DataRow p in productos.Rows)
                         {
-                            <option value="@p["id_proser"]"
-                                    data-precio="@p["precio"]"
-                                    data-stock="@p["stock"]">
-                                @p["nombre_proser"]
-                            </option>
+                                <option value="@p["id_proser"]"
+                                        data-precio="@p["precio"]"
+                                        data-stock="@p["stock"]"
+                                        data-tipo="@p["tipo"]">
+                                    @p["nombre_proser"]
+                                </option>
                         }
                     </select>
                 </div>
@@ -349,13 +378,13 @@
 
 <script>
     let carrito = [];
-                document.addEventListener("DOMContentLoaded", function () {
+                    document.addEventListener("DOMContentLoaded", function () {
 
                 configurarAutocomplete(
                     "buscarCliente",
                     "listaClientes",
                     "cliente",
-                    filtrarReservas
+                    null
                 );
 
                 configurarAutocomplete(
@@ -364,7 +393,44 @@
                     "producto",
                     cargarProducto
                 );
-            });
+
+                cargarDatosReserva();
+    });
+
+                       function cargarDatosReserva() {
+
+        let reserva = document.getElementById("reserva");
+
+        let option = reserva.options[reserva.selectedIndex];
+
+        let cliente = option.getAttribute("data-nombrecliente");
+
+        let contenedorAsignado =
+            document.getElementById("contenedorClienteAsignado");
+
+        let contenedorManual =
+            document.getElementById("contenedorClienteManual");
+
+        // SIN HABITACIÓN
+        if (reserva.value === "") {
+
+            contenedorAsignado.style.display = "none";
+
+            contenedorManual.style.display = "block";
+
+            document.getElementById("buscarCliente").value = "";
+            document.getElementById("cliente").value = "";
+
+            return;
+        }
+
+        // CON HABITACIÓN
+        contenedorManual.style.display = "none";
+
+        contenedorAsignado.style.display = "block";
+
+        document.getElementById("clienteVisual").value = cliente;
+    }
 
             function configurarAutocomplete(inputId, listaId, selectId, callback) {
 
@@ -439,65 +505,85 @@
 
             
 
-           function filtrarReservas() {
+          
 
-        let cliente = document.getElementById("cliente").value;
-        let reserva = document.getElementById("reserva");
 
-        reserva.value = "";
 
-        for (let option of reserva.options) {
+       function cargarProducto() {
 
-            if (option.value === "") {
-                option.style.display = "block";
-                continue;
-            }
+        let select = document.getElementById("producto");
+        if (!select.value) return;
+        let option = select.options[select.selectedIndex];
+       
 
-            let clienteReserva = option.getAttribute("data-cliente");
+        let precio = option.getAttribute("data-precio") || "";
+        let stock = option.getAttribute("data-stock") || "";
+        let tipo = option.getAttribute("data-tipo") || "";
 
-            if (cliente === "" || clienteReserva === cliente) {
-                option.style.display = "block";
-            } else {
-                option.style.display = "none";
-            }
+        document.getElementById("precio").value = precio;
+
+        // PRODUCTO
+        if (tipo.toLowerCase() === "producto") {
+
+            document.getElementById("stock").value = stock;
+        }
+
+        // SERVICIO
+        else {
+
+            document.getElementById("stock").value = "No aplica";
         }
     }
-    
 
+        function agregarProducto() {
 
-    function cargarProducto() {
         let select = document.getElementById("producto");
         let option = select.options[select.selectedIndex];
 
-        document.getElementById("precio").value = option.getAttribute("data-precio") || "";
-        document.getElementById("stock").value = option.getAttribute("data-stock") || "";
-    }
-
-    function agregarProducto() {
-        let select = document.getElementById("producto");
+        let tipo = option.getAttribute("data-tipo");
+        let stock = parseInt(option.getAttribute("data-stock")) || 0;
 
         let id = parseInt(select.value);
-        let nombre = select.options[select.selectedIndex].text;
+        let nombre = option.text;
         let precio = parseFloat(document.getElementById("precio").value);
         let cantidad = parseInt(document.getElementById("cantidad").value);
-        let stock = parseInt(document.getElementById("stock").value);
 
         if (!id || !cantidad || cantidad <= 0) return;
 
         let item = carrito.find(p => p.id == id);
 
         if (item) {
-            if (item.cantidad + cantidad > stock) {
-                alert("Stock insuficiente");
-                return;
+
+            // PRODUCTO
+            if (tipo.toLowerCase() === "producto") {
+
+                if (item.cantidad + cantidad > stock) {
+                    alert("Stock insuficiente");
+                    return;
+                }
             }
+
             item.cantidad += cantidad;
-        } else {
-            if (cantidad > stock) {
-                alert("Stock insuficiente");
-                return;
+        }
+        else {
+
+            // PRODUCTO
+            if (tipo.toLowerCase() === "producto") {
+
+                if (cantidad > stock) {
+                    alert("Stock insuficiente");
+                    return;
+                }
             }
-            carrito.push({ id, nombre, precio, cantidad, stock });
+
+            carrito.push({
+                id,
+                nombre,
+                precio,
+                cantidad,
+                stock,
+                tipo
+            });
         }
 
         render();
@@ -512,11 +598,18 @@
 
         if (nuevaCantidad <= 0) {
             carrito = carrito.filter(p => p.id != id);
-        } else if (nuevaCantidad <= item.stock) {
-            item.cantidad = nuevaCantidad;
-        } else {
-            alert("Stock máximo alcanzado");
-        }
+            }
+    else if (
+        item.tipo.toLowerCase() === "servicio"
+        || nuevaCantidad <= item.stock
+    ) {
+
+        item.cantidad = nuevaCantidad;
+    }
+    else {
+
+        alert("Stock máximo alcanzado");
+    }
 
         render();
     }
@@ -567,8 +660,33 @@
 
     function preparar() {
         document.getElementById("detalleJson").value = JSON.stringify(carrito);
-        document.getElementById("inputCliente").value = document.getElementById("cliente").value;
+
+        
+
+        let reserva = document.getElementById("reserva");
+
+    let cliente = "";
+
+    // CON HABITACIÓN
+    if (reserva.value !== "") {
+
+        cliente = reserva.options[reserva.selectedIndex]
+            .getAttribute("data-cliente");
+    }
+
+    // SIN HABITACIÓN
+    else {
+
+        cliente = document.getElementById("cliente").value;
+    }
+
+        if (reserva.value === "" && cliente === "") {
+        cliente = "";
+    }
+
+    document.getElementById("inputCliente").value = cliente;
+
         document.getElementById("inputReserva").value = document.getElementById("reserva").value;
         document.getElementById("inputPagado").value = document.getElementById("montoPagado").value;
     }
-</script>
+</script>   

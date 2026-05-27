@@ -33,27 +33,41 @@ namespace MiHotel.Controllers
 
             var dtProd = new DataTable();
             new MySqlDataAdapter(@"
-            SELECT id_proser, nombre_proser, precio, stock
-            FROM proser
-            WHERE id_tipoproser = (
-                SELECT id_tipoproser 
-                FROM tipo_proser 
-                WHERE LOWER(nombre)='producto' 
-                LIMIT 1
-            )", conexion).Fill(dtProd);
+            SELECT 
+            p.id_proser,
+            p.nombre_proser,
+            p.precio,
+            p.stock,
+            tp.nombre AS tipo
+            FROM proser p
+            INNER JOIN tipo_proser tp
+                ON p.id_tipoproser = tp.id_tipoproser
+            WHERE LOWER(tp.nombre) IN ('producto', 'servicio')", conexion).Fill(dtProd);
 
             var dtCli = new DataTable();
             new MySqlDataAdapter("SELECT id_clipro, nombre FROM clipro WHERE estado='activo'", conexion).Fill(dtCli);
 
-            var dtRes = new DataTable();
-            new MySqlDataAdapter(@"
+                        var dtRes = new DataTable();
+
+                        new MySqlDataAdapter(@"
             SELECT 
-                id_reserva,
-                id_clipro,
-                fecha_entrada,
-                fecha_salida
-            FROM reserva
-            WHERE estado = 'en_curso'", conexion).Fill(dtRes);
+                r.id_reserva,
+                r.id_clipro,
+                r.id_habitacion,
+                c.nombre AS cliente,
+                h.nombre_proser AS habitacion,
+                r.fecha_entrada,
+                r.fecha_salida
+            FROM reserva r
+            INNER JOIN clipro c
+                ON r.id_clipro = c.id_clipro
+            INNER JOIN proser h
+                ON r.id_habitacion = h.id_proser
+            INNER JOIN tipo_proser tp
+                ON h.id_tipoproser = tp.id_tipoproser
+            WHERE r.estado = 'en_curso'
+            AND LOWER(tp.nombre) = 'habitacion'
+            ", conexion).Fill(dtRes);
 
             ViewBag.Productos = dtProd;
             ViewBag.Clientes = dtCli;
@@ -84,9 +98,33 @@ namespace MiHotel.Controllers
 
                 if (id_reserva.HasValue)
                 {
-                    var cmd = new MySqlCommand("SELECT id_clipro FROM reserva WHERE id_reserva=@id", conexion, tx);
-                    cmd.Parameters.AddWithValue("@id", id_reserva.Value);
-                    idClienteFinal = Convert.ToInt32(cmd.ExecuteScalar());
+                    var cmdReserva = new MySqlCommand(@"
+        SELECT id_clipro
+        FROM reserva
+        WHERE id_reserva = @id
+        AND estado = 'en_curso'
+        LIMIT 1", conexion, tx);
+
+                    cmdReserva.Parameters.AddWithValue("@id", id_reserva.Value);
+
+                    var resultado = cmdReserva.ExecuteScalar();
+
+                    if (resultado == null)
+                    {
+                        TempData["Error"] = "La reservación seleccionada no es válida.";
+                        return RedirectToAction("Index");
+                    }
+
+                    int clienteReserva = Convert.ToInt32(resultado);
+
+                    // VALIDAR CLIENTE ↔ RESERVA
+                    if (id_clipro.HasValue && clienteReserva != id_clipro.Value)
+                    {
+                        TempData["Error"] = "La reservación no pertenece al cliente seleccionado.";
+                        return RedirectToAction("Index");
+                    }
+
+                    idClienteFinal = clienteReserva;
                 }
                 else
                 {
@@ -107,16 +145,33 @@ namespace MiHotel.Controllers
                 {
                     InsertarDetalle(conexion, tx, idMovimientoVenta, item);
 
-                    new MySqlCommand(
-                        "UPDATE proser SET stock = stock - @c WHERE id_proser=@id",
-                        conexion, tx)
+                    var cmdTipo = new MySqlCommand(@"
+    SELECT LOWER(tp.nombre)
+    FROM proser p
+    INNER JOIN tipo_proser tp
+        ON p.id_tipoproser = tp.id_tipoproser
+    WHERE p.id_proser = @id
+    LIMIT 1", conexion, tx);
+
+                    cmdTipo.Parameters.AddWithValue("@id", item.id);
+
+                    string tipo = Convert.ToString(cmdTipo.ExecuteScalar()) ?? "";
+
+                    if (tipo == "producto")
                     {
-                        Parameters =
+                        new MySqlCommand(
+                            "UPDATE proser SET stock = stock - @c WHERE id_proser=@id",
+                            conexion, tx)
                         {
-                            new("@c", item.cantidad),
-                            new("@id", item.id)
-                        }
-                    }.ExecuteNonQuery();
+                            Parameters =
+        {
+            new("@c", item.cantidad),
+            new("@id", item.id)
+        }
+                        }.ExecuteNonQuery();
+                    }
+
+
                 }
 
                 // 🔹 PAGO PARCIAL (si aplica)
@@ -234,3 +289,5 @@ namespace MiHotel.Controllers
         }
     }
 }
+
+

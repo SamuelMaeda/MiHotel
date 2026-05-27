@@ -1,0 +1,218 @@
+﻿@model System.Data.DataTable
+
+@{
+    ViewData["Title"] = "Historial de Ventas";
+
+    string ordenActual = ViewBag.OrdenarPor ?? "fecha_hora";
+    string direccionActual = ViewBag.Direccion ?? "desc";
+
+    Func<string, string> nuevaDireccion = columna =>
+    {
+        if (ordenActual == columna && direccionActual == "asc")
+            return "desc";
+
+        return "asc";
+    };
+}
+
+<div class="container-fluid px-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold">Historial de Ventas</h2>
+    </div>
+
+    <div class="tarjeta-contenido">
+
+        <!-- BUSCADOR -->
+        <form method="get" class="row mb-3">
+
+            <div class="col-md-4">
+
+                <input type="text"
+                       name="busqueda"
+                       value="@ViewBag.Busqueda"
+                       class="form-control"
+                       placeholder="Buscar venta..." />
+
+            </div>
+
+            <div class="col-md-2">
+
+                <button type="submit" class="btn btn-dark w-100">
+                    Buscar
+                </button>
+
+            </div>
+
+        </form>
+
+        <!-- TABLA -->
+        <div class="table-responsive">
+
+            <table class="table table-bordered table-striped align-middle">
+
+                <thead class="table-dark">
+
+                    <tr>
+
+                        <th>
+                            <a asp-action="Index"
+                               asp-route-busqueda="@ViewBag.Busqueda"
+                               asp-route-ordenarPor="id_movimiento"
+                               asp-route-direccion="@nuevaDireccion("id_movimiento")"
+                               class="text-white text-decoration-none">
+
+                                # Venta
+
+                            </a>
+                        </th>
+
+                        <th>
+                            <a asp-action="Index"
+                               asp-route-busqueda="@ViewBag.Busqueda"
+                               asp-route-ordenarPor="fecha_hora"
+                               asp-route-direccion="@nuevaDireccion("fecha_hora")"
+                               class="text-white text-decoration-none">
+
+                                Fecha
+
+                            </a>
+                        </th>
+
+                        <th>
+                            <a asp-action="Index"
+                               asp-route-busqueda="@ViewBag.Busqueda"
+                               asp-route-ordenarPor="cliente"
+                               asp-route-direccion="@nuevaDireccion("cliente")"
+                               class="text-white text-decoration-none">
+
+                                Cliente
+
+                            </a>
+                        </th>
+
+                        <th>
+                            <a asp-action="Index"
+                               asp-route-busqueda="@ViewBag.Busqueda"
+                               asp-route-ordenarPor="habitacion"
+                               asp-route-direccion="@nuevaDireccion("habitacion")"
+                               class="text-white text-decoration-none">
+
+                                Habitación
+
+                            </a>
+                        </th>
+
+                        <th>
+                            <a asp-action="Index"
+                               asp-route-busqueda="@ViewBag.Busqueda"
+                               asp-route-ordenarPor="usuario"
+                               asp-route-direccion="@nuevaDireccion("usuario")"
+                               class="text-white text-decoration-none">
+
+                                Usuario
+
+                            </a>
+                        </th>
+
+                        <th>
+                            <a asp-action="Index"
+                               asp-route-busqueda="@ViewBag.Busqueda"
+                               asp-route-ordenarPor="total"
+                               asp-route-direccion="@nuevaDireccion("total")"
+                               class="text-white text-decoration-none">
+
+                                Total
+
+                            </a>
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody>
+
+                    @if (Model.Rows.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center py-4">
+                                No existen ventas registradas.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (System.Data.DataRow v in Model.Rows)
+                        {
+                            <tr>
+
+                                <td>
+                                    @v["id_movimiento"]
+                                </td>
+
+                                <td>
+                                    @Convert.ToDateTime(v["fecha_hora"]).ToString("dd/MM/yyyy")
+                                </td>
+
+                                <td>
+                                    @v["cliente"]
+                                </td>
+
+                                <td>
+                                    @(v["habitacion"] == DBNull.Value
+                                                                ? "Venta general"
+                                                                : v["habitacion"])
+                        </td>
+
+                                <td>
+                                    @v["usuario"]
+                                </td>
+
+                                <td>
+                                    Q @Convert.ToDecimal(v["total"]).ToString("N2")
+                                </td>
+
+                            </tr>
+                                        }
+                    }
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+        <!-- PAGINACIÓN -->
+        @if (ViewBag.TotalPaginas > 1)
+        {
+            <nav>
+
+                <ul class="pagination">
+
+                    @for (int i = 1; i <= ViewBag.TotalPaginas; i++)
+                    {
+                        <li class="page-item @(i == ViewBag.PaginaActual ? "active" : "")">
+
+                            <a class="page-link"
+                               asp-action="Index"
+                               asp-route-pagina="@i"
+                               asp-route-busqueda="@ViewBag.Busqueda"
+                               asp-route-ordenarPor="@ViewBag.OrdenarPor"
+                               asp-route-direccion="@ViewBag.Direccion">
+
+                                @i
+
+                            </a>
+
+                        </li>
+                    }
+
+                </ul>
+
+            </nav>
+        }
+
+    </div>
+
+</div>
