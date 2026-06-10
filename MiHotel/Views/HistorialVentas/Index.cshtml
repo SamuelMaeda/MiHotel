@@ -3,7 +3,7 @@
 @{
     ViewData["Title"] = "Historial de Ventas";
 
-    string ordenActual = ViewBag.OrdenarPor ?? "fecha_hora";
+string ordenActual = ViewBag.OrdenarPor ?? "fecha_hora";
     string direccionActual = ViewBag.Direccion ?? "desc";
 
     Func<string, string> nuevaDireccion = columna =>
@@ -13,206 +13,443 @@
 
         return "asc";
     };
-}
 
-<div class="container-fluid px-4">
-
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="fw-bold">Historial de Ventas</h2>
-    </div>
-
-    <div class="tarjeta-contenido">
-
-        <!-- BUSCADOR -->
-        <form method="get" class="row mb-3">
-
-            <div class="col-md-4">
-
-                <input type="text"
-                       name="busqueda"
-                       value="@ViewBag.Busqueda"
-                       class="form-control"
-                       placeholder="Buscar venta..." />
-
-            </div>
-
-            <div class="col-md-2">
-
-                <button type="submit" class="btn btn-dark w-100">
-                    Buscar
-                </button>
-
-            </div>
-
-        </form>
-
-        <!-- TABLA -->
-        <div class="table-responsive">
-
-            <table class="table table-bordered table-striped align-middle">
-
-                <thead class="table-dark">
-
-                    <tr>
-
-                        <th>
-                            <a asp-action="Index"
-                               asp-route-busqueda="@ViewBag.Busqueda"
-                               asp-route-ordenarPor="id_movimiento"
-                               asp-route-direccion="@nuevaDireccion("id_movimiento")"
-                               class="text-white text-decoration-none">
-
-                                # Venta
-
-                            </a>
-                        </th>
-
-                        <th>
-                            <a asp-action="Index"
-                               asp-route-busqueda="@ViewBag.Busqueda"
-                               asp-route-ordenarPor="fecha_hora"
-                               asp-route-direccion="@nuevaDireccion("fecha_hora")"
-                               class="text-white text-decoration-none">
-
-                                Fecha
-
-                            </a>
-                        </th>
-
-                        <th>
-                            <a asp-action="Index"
-                               asp-route-busqueda="@ViewBag.Busqueda"
-                               asp-route-ordenarPor="cliente"
-                               asp-route-direccion="@nuevaDireccion("cliente")"
-                               class="text-white text-decoration-none">
-
-                                Cliente
-
-                            </a>
-                        </th>
-
-                        <th>
-                            <a asp-action="Index"
-                               asp-route-busqueda="@ViewBag.Busqueda"
-                               asp-route-ordenarPor="habitacion"
-                               asp-route-direccion="@nuevaDireccion("habitacion")"
-                               class="text-white text-decoration-none">
-
-                                Habitación
-
-                            </a>
-                        </th>
-
-                        <th>
-                            <a asp-action="Index"
-                               asp-route-busqueda="@ViewBag.Busqueda"
-                               asp-route-ordenarPor="usuario"
-                               asp-route-direccion="@nuevaDireccion("usuario")"
-                               class="text-white text-decoration-none">
-
-                                Usuario
-
-                            </a>
-                        </th>
-
-                        <th>
-                            <a asp-action="Index"
-                               asp-route-busqueda="@ViewBag.Busqueda"
-                               asp-route-ordenarPor="total"
-                               asp-route-direccion="@nuevaDireccion("total")"
-                               class="text-white text-decoration-none">
-
-                                Total
-
-                            </a>
-                        </th>
-
-                    </tr>
-
-                </thead>
-
-                <tbody>
-
-                    @if (Model.Rows.Count == 0)
-                    {
-                        <tr>
-                            <td colspan="6" class="text-center py-4">
-                                No existen ventas registradas.
-                            </td>
-                        </tr>
-                    }
-                    else
-                    {
-                        @foreach (System.Data.DataRow v in Model.Rows)
-                        {
-                            <tr>
-
-                                <td>
-                                    @v["id_movimiento"]
-                                </td>
-
-                                <td>
-                                    @Convert.ToDateTime(v["fecha_hora"]).ToString("dd/MM/yyyy")
-                                </td>
-
-                                <td>
-                                    @v["cliente"]
-                                </td>
-
-                                <td>
-                                    @(v["habitacion"] == DBNull.Value
-                                                                ? "Venta general"
-                                                                : v["habitacion"])
-                        </td>
-
-                                <td>
-                                    @v["usuario"]
-                                </td>
-
-                                <td>
-                                    Q @Convert.ToDecimal(v["total"]).ToString("N2")
-                                </td>
-
-                            </tr>
-                                        }
-                    }
-
-                </tbody>
-
-            </table>
-
-        </div>
-
-        <!-- PAGINACIÓN -->
-        @if (ViewBag.TotalPaginas > 1)
+    string IconoOrden(string columna)
+    {
+        if (ordenActual != columna)
         {
-            <nav>
-
-                <ul class="pagination">
-
-                    @for (int i = 1; i <= ViewBag.TotalPaginas; i++)
-                    {
-                        <li class="page-item @(i == ViewBag.PaginaActual ? "active" : "")">
-
-                            <a class="page-link"
-                               asp-action="Index"
-                               asp-route-pagina="@i"
-                               asp-route-busqueda="@ViewBag.Busqueda"
-                               asp-route-ordenarPor="@ViewBag.OrdenarPor"
-                               asp-route-direccion="@ViewBag.Direccion">
-
-                                @i
-
-                            </a>
-
-                        </li>
-                    }
-
-                </ul>
-
-            </nav>
+            return "bi-arrow-down-up";
         }
 
+        return direccionActual == "asc"
+            ? "bi-sort-alpha-down"
+            : "bi-sort-alpha-up";
+    }
+
+
+}
+
+<style>
+
+    .tarjeta-contenido {
+        background-color: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.10);
+    }
+
+    .paginacion {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 20px;
+    }
+
+    .pagina-link {
+        padding: 8px 12px;
+        border-radius: 8px;
+        text-decoration: none;
+        background-color: #E6D3D0;
+        color: #363636;
+    }
+
+        .pagina-link.activa {
+            background-color: #464482;
+            color: white;
+            font-weight: bold;
+        }
+
+    .encabezado-orden {
+        color: inherit;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-weight: 600;
+    }
+
+    .table th,
+    .table td {
+        padding: 12px;
+        vertical-align: middle;
+    }
+
+    .table thead th {
+        font-size: 17px;
+        font-weight: 600;   
+    }
+
+    .table tbody td {
+        font-size: 17px;
+    }
+
+    .table {
+        margin-bottom: 0;
+    }
+
+        .table thead th,
+        .table tbody td {
+            line-height: 1.4;
+        }
+
+    .btn-detalle {
+        background-color: #464482;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 6px 10px;
+        cursor: pointer;
+    }
+
+    .fila-detalle {
+        display: none;
+        background-color: #f8f9fa;
+    }
+
+    .tabla-detalle {
+        width: 100%;
+        margin-top: 10px;
+        border-collapse: collapse;
+    }
+
+        .tabla-detalle th,
+        .tabla-detalle td {
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .tabla-detalle th {
+            background-color: #464482;
+            color: white;
+        }
+
+    .contenedor-detalle {
+        background-color: white;
+        border-radius: 12px;
+        padding: 15px;
+        border-left: 5px solid #464482;
+        box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    }
+
+    .titulo-detalle {
+        font-size: 18px;
+        font-weight: 600;
+        color: #363636;
+        margin-bottom: 15px;
+    }
+
+</style>
+
+<div class="tarjeta-contenido">
+
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="m-0">
+            Historial de Ventas
+        </h3>
     </div>
 
+    <!-- BUSCADOR -->
+    <form method="get" class="mb-4">
+
+        <label class="form-label">
+            Buscar venta
+        </label>
+
+        <input type="text"
+               name="busqueda"
+               value="@ViewBag.Busqueda"
+               class="form-control"
+               placeholder="Buscar por cliente, habitación, usuario o número de venta" />
+
+    </form>
+
+    <div class="mb-3">
+        <strong>Total de registros:</strong>
+        @ViewBag.TotalRegistros
+    </div>
+
+    <!-- TABLA -->
+    <div class="table-responsive">
+
+        <table class="table table-bordered table-striped">
+
+            <thead class="table-dark">
+
+                <tr>
+
+                    <th>
+                        <a asp-action="Index"
+                           asp-route-busqueda="@ViewBag.Busqueda"
+                           asp-route-ordenarPor="id_movimiento"
+                           asp-route-direccion="@nuevaDireccion("id_movimiento")"
+                           class="encabezado-orden">
+
+                            # Venta
+                            <i class="bi @IconoOrden("id_movimiento")"></i>
+
+                        </a>
+                    </th>
+
+                    <th>
+                        <a asp-action="Index"
+                           asp-route-busqueda="@ViewBag.Busqueda"
+                           asp-route-ordenarPor="fecha_hora"
+                           asp-route-direccion="@nuevaDireccion("fecha_hora")"
+                           class="encabezado-orden">
+
+                            Fecha y Hora
+                            <i class="bi @IconoOrden("fecha_hora")"></i>
+
+                        </a>
+                    </th>
+
+                    <th>
+                        <a asp-action="Index"
+                           asp-route-busqueda="@ViewBag.Busqueda"
+                           asp-route-ordenarPor="cliente"
+                           asp-route-direccion="@nuevaDireccion("cliente")"
+                           class="encabezado-orden">
+
+                            Cliente
+                            <i class="bi @IconoOrden("cliente")"></i>
+
+                        </a>
+                    </th>
+
+                    <th>
+                        <a asp-action="Index"
+                           asp-route-busqueda="@ViewBag.Busqueda"
+                           asp-route-ordenarPor="habitacion"
+                           asp-route-direccion="@nuevaDireccion("habitacion")"
+                           class="encabezado-orden">
+
+                            Habitación
+                            <i class="bi @IconoOrden("habitacion")"></i>
+
+                        </a>
+                    </th>
+
+                    <th>
+                        <a asp-action="Index"
+                           asp-route-busqueda="@ViewBag.Busqueda"
+                           asp-route-ordenarPor="usuario"
+                           asp-route-direccion="@nuevaDireccion("usuario")"
+                           class="encabezado-orden">
+
+                            Usuario
+                            <i class="bi @IconoOrden("usuario")"></i>
+
+                        </a>
+                    </th>
+
+                    <th>
+                        <a asp-action="Index"
+                           asp-route-busqueda="@ViewBag.Busqueda"
+                           asp-route-ordenarPor="total"
+                           asp-route-direccion="@nuevaDireccion("total")"
+                           class="encabezado-orden">
+
+                            Total
+                            <i class="bi @IconoOrden("total")"></i>
+
+                        </a>
+                    </th>
+
+                    <th>
+                        Acciones
+                    </th>
+
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                @if (Model.Rows.Count == 0)
+                {
+                    <tr>
+                        <td colspan="7" class="text-center py-4">
+                            No existen ventas registradas.
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (System.Data.DataRow v in Model.Rows)
+                    {
+                        <tr>
+
+                            <td>
+                                @v["id_movimiento"]
+                            </td>
+
+                            <td>
+                                @Convert.ToDateTime(v["fecha_hora"]).ToString("dd/MM/yyyy HH:mm")
+                            </td>
+
+                            <td>
+                                @v["cliente"]
+                            </td>
+
+                            <td>
+                                @(v["habitacion"] == DBNull.Value
+                                                        ? "Venta general"
+                                                        : v["habitacion"])
+                    </td>
+
+                            <td>
+                                @v["usuario"]
+                            </td>
+
+                            <td>
+                                Q @Convert.ToDecimal(v["total"]).ToString("N2")
+                            </td>
+
+                            <td>
+
+                                <button type="button"
+                                        class="btn-detalle"
+                                        onclick="toggleDetalle(@v["id_movimiento"])">
+
+                                    <i class="bi bi-eye"></i>
+
+                                </button>
+
+                            </td>
+
+                        </tr>
+
+                        <tr id="detalle-@v["id_movimiento"]"
+                            class="fila-detalle">
+
+                            <td colspan="7">
+
+                                <div id="contenido-@v["id_movimiento"]">
+                                </div>
+
+                            </td>
+
+                        </tr>
+                                }
+                }
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+    <!-- PAGINACIÓN -->
+    @if (ViewBag.TotalPaginas > 1)
+    {
+        <div class="paginacion">
+
+            @for (int i = 1; i <= ViewBag.TotalPaginas; i++)
+            {
+                <a asp-action="Index"
+                   asp-route-pagina="@i"
+                   asp-route-busqueda="@ViewBag.Busqueda"
+                   asp-route-ordenarPor="@ViewBag.OrdenarPor"
+                   asp-route-direccion="@ViewBag.Direccion"
+                   class="pagina-link @(i == ViewBag.PaginaActual ? "activa" : "")">
+
+                    @i
+
+                </a>
+            }
+
+        </div>
+    }
+
 </div>
+
+@section Scripts {
+
+    <script>
+
+        let temporizador;
+
+        document.querySelector('[name="busqueda"]')
+            .addEventListener("input", function () {
+
+                clearTimeout(temporizador);
+
+                temporizador = setTimeout(function () {
+
+                    document.querySelector("form").submit();
+
+                }, 350);
+
+            });
+
+        async function toggleDetalle(idVenta) {
+
+            let fila =
+                document.getElementById(`detalle-${idVenta}`);
+
+            let contenido =
+                document.getElementById(`contenido-${idVenta}`);
+
+            if (fila.style.display === "table-row") {
+
+                fila.style.display = "none";
+
+                return;
+            }
+
+            const respuesta =
+                await fetch(`/HistorialVentas/ObtenerDetalleVenta?id=${idVenta}`);
+
+            const datos =
+                await respuesta.json();
+
+                    let html = `
+            <div class="contenedor-detalle">
+
+                <div class="titulo-detalle">
+                    Detalle de Venta #${idVenta}
+                </div>
+
+                <table class="tabla-detalle">
+
+                    <thead>
+                        <tr>
+                            <th>Producto / Servicio</th>
+                            <th>Cantidad</th>
+                            <th>Precio Unitario</th>
+                            <th>Subtotal</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+        `;
+
+            datos.forEach(item => {
+
+                html += `
+                    <tr>
+                        <td>${item.producto}</td>
+                        <td>${item.cantidad}</td>
+                        <td>Q ${parseFloat(item.precio).toFixed(2)}</td>
+                        <td>Q ${parseFloat(item.subtotal).toFixed(2)}</td>
+                    </tr>
+                `;
+            });
+
+                    html += `
+                    </tbody>
+                </table>
+
+            </div>
+        `;
+
+            contenido.innerHTML = html;
+
+            fila.style.display = "table-row";
+        }
+
+    </script>
+
+}

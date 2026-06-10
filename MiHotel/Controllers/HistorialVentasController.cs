@@ -14,6 +14,56 @@ namespace MiHotel.Controllers
             _conexionBD = conexionBD;
         }
 
+        [HttpGet]
+        public IActionResult ObtenerDetalleVenta(int id)
+        {
+            var acceso = ValidarSesion();
+            if (acceso != null) return acceso;
+
+            using var conexion = _conexionBD.ObtenerConexion();
+
+            conexion.Open();
+
+            var dt = new DataTable();
+
+            string query = @"
+    SELECT
+        COALESCE(p.nombre_proser, d.descripcion) AS producto,
+        d.cantidad,
+        d.precio_unitario,
+        d.subtotal
+
+    FROM detalle d
+
+    LEFT JOIN proser p
+        ON d.id_proser = p.id_proser
+
+    WHERE d.id_movimiento = @id
+
+    ORDER BY d.id_detalle";
+
+            var cmd = new MySqlCommand(query, conexion);
+
+            cmd.Parameters.AddWithValue("@id", id);
+
+            new MySqlDataAdapter(cmd).Fill(dt);
+
+            var lista = new List<object>();
+
+            foreach (DataRow row in dt.Rows)
+            {
+                lista.Add(new
+                {
+                    producto = row["producto"]?.ToString(),
+                    cantidad = Convert.ToInt32(row["cantidad"]),
+                    precio = Convert.ToDecimal(row["precio_unitario"]),
+                    subtotal = Convert.ToDecimal(row["subtotal"])
+                });
+            }
+
+            return Json(lista);
+        }
+
         private IActionResult? ValidarSesion()
         {
             if (HttpContext.Session.GetString("IdUsuario") == null)
@@ -28,6 +78,9 @@ namespace MiHotel.Controllers
     string direccion = "desc",
     int pagina = 1)
         {
+
+
+
             var acceso = ValidarSesion();
             if (acceso != null) return acceso;
 
@@ -175,6 +228,8 @@ namespace MiHotel.Controllers
             ViewBag.PaginaActual = pagina;
             ViewBag.TotalPaginas = totalPaginas;
             ViewBag.TotalRegistros = totalRegistros;
+
+
 
             return View(dt);
         }
