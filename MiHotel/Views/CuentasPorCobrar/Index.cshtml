@@ -1,4 +1,12 @@
-﻿@model System.Data.DataTable
+﻿@*
+========================================
+VISTA PRINCIPAL DE CUENTAS POR COBRAR
+Muestra las cuentas pendientes agrupadas
+por estadía y las cuentas independientes.
+========================================
+*@
+
+@model System.Data.DataTable
 
 @{
     ViewData["Title"] = "Cuentas por Cobrar";
@@ -34,23 +42,47 @@
             : "bi-sort-alpha-up";
     }
 }
-<style>
 
+<style>
     .tarjeta-contenido {
-        background: white;
+        background-color: white;
         border-radius: 15px;
         padding: 25px;
-        box-shadow: 0 4px 10px rgba(0,0,0,.10);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.10);
     }
 
-    .btn-crear {
-        background: #464482;
+    .encabezado-principal {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .btn-superior {
+        background-color: #464482;
         color: white;
         padding: 10px 16px;
         border-radius: 8px;
+        border: none;
         text-decoration: none;
         font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
     }
+
+        .btn-superior:hover {
+            color: white;
+        }
+
+        .btn-superior:disabled {
+            background-color: #8a89ad;
+            color: white;
+            cursor: not-allowed;
+            opacity: 0.75;
+        }
 
     .tabs-vista {
         display: flex;
@@ -63,35 +95,28 @@
         text-decoration: none;
         padding: 10px 14px;
         border-radius: 8px;
-        background: #E6D3D0;
+        background-color: #E6D3D0;
         color: #363636;
         font-weight: 500;
+        border: none;
+        display: inline-flex;
+        align-items: center;
     }
 
+        .tab-vista:hover {
+            color: #363636;
+        }
+
         .tab-vista.activa {
-            background: #824B44;
+            background-color: #824B44;
             color: white;
         }
 
-    .paginacion {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-        margin-top: 20px;
-    }
-
-    .pagina-link {
-        padding: 8px 12px;
-        border-radius: 8px;
-        background: #E6D3D0;
-        color: #363636;
-        text-decoration: none;
-    }
-
-        .pagina-link.activa {
-            background: #464482;
-            color: white;
-            font-weight: bold;
+        .tab-vista.deshabilitada {
+            background-color: #e9ecef;
+            color: #6c757d;
+            cursor: not-allowed;
+            opacity: 0.85;
         }
 
     .encabezado-orden {
@@ -103,96 +128,161 @@
         font-weight: 600;
     }
 
+        .encabezado-orden:hover {
+            color: inherit;
+        }
+
+    .acciones-contenedor {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
     .btn-icono {
         width: 38px;
         height: 38px;
-        border: none;
         border-radius: 8px;
+        border: none;
         display: inline-flex;
         justify-content: center;
         align-items: center;
         color: white;
         text-decoration: none;
-        background: #5a58a6;
+        font-size: 16px;
     }
 
         .btn-icono:hover {
             color: white;
         }
 
+        .btn-icono:disabled {
+            cursor: not-allowed;
+            opacity: 0.65;
+        }
+
+    .btn-gestionar {
+        background-color: #464482;
+    }
+
     .estado-pendiente {
-        color: #842029;
+        color: #856404;
         font-weight: bold;
     }
 
+    .tipo-cuenta {
+        color: #6c757d;
+        font-size: 13px;
+        margin-top: 3px;
+    }
+
+    .paginacion {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 20px;
+    }
+
+    .pagina-link {
+        padding: 8px 12px;
+        border-radius: 8px;
+        background-color: #E6D3D0;
+        color: #363636;
+        text-decoration: none;
+        min-width: 40px;
+        text-align: center;
+    }
+
+        .pagina-link:hover {
+            color: #363636;
+        }
+
+        .pagina-link.activa {
+            background-color: #464482;
+            color: white;
+            font-weight: bold;
+        }
+
+        .pagina-link.deshabilitada {
+            background-color: #e9ecef;
+            color: #6c757d;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
 </style>
 
 <div class="tarjeta-contenido">
 
-    <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="encabezado-principal">
 
         <h3 class="m-0">
             Cuentas por Cobrar
         </h3>
 
-        <div>
+        <button type="button"
+                class="btn-superior"
+                disabled
+                title="El historial financiero se implementará en una fase posterior">
 
-            <a href="#"
-               class="btn-crear"
-               onclick="return false;">
+            <i class="bi bi-clock-history"></i>
 
-                Historial
+            Historial
 
-            </a>
-
-        </div>
+        </button>
 
     </div>
 
-
     <div class="tabs-vista">
 
-        <a asp-action="Index"
+        <a asp-controller="CuentasPorCobrar"
+           asp-action="Index"
            asp-route-vista="estadias"
            asp-route-busqueda="@busqueda"
            asp-route-ordenarPor="@ordenarPor"
            asp-route-direccion="@direccion"
-           class="tab-vista @(vista == "estadias" ? "activa" : "")">
+           class="tab-vista activa">
 
             Ver por estadías
 
         </a>
 
-        <a asp-action="Index"
-           asp-route-vista="cliente"
-           asp-route-busqueda="@busqueda"
-           asp-route-ordenarPor="@ordenarPor"
-           asp-route-direccion="@direccion"
-           class="tab-vista @(vista == "cliente" ? "activa" : "")">
+        <span class="tab-vista deshabilitada"
+              title="La vista consolidada por cliente se implementará en la siguiente fase">
 
             Ver por cliente
 
-        </a>
+        </span>
 
     </div>
 
-
-@if (TempData["Exito"] != null)
-{
+    @if (TempData["Exito"] != null)
+    {
         <div class="alert alert-success">
+
             @TempData["Exito"]
-        </div>
-}
 
-@if (TempData["Mensaje"] != null)
-{
+        </div>
+    }
+
+    @if (TempData["Mensaje"] != null)
+    {
         <div class="alert alert-danger">
-            @TempData["Mensaje"]
-        </div>
-}
 
+            @TempData["Mensaje"]
+
+        </div>
+    }
+
+    @if (ViewBag.Mensaje != null)
+    {
+        <div class="alert alert-danger">
+
+            @ViewBag.Mensaje
+
+        </div>
+    }
 
     <form id="formBusqueda"
+          asp-controller="CuentasPorCobrar"
           asp-action="Index"
           method="get"
           class="mb-4">
@@ -209,7 +299,8 @@
                name="direccion"
                value="@direccion" />
 
-        <label class="form-label">
+        <label for="busqueda"
+               class="form-label">
 
             Buscar cuenta
 
@@ -220,10 +311,10 @@
                name="busqueda"
                value="@busqueda"
                class="form-control"
-               placeholder="Buscar por cliente o habitación" />
+               placeholder="Buscar por cliente, habitación o referencia"
+               autocomplete="off" />
 
     </form>
-
 
     <div class="mb-3">
 
@@ -233,21 +324,18 @@
 
     </div>
 
-
     <div class="table-responsive">
 
-        <table class="table table-bordered table-striped">
+        <table class="table table-bordered table-striped align-middle">
 
-            <thead class="table-dark">
-
-                <tr>
             <thead class="table-dark">
 
                 <tr>
 
                     <th>
 
-                        <a asp-action="Index"
+                        <a asp-controller="CuentasPorCobrar"
+                           asp-action="Index"
                            asp-route-vista="@vista"
                            asp-route-busqueda="@busqueda"
                            asp-route-ordenarPor="cliente"
@@ -264,7 +352,8 @@
 
                     <th>
 
-                        <a asp-action="Index"
+                        <a asp-controller="CuentasPorCobrar"
+                           asp-action="Index"
                            asp-route-vista="@vista"
                            asp-route-busqueda="@busqueda"
                            asp-route-ordenarPor="habitacion"
@@ -281,7 +370,8 @@
 
                     <th>
 
-                        <a asp-action="Index"
+                        <a asp-controller="CuentasPorCobrar"
+                           asp-action="Index"
                            asp-route-vista="@vista"
                            asp-route-busqueda="@busqueda"
                            asp-route-ordenarPor="fecha_entrada"
@@ -298,20 +388,33 @@
 
                     <th>
 
-                        Salida
+                        <a asp-controller="CuentasPorCobrar"
+                           asp-action="Index"
+                           asp-route-vista="@vista"
+                           asp-route-busqueda="@busqueda"
+                           asp-route-ordenarPor="fecha_salida"
+                           asp-route-direccion="@SiguienteDireccion("fecha_salida")"
+                           class="encabezado-orden">
+
+                            Salida
+
+                            <i class="bi @IconoOrden("fecha_salida")"></i>
+
+                        </a>
 
                     </th>
 
-                    <th class="text-end">
+                    <th>
 
-                        <a asp-action="Index"
+                        <a asp-controller="CuentasPorCobrar"
+                           asp-action="Index"
                            asp-route-vista="@vista"
                            asp-route-busqueda="@busqueda"
                            asp-route-ordenarPor="saldo"
                            asp-route-direccion="@SiguienteDireccion("saldo")"
                            class="encabezado-orden">
 
-                            Saldo Pendiente
+                            Saldo pendiente
 
                             <i class="bi @IconoOrden("saldo")"></i>
 
@@ -320,15 +423,11 @@
                     </th>
 
                     <th>
-
                         Estado
-
                     </th>
 
                     <th>
-
                         Acciones
-
                     </th>
 
                 </tr>
@@ -341,9 +440,10 @@
                 {
                     <tr>
 
-                        <td colspan="7" class="text-center py-4">
+                        <td colspan="7"
+                            class="text-center py-4">
 
-                            No existen cuentas por cobrar registradas.
+                            No existen cuentas por cobrar pendientes.
 
                         </td>
 
@@ -351,53 +451,73 @@
                 }
                 else
                 {
-                    @foreach (System.Data.DataRow fila in Model.Rows)
+                    foreach (System.Data.DataRow fila in Model.Rows)
                     {
+                        string tipoCuenta =
+                        fila["tipo_cuenta"]?.ToString()?.Trim().ToLower()
+                        ?? "";
+
+                        bool esEstadia =
+                        tipoCuenta == "estadia"
+                        && fila["id_reserva"] != DBNull.Value;
+
                         <tr>
 
                             <td>
 
                                 @fila["cliente"]
 
+                                @if (!esEstadia)
+                                {
+                                    <div class="tipo-cuenta">
+                                        Cuenta sin estadía
+                                    </div>
+                                }
+
                             </td>
 
                             <td>
 
-                                @(fila["habitacion"] == DBNull.Value
-                                                        ? "-"
-                                                        : fila["habitacion"])
-
-                    </td>
-
-                            <td>
-
-                        @if (fila["fecha_entrada"] != DBNull.Value)
-                                {
-                                    @Convert.ToDateTime(fila["fecha_entrada"]).ToString("dd/MM/yyyy")
-                                }
-                                else
+                                @if (fila["habitacion"] == DBNull.Value)
                                 {
                                     @:-
                                 }
+                                else
+                                {
+                                    @fila["habitacion"]
+                                }
 
                             </td>
 
                             <td>
 
-                                @if (fila["fecha_salida"] != DBNull.Value)
+                                @if (fila["fecha_entrada"] == DBNull.Value)
                                 {
-                                    @Convert.ToDateTime(fila["fecha_salida"]).ToString("dd/MM/yyyy")
+                                    @:-
                                 }
                                 else
                                 {
-                                    @:-
+                                    @(Convert.ToDateTime(fila["fecha_entrada"]).ToString("dd/MM/yyyy"))
                                 }
 
                             </td>
 
-                            <td class="text-end saldo">
+                            <td>
 
-                                Q @Convert.ToDecimal(fila["saldo"]).ToString("N2")
+                                @if (fila["fecha_salida"] == DBNull.Value)
+                                {
+                                    @:-
+                                }
+                                else
+                                {
+                                    @(Convert.ToDateTime(fila["fecha_salida"]).ToString("dd/MM/yyyy"))
+                                }
+
+                            </td>
+
+                            <td>
+
+                                Q @(Convert.ToDecimal(fila["saldo"]).ToString("N2"))
 
                             </td>
 
@@ -411,13 +531,18 @@
 
                             <td>
 
-                                <button type="button"
-                                        class="btn-icono"
-                                        disabled>
+                                <div class="acciones-contenedor">
 
-                                    <i class="bi bi-folder2-open"></i>
+                                    <button type="button"
+                                            class="btn-icono btn-gestionar"
+                                            disabled
+                                            title="El detalle financiero se implementará en la siguiente fase">
 
-                                </button>
+                                        <i class="bi bi-folder2-open"></i>
+
+                                    </button>
+
+                                </div>
 
                             </td>
 
@@ -430,3 +555,102 @@
         </table>
 
     </div>
+
+    @if (totalPaginas > 1)
+    {
+        <div class="paginacion">
+
+            @if (paginaActual > 1)
+            {
+                <a asp-controller="CuentasPorCobrar"
+                   asp-action="Index"
+                   asp-route-vista="@vista"
+                   asp-route-busqueda="@busqueda"
+                   asp-route-ordenarPor="@ordenarPor"
+                   asp-route-direccion="@direccion"
+                   asp-route-pagina="@(paginaActual - 1)"
+                   class="pagina-link"
+                   title="Página anterior">
+
+                    <i class="bi bi-chevron-left"></i>
+
+                </a>
+            }
+            else
+            {
+                <span class="pagina-link deshabilitada">
+
+                    <i class="bi bi-chevron-left"></i>
+
+                </span>
+            }
+
+            @for (int numeroPagina = 1;
+                    numeroPagina <= totalPaginas;
+                    numeroPagina++)
+            {
+                <a asp-controller="CuentasPorCobrar"
+                   asp-action="Index"
+                   asp-route-vista="@vista"
+                   asp-route-busqueda="@busqueda"
+                   asp-route-ordenarPor="@ordenarPor"
+                   asp-route-direccion="@direccion"
+                   asp-route-pagina="@numeroPagina"
+                   class="pagina-link @(numeroPagina == paginaActual ? "activa" : "")">
+
+                    @numeroPagina
+
+                </a>
+            }
+
+            @if (paginaActual < totalPaginas)
+            {
+                <a asp-controller="CuentasPorCobrar"
+                   asp-action="Index"
+                   asp-route-vista="@vista"
+                   asp-route-busqueda="@busqueda"
+                   asp-route-ordenarPor="@ordenarPor"
+                   asp-route-direccion="@direccion"
+                   asp-route-pagina="@(paginaActual + 1)"
+                   class="pagina-link"
+                   title="Página siguiente">
+
+                    <i class="bi bi-chevron-right"></i>
+
+                </a>
+            }
+            else
+            {
+                <span class="pagina-link deshabilitada">
+
+                    <i class="bi bi-chevron-right"></i>
+
+                </span>
+            }
+
+        </div>
+    }
+
+</div>
+
+@section Scripts {
+
+    <script>
+        let temporizadorBusqueda;
+
+        const campoBusqueda =
+            document.getElementById("busqueda");
+
+        const formularioBusqueda =
+            document.getElementById("formBusqueda");
+
+        campoBusqueda.addEventListener("input", function () {
+            clearTimeout(temporizadorBusqueda);
+
+            temporizadorBusqueda = setTimeout(function () {
+                formularioBusqueda.submit();
+            }, 350);
+        });
+    </script>
+
+}

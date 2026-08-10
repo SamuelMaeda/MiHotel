@@ -121,10 +121,6 @@
         background-color: #464482;
     }
 
-    .btn-pagos {
-        background-color: #5a58a6;
-    }
-
     .btn-editar {
         background-color: #824B44;
     }
@@ -286,9 +282,6 @@
                                         <i class="bi bi-eye-fill"></i>
                                     </a>
 
-                                    <a asp-controller="Reservas" asp-action="Pagos" asp-route-id="@fila["id_reserva"]" class="btn-icono btn-pagos" title="Ver pagos">
-                                        <i class="bi bi-cash-stack"></i>
-                                    </a>
 
                                     @if (estado == "pendiente" || estado == "confirmada")
                                     {
