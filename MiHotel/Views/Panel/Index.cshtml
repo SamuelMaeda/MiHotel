@@ -1,4 +1,4 @@
-﻿@{
+@{
     ViewData["Title"] = "Panel Principal";
 
     string nombreUsuario = ViewBag.NombreUsuario ?? "Usuario";
@@ -6,103 +6,554 @@
 }
 
 <style>
-    .tarjeta-bienvenida {
-        background-color: #DEDEDE;
-        border-radius: 15px;
-        padding: 25px;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.12);
-        margin-bottom: 20px;
-    }
-
-    .menu-rol {
+    .panel-contenido {
         background-color: white;
         border-radius: 15px;
         padding: 25px;
         box-shadow: 0 4px 10px rgba(0,0,0,0.10);
     }
 
-    .opcion-menu {
-        background-color: #464482;
-        color: white;
-        padding: 12px 18px;
-        border-radius: 10px;
-        text-decoration: none;
-        display: inline-block;
-        margin: 8px 8px 0 0;
+    .panel-bienvenida {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        padding-bottom: 22px;
+        margin-bottom: 26px;
+        border-bottom: 1px solid #e7dddd;
     }
 
-        .opcion-menu:hover {
-            background-color: #36366b;
-            color: white;
+    .panel-bienvenida h2 {
+        color: #363636;
+        margin: 0 0 6px;
+    }
+
+    .panel-bienvenida p {
+        color: #666;
+        margin: 0;
+    }
+
+    .panel-rol {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background-color: #E6D3D0;
+        color: #824B44;
+        border-radius: 999px;
+        padding: 9px 14px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .grupo-panel + .grupo-panel {
+        margin-top: 30px;
+    }
+
+    .grupo-encabezado {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 14px;
+    }
+
+    .grupo-encabezado i {
+        color: #824B44;
+        font-size: 20px;
+    }
+
+    .grupo-encabezado h3 {
+        color: #363636;
+        font-size: 20px;
+        margin: 0;
+    }
+
+    .opciones-panel {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(245px, 285px));
+        justify-content: center;
+        gap: 22px;
+    }
+
+    .opcion-panel {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        width: 100%;
+        min-height: 180px;
+        padding: 24px 20px;
+        border: none;
+        border-radius: 14px;
+        background-color: #464482;
+        color: white;
+        text-align: center;
+        text-decoration: none;
+        box-shadow: 0 4px 9px rgba(70, 68, 130, 0.22);
+        transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+    }
+
+    .opcion-panel:hover {
+        color: white;
+        background-color: #36366b;
+        box-shadow: 0 7px 15px rgba(70, 68, 130, 0.28);
+        transform: translateY(-3px);
+    }
+
+    .opcion-panel.principal {
+        background-color: #824B44;
+        box-shadow: 0 4px 9px rgba(130, 75, 68, 0.24);
+    }
+
+    .opcion-panel.principal:hover {
+        background-color: #6e3f39;
+        box-shadow: 0 7px 15px rgba(130, 75, 68, 0.30);
+    }
+
+    .opcion-icono {
+        width: 66px;
+        height: 66px;
+        border-radius: 14px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        background-color: rgba(255,255,255,0.16);
+        color: white;
+        font-size: 32px;
+    }
+
+    .opcion-icono.cafe,
+    .opcion-icono.oscuro {
+        background-color: rgba(255,255,255,0.16);
+    }
+
+    .opcion-texto {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .opcion-titulo {
+        display: block;
+        margin-bottom: 7px;
+        font-size: 18px;
+        font-weight: 700;
+        line-height: 1.25;
+    }
+
+    .opcion-descripcion {
+        display: block;
+        max-width: 230px;
+        margin: 0 auto;
+        color: rgba(255,255,255,0.88);
+        font-size: 14px;
+        line-height: 1.4;
+    }
+
+    .opcion-panel.proximamente {
+        cursor: not-allowed;
+        background-color: #ded4d2;
+        color: #625b5a;
+        box-shadow: none;
+        opacity: 0.82;
+    }
+
+    .opcion-panel.proximamente:hover {
+        background-color: #ded4d2;
+        color: #625b5a;
+        box-shadow: none;
+        transform: none;
+    }
+
+    .opcion-panel.proximamente .opcion-icono {
+        background-color: rgba(54,54,54,0.12);
+        color: #625b5a;
+    }
+
+    .opcion-panel.proximamente .opcion-descripcion {
+        color: #746d6c;
+    }
+
+    .etiqueta-proximamente {
+        position: absolute;
+        top: 9px;
+        right: 9px;
+        border-radius: 999px;
+        background-color: #824B44;
+        color: white;
+        padding: 4px 9px;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.2px;
+    }
+
+    .panel-sin-opciones {
+        padding: 22px;
+        border-radius: 10px;
+        background-color: #f5eeee;
+        color: #6e3f39;
+        text-align: center;
+    }
+
+    @@media (max-width: 768px) {
+        .panel-contenido {
+            padding: 20px;
         }
+
+        .panel-bienvenida {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        .opciones-panel {
+            grid-template-columns: 1fr;
+            max-width: 430px;
+            margin-right: auto;
+            margin-left: auto;
+        }
+    }
+
+    @@media (max-width: 420px) {
+        .panel-contenido {
+            padding: 16px;
+        }
+
+        .opcion-panel {
+            min-height: 165px;
+            padding: 22px 18px;
+        }
+
+        .opcion-icono {
+            width: 60px;
+            height: 60px;
+            font-size: 29px;
+        }
+    }
 </style>
 
-<div class="tarjeta-bienvenida">
-    <h2>Bienvenido al sistema</h2>
-    <p>Has iniciado sesión correctamente.</p>
-</div>
+<div class="panel-contenido">
+    <div class="panel-bienvenida">
+        <div>
+            <h2>Bienvenido, @nombreUsuario</h2>
+            <p>Selecciona una opción para comenzar.</p>
+        </div>
 
-<div class="menu-rol">
-    <h4>Opciones disponibles</h4>
+        <span class="panel-rol">
+            <i class="bi bi-person-badge-fill"></i>
+            @nombreRol
+        </span>
+    </div>
 
     @if (nombreRol.ToLower() == "admin")
     {
-        
-        <a asp-controller="Usuarios" asp-action="Index" class="opcion-menu">Usuarios</a>
-        <a asp-controller="Roles" asp-action="Index" class="opcion-menu">Roles</a>
-        <a asp-controller="Permisos" asp-action="Index" class="opcion-menu">Permisos</a>
-        <a asp-controller="RolPermisos" asp-action="Index" class="opcion-menu">RolPermisos</a>
-        <a asp-controller="Inventario" asp-action="Index" class="opcion-menu">Inventario</a>
-        <a asp-controller="Reservas" asp-action="Index" class="opcion-menu">Reservas</a>
-        <a asp-controller="POS" asp-action="Index" class="opcion-menu">Punto de Venta</a>
-        // <a asp-controller="PuntoVenta" asp-action="Index" class="text-decoration-none">
-        <a asp-controller="ProductosServicios" asp-action="Index" class="opcion-menu">Productos y Servicios</a>
-        <a asp-controller="Proveedores" asp-action="Index" class="opcion-menu">Proveedores</a>
-        <a asp-controller="Marcas" asp-action="Index" class="opcion-menu">Marcas</a>
+        <section class="grupo-panel">
+            <div class="grupo-encabezado">
+                <i class="bi bi-building"></i>
+                <h3>Operación del hotel</h3>
+            </div>
 
-        <a href="#" class="opcion-menu">Cuentas por Cobrar</a>
-        <a href="#" class="opcion-menu">Cuentas por Pagar</a>
-        <a href="#" class="opcion-menu">Reportes</a>
-        <a asp-controller="Categorias" asp-action="Index" class="opcion-menu">Categorias</a>
-        <a asp-controller="Subcategorias" asp-action="Index" class="opcion-menu">Subcategorias</a>
-        <a asp-controller="Habitaciones" asp-action="Index" class="opcion-menu">Habitaciones</a>
-        <a asp-controller="Clientes" asp-action="Index" class="opcion-menu">Clientes</a>
-        <a asp-controller="Disponibilidad" asp-action="Index" class="opcion-menu">Disponibilidad</a>
-        <a asp-controller="HistorialVentas" asp-action="Index" class="opcion-menu">Historial de Ventas</a>
-        <a asp-controller="CuentasPorCobrar" asp-action="Index" class="opcion-menu">Cuentas por Cobrar </a>
+            <div class="opciones-panel">
+                <a asp-controller="Reservas" asp-action="Index" class="opcion-panel principal">
+                    <span class="opcion-icono cafe"><i class="bi bi-calendar-check-fill"></i></span>
+                    <span class="opcion-texto">
+                        <span class="opcion-titulo">Reservas</span>
+                        <span class="opcion-descripcion">Consulta y administra las reservaciones.</span>
+                    </span>
+                </a>
 
+                <a asp-controller="Disponibilidad" asp-action="Index" class="opcion-panel">
+                    <span class="opcion-icono"><i class="bi bi-calendar2-week-fill"></i></span>
+                    <span class="opcion-texto">
+                        <span class="opcion-titulo">Disponibilidad</span>
+                        <span class="opcion-descripcion">Revisa las habitaciones disponibles.</span>
+                    </span>
+                </a>
 
-        <a asp-controller="Reservas" asp-action="BuscarPorCodigo" class="opcion-menu">Buscar Reserva por Código
-        </a>
+                <a asp-controller="Habitaciones" asp-action="Index" class="opcion-panel">
+                    <span class="opcion-icono oscuro"><i class="bi bi-door-open-fill"></i></span>
+                    <span class="opcion-texto">
+                        <span class="opcion-titulo">Habitaciones</span>
+                        <span class="opcion-descripcion">Administra habitaciones y sus datos.</span>
+                    </span>
+                </a>
 
+                <a asp-controller="Reservas" asp-action="BuscarPorCodigo" class="opcion-panel">
+                    <span class="opcion-icono"><i class="bi bi-search"></i></span>
+                    <span class="opcion-texto">
+                        <span class="opcion-titulo">Buscar reserva por código</span>
+                        <span class="opcion-descripcion">Localiza rápidamente una reservación.</span>
+                    </span>
+                </a>
+            </div>
+        </section>
 
+        <section class="grupo-panel">
+            <div class="grupo-encabezado">
+                <i class="bi bi-cash-coin"></i>
+                <h3>Ventas y finanzas</h3>
+            </div>
+
+            <div class="opciones-panel">
+                <a asp-controller="POS" asp-action="Index" class="opcion-panel principal">
+                    <span class="opcion-icono cafe"><i class="bi bi-cart-fill"></i></span>
+                    <span class="opcion-texto">
+                        <span class="opcion-titulo">Punto de venta</span>
+                        <span class="opcion-descripcion">Registra ventas de productos y servicios.</span>
+                    </span>
+                </a>
+
+                <a asp-controller="HistorialVentas" asp-action="Index" class="opcion-panel">
+                    <span class="opcion-icono oscuro"><i class="bi bi-receipt-cutoff"></i></span>
+                    <span class="opcion-texto">
+                        <span class="opcion-titulo">Historial de ventas</span>
+                        <span class="opcion-descripcion">Consulta las ventas que se han realizado.</span>
+                    </span>
+                </a>
+
+                <a asp-controller="CuentasPorCobrar" asp-action="Index" class="opcion-panel principal">
+                    <span class="opcion-icono cafe"><i class="bi bi-wallet2"></i></span>
+                    <span class="opcion-texto">
+                        <span class="opcion-titulo">Cuentas por cobrar</span>
+                        <span class="opcion-descripcion">Consulta los saldos pendientes de pago.</span>
+                    </span>
+                </a>
+
+                <a href="#" class="opcion-panel proximamente" aria-disabled="true" tabindex="-1">
+                    <span class="etiqueta-proximamente">Próximamente</span>
+                    <span class="opcion-icono"><i class="bi bi-credit-card-fill"></i></span>
+                    <span class="opcion-texto">
+                        <span class="opcion-titulo">Cuentas por pagar</span>
+                        <span class="opcion-descripcion">Control de pagos pendientes a proveedores.</span>
+                    </span>
+                </a>
+
+                <a href="#" class="opcion-panel proximamente" aria-disabled="true" tabindex="-1">
+                    <span class="etiqueta-proximamente">Próximamente</span>
+                    <span class="opcion-icono oscuro"><i class="bi bi-bar-chart-fill"></i></span>
+                    <span class="opcion-texto">
+                        <span class="opcion-titulo">Reportes</span>
+                        <span class="opcion-descripcion">Consulta información resumida del hotel.</span>
+                    </span>
+                </a>
+            </div>
+        </section>
+
+        <section class="grupo-panel">
+            <div class="grupo-encabezado">
+                <i class="bi bi-box-seam-fill"></i>
+                <h3>Productos e inventario</h3>
+            </div>
+
+            <div class="opciones-panel">
+                <a asp-controller="Inventario" asp-action="Index" class="opcion-panel principal">
+                    <span class="opcion-icono cafe"><i class="bi bi-boxes"></i></span>
+                    <span class="opcion-texto">
+                        <span class="opcion-titulo">Inventario</span>
+                        <span class="opcion-descripcion">Consulta existencias y movimientos.</span>
+                    </span>
+                </a>
+
+                <a asp-controller="ProductosServicios" asp-action="Index" class="opcion-panel">
+                    <span class="opcion-icono"><i class="bi bi-tags-fill"></i></span>
+                    <span class="opcion-texto">
+                        <span class="opcion-titulo">Productos y servicios</span>
+                        <span class="opcion-descripcion">Administra lo que ofrece el hotel.</span>
+                    </span>
+                </a>
+
+                <a asp-controller="Proveedores" asp-action="Index" class="opcion-panel">
+                    <span class="opcion-icono oscuro"><i class="bi bi-truck"></i></span>
+                    <span class="opcion-texto">
+                        <span class="opcion-titulo">Proveedores</span>
+                        <span class="opcion-descripcion">Consulta y administra proveedores.</span>
+                    </span>
+                </a>
+
+                <a asp-controller="Marcas" asp-action="Index" class="opcion-panel">
+                    <span class="opcion-icono"><i class="bi bi-bookmark-fill"></i></span>
+                    <span class="opcion-texto">
+                        <span class="opcion-titulo">Marcas</span>
+                        <span class="opcion-descripcion">Organiza las marcas de los productos.</span>
+                    </span>
+                </a>
+
+                <a asp-controller="Categorias" asp-action="Index" class="opcion-panel">
+                    <span class="opcion-icono cafe"><i class="bi bi-grid-fill"></i></span>
+                    <span class="opcion-texto">
+                        <span class="opcion-titulo">Categorías</span>
+                        <span class="opcion-descripcion">Agrupa productos y servicios.</span>
+                    </span>
+                </a>
+
+                <a asp-controller="Subcategorias" asp-action="Index" class="opcion-panel">
+                    <span class="opcion-icono oscuro"><i class="bi bi-diagram-3-fill"></i></span>
+                    <span class="opcion-texto">
+                        <span class="opcion-titulo">Subcategorías</span>
+                        <span class="opcion-descripcion">Define grupos más específicos.</span>
+                    </span>
+                </a>
+            </div>
+        </section>
+
+        <section class="grupo-panel">
+            <div class="grupo-encabezado">
+                <i class="bi bi-people-fill"></i>
+                <h3>Personas</h3>
+            </div>
+
+            <div class="opciones-panel">
+                <a asp-controller="Clientes" asp-action="Index" class="opcion-panel">
+                    <span class="opcion-icono cafe"><i class="bi bi-person-lines-fill"></i></span>
+                    <span class="opcion-texto">
+                        <span class="opcion-titulo">Clientes</span>
+                        <span class="opcion-descripcion">Consulta y administra los huéspedes.</span>
+                    </span>
+                </a>
+            </div>
+        </section>
+
+        <section class="grupo-panel">
+            <div class="grupo-encabezado">
+                <i class="bi bi-gear-fill"></i>
+                <h3>Administración del sistema</h3>
+            </div>
+
+            <div class="opciones-panel">
+                <a asp-controller="Usuarios" asp-action="Index" class="opcion-panel">
+                    <span class="opcion-icono oscuro"><i class="bi bi-person-gear"></i></span>
+                    <span class="opcion-texto">
+                        <span class="opcion-titulo">Usuarios</span>
+                        <span class="opcion-descripcion">Administra el acceso de los usuarios.</span>
+                    </span>
+                </a>
+
+                <a asp-controller="Roles" asp-action="Index" class="opcion-panel">
+                    <span class="opcion-icono"><i class="bi bi-person-vcard-fill"></i></span>
+                    <span class="opcion-texto">
+                        <span class="opcion-titulo">Roles</span>
+                        <span class="opcion-descripcion">Define las responsabilidades de cada perfil.</span>
+                    </span>
+                </a>
+
+                <a asp-controller="Permisos" asp-action="Index" class="opcion-panel">
+                    <span class="opcion-icono cafe"><i class="bi bi-shield-lock-fill"></i></span>
+                    <span class="opcion-texto">
+                        <span class="opcion-titulo">Permisos</span>
+                        <span class="opcion-descripcion">Configura las acciones disponibles.</span>
+                    </span>
+                </a>
+
+                <a asp-controller="RolPermisos" asp-action="Index" class="opcion-panel">
+                    <span class="opcion-icono oscuro"><i class="bi bi-key-fill"></i></span>
+                    <span class="opcion-texto">
+                        <span class="opcion-titulo">Asignación de permisos</span>
+                        <span class="opcion-descripcion">Asigna permisos a cada rol del sistema.</span>
+                    </span>
+                </a>
+            </div>
+        </section>
     }
     else if (nombreRol.ToLower() == "recepcionista")
     {
-        <a href="#" class="opcion-menu">Reservas</a>
-        <a href="#" class="opcion-menu">Check-In</a>
-        <a href="#" class="opcion-menu">Check-Out</a>
-        <a asp-controller="Habitaciones" asp-action="Index" class="opcion-menu">Habitaciones</a>
-        <a asp-controller="Clientes" asp-action="Index" class="opcion-menu">Clientes</a>
-        <a asp-controller="POS" asp-action="Index" class="opcion-menu">Punto de Venta</a>
-        
+        <section class="grupo-panel">
+            <div class="grupo-encabezado">
+                <i class="bi bi-building"></i>
+                <h3>Operación del hotel</h3>
+            </div>
+
+            <div class="opciones-panel">
+                <a href="#" class="opcion-panel proximamente" aria-disabled="true" tabindex="-1">
+                    <span class="etiqueta-proximamente">Próximamente</span>
+                    <span class="opcion-icono cafe"><i class="bi bi-calendar-check-fill"></i></span>
+                    <span class="opcion-texto"><span class="opcion-titulo">Reservas</span><span class="opcion-descripcion">Consulta y administra las reservaciones.</span></span>
+                </a>
+                <a href="#" class="opcion-panel proximamente" aria-disabled="true" tabindex="-1">
+                    <span class="etiqueta-proximamente">Próximamente</span>
+                    <span class="opcion-icono"><i class="bi bi-box-arrow-in-right"></i></span>
+                    <span class="opcion-texto"><span class="opcion-titulo">Check-in</span><span class="opcion-descripcion">Registra la entrada de los huéspedes.</span></span>
+                </a>
+                <a href="#" class="opcion-panel proximamente" aria-disabled="true" tabindex="-1">
+                    <span class="etiqueta-proximamente">Próximamente</span>
+                    <span class="opcion-icono oscuro"><i class="bi bi-box-arrow-right"></i></span>
+                    <span class="opcion-texto"><span class="opcion-titulo">Check-out</span><span class="opcion-descripcion">Registra la salida de los huéspedes.</span></span>
+                </a>
+                <a asp-controller="Habitaciones" asp-action="Index" class="opcion-panel">
+                    <span class="opcion-icono"><i class="bi bi-door-open-fill"></i></span>
+                    <span class="opcion-texto"><span class="opcion-titulo">Habitaciones</span><span class="opcion-descripcion">Consulta las habitaciones del hotel.</span></span>
+                </a>
+            </div>
+        </section>
+
+        <section class="grupo-panel">
+            <div class="grupo-encabezado"><i class="bi bi-people-fill"></i><h3>Clientes</h3></div>
+            <div class="opciones-panel">
+                <a asp-controller="Clientes" asp-action="Index" class="opcion-panel">
+                    <span class="opcion-icono cafe"><i class="bi bi-person-lines-fill"></i></span>
+                    <span class="opcion-texto"><span class="opcion-titulo">Clientes</span><span class="opcion-descripcion">Consulta y administra los huéspedes.</span></span>
+                </a>
+            </div>
+        </section>
+
+        <section class="grupo-panel">
+            <div class="grupo-encabezado"><i class="bi bi-cart-fill"></i><h3>Ventas</h3></div>
+            <div class="opciones-panel">
+                <a asp-controller="POS" asp-action="Index" class="opcion-panel principal">
+                    <span class="opcion-icono cafe"><i class="bi bi-cart-fill"></i></span>
+                    <span class="opcion-texto"><span class="opcion-titulo">Punto de venta</span><span class="opcion-descripcion">Registra ventas de productos y servicios.</span></span>
+                </a>
+            </div>
+        </section>
     }
     else if (nombreRol.ToLower() == "camarero")
     {
-        <a href="#" class="opcion-menu">Punto de Venta</a>
-        <a href="#" class="opcion-menu">Restaurante</a>
-        <a href="#" class="opcion-menu">Consumos</a>
+        <section class="grupo-panel">
+            <div class="grupo-encabezado"><i class="bi bi-cup-hot-fill"></i><h3>Restaurante y ventas</h3></div>
+            <div class="opciones-panel">
+                <a href="#" class="opcion-panel proximamente" aria-disabled="true" tabindex="-1">
+                    <span class="etiqueta-proximamente">Próximamente</span>
+                    <span class="opcion-icono cafe"><i class="bi bi-cart-fill"></i></span>
+                    <span class="opcion-texto"><span class="opcion-titulo">Punto de venta</span><span class="opcion-descripcion">Registra las ventas del restaurante.</span></span>
+                </a>
+                <a href="#" class="opcion-panel proximamente" aria-disabled="true" tabindex="-1">
+                    <span class="etiqueta-proximamente">Próximamente</span>
+                    <span class="opcion-icono"><i class="bi bi-cup-straw"></i></span>
+                    <span class="opcion-texto"><span class="opcion-titulo">Restaurante</span><span class="opcion-descripcion">Administra la atención del restaurante.</span></span>
+                </a>
+                <a href="#" class="opcion-panel proximamente" aria-disabled="true" tabindex="-1">
+                    <span class="etiqueta-proximamente">Próximamente</span>
+                    <span class="opcion-icono oscuro"><i class="bi bi-receipt"></i></span>
+                    <span class="opcion-texto"><span class="opcion-titulo">Consumos</span><span class="opcion-descripcion">Consulta los consumos registrados.</span></span>
+                </a>
+            </div>
+        </section>
     }
     else if (nombreRol.ToLower() == "cliente")
     {
-        <a asp-controller="Reservas" asp-action="MisReservas" class="opcion-menu">Mis Reservas</a>
-        <a asp-controller="Disponibilidad" asp-action="Index" class="opcion-menu">Disponibilidad</a>
-        <a href="#" class="opcion-menu">Mis Pagos</a>
-
-
+        <section class="grupo-panel">
+            <div class="grupo-encabezado"><i class="bi bi-suitcase-fill"></i><h3>Mis servicios</h3></div>
+            <div class="opciones-panel">
+                <a asp-controller="Reservas" asp-action="MisReservas" class="opcion-panel principal">
+                    <span class="opcion-icono cafe"><i class="bi bi-calendar-check-fill"></i></span>
+                    <span class="opcion-texto"><span class="opcion-titulo">Mis reservas</span><span class="opcion-descripcion">Consulta el estado de tus reservaciones.</span></span>
+                </a>
+                <a asp-controller="Disponibilidad" asp-action="Index" class="opcion-panel">
+                    <span class="opcion-icono"><i class="bi bi-calendar2-week-fill"></i></span>
+                    <span class="opcion-texto"><span class="opcion-titulo">Disponibilidad</span><span class="opcion-descripcion">Revisa las habitaciones disponibles.</span></span>
+                </a>
+                <a href="#" class="opcion-panel proximamente" aria-disabled="true" tabindex="-1">
+                    <span class="etiqueta-proximamente">Próximamente</span>
+                    <span class="opcion-icono oscuro"><i class="bi bi-wallet2"></i></span>
+                    <span class="opcion-texto"><span class="opcion-titulo">Mis pagos</span><span class="opcion-descripcion">Consulta tus pagos y saldos pendientes.</span></span>
+                </a>
+            </div>
+        </section>
     }
     else
     {
-        <p>No hay opciones configuradas para este rol.</p>
+        <div class="panel-sin-opciones">
+            <i class="bi bi-info-circle-fill me-2"></i>
+            No hay opciones configuradas para este rol.
+        </div>
     }
 </div>
