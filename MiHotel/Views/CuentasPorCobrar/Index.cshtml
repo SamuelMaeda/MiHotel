@@ -533,14 +533,29 @@ por estadía y las cuentas independientes.
 
                                 <div class="acciones-contenedor">
 
-                                    <button type="button"
-                                            class="btn-icono btn-gestionar"
-                                            disabled
-                                            title="El detalle financiero se implementará en la siguiente fase">
+                                    @if (esEstadia)
+                                    {
+                                        <a asp-controller="CuentasPorCobrar"
+                                           asp-action="Detalle"
+                                           asp-route-id="@fila["id_reserva"]"
+                                           class="btn-icono btn-gestionar"
+                                           title="Gestionar cuenta y abonos">
 
-                                        <i class="bi bi-folder2-open"></i>
+                                            <i class="bi bi-folder2-open"></i>
 
-                                    </button>
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <button type="button"
+                                                class="btn-icono btn-gestionar"
+                                                disabled
+                                                title="Las cuentas independientes existentes se conservan solo para consulta">
+
+                                            <i class="bi bi-folder2-open"></i>
+
+                                        </button>
+                                    }
 
                                 </div>
 

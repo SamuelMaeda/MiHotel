@@ -359,6 +359,7 @@
                 </div>
 
                 <form method="post" asp-action="GuardarVenta">
+                    @Html.AntiForgeryToken()
                     <input type="hidden" name="detalleJson" id="detalleJson" />
                     <input type="hidden" name="id_clipro" id="inputCliente" />
                     <input type="hidden" name="id_reserva" id="inputReserva" />
@@ -689,4 +690,4 @@
         document.getElementById("inputReserva").value = document.getElementById("reserva").value;
         document.getElementById("inputPagado").value = document.getElementById("montoPagado").value;
     }
-</script>   
+</script>

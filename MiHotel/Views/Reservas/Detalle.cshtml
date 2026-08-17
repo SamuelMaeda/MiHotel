@@ -40,8 +40,13 @@
         font-weight: bold;
     }
 
-    .estado-confirmada {
-        color: #0f5132;
+    .estado-en_curso {
+        color: #0c5460;
+        font-weight: bold;
+    }
+
+    .estado-en_checkout {
+        color: #b45309;
         font-weight: bold;
     }
 
@@ -64,6 +69,21 @@
         font-weight: 500;
         display: inline-block;
     }
+
+    .btn-cuenta {
+        background-color: #464482;
+        color: white;
+        text-decoration: none;
+        padding: 10px 18px;
+        border-radius: 8px;
+        font-weight: 500;
+        display: inline-block;
+    }
+
+        .btn-cuenta:hover {
+            background-color: #36366b;
+            color: white;
+        }
 
         .btn-volver:hover {
             background-color: #6e3f39;
@@ -146,11 +166,15 @@
 
                 @if (estado == "pendiente")
                 {
-                    <span class="estado-pendiente">Pendiente</span>
+                    <span class="estado-pendiente">Pendiente de ingreso</span>
                 }
-                else if (estado == "confirmada")
+                else if (estado == "en_curso")
                 {
-                    <span class="estado-confirmada">Confirmada</span>
+                    <span class="estado-en_curso">En curso</span>
+                }
+                else if (estado == "en_checkout")
+                {
+                    <span class="estado-en_checkout">En check-out</span>
                 }
                 else if (estado == "cancelada")
                 {
@@ -170,6 +194,9 @@
     </div>
 
     <div class="acciones-formulario">
+        <a asp-controller="CuentasPorCobrar" asp-action="Detalle" asp-route-id="@Model.IdReserva" class="btn-cuenta">
+            Ver cuenta y abonos
+        </a>
         <a asp-controller="Reservas" asp-action="Index" class="btn-volver">
             Volver al listado
         </a>

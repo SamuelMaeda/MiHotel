@@ -2,7 +2,7 @@
 
 @{
     ViewData["Title"] = "Detalle de Mi Reserva";
-    bool puedeCancelar = Model.Estado?.Trim().ToLower() == "pendiente" || Model.Estado?.Trim().ToLower() == "confirmada";
+    bool puedeCancelar = Model.Estado?.Trim().ToLower() == "pendiente";
 }
 
 <style>
@@ -65,8 +65,8 @@
         font-weight: bold;
     }
 
-    .estado-confirmada {
-        color: #0f5132;
+    .estado-en_checkout {
+        color: #b45309;
         font-weight: bold;
     }
 
@@ -156,15 +156,15 @@
 
                         @if (estado == "pendiente")
                         {
-                            <span class="estado-pendiente">Pendiente</span>
-                        }
-                        else if (estado == "confirmada")
-                        {
-                            <span class="estado-confirmada">Confirmada</span>
+                            <span class="estado-pendiente">Pendiente de ingreso</span>
                         }
                         else if (estado == "en_curso")
                         {
                             <span class="estado-en_curso">En curso</span>
+                        }
+                        else if (estado == "en_checkout")
+                        {
+                            <span class="estado-en_checkout">En check-out</span>
                         }
                         else if (estado == "cancelada")
                         {

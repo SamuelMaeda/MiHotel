@@ -1,0 +1,202 @@
+@model MiHotel.Models.CuentaPorCobrarDetalleViewModel
+@using System.Data
+
+@{
+    ViewData["Title"] = "Detalle de cuenta por cobrar";
+    bool puedeCobrar = ViewBag.PuedeCobrar is bool valor && valor;
+    bool volverCheckout = Model.EstadoReserva.Trim().ToLower() == "en_checkout";
+    DataTable formasPago = ViewBag.FormasPago as DataTable ?? new DataTable();
+}
+
+<style>
+    .tarjeta-contenido {
+        background-color: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.10);
+    }
+
+    .resumen-cuenta {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+        gap: 14px;
+        margin-bottom: 22px;
+    }
+
+    .dato-cuenta {
+        background-color: #f5efee;
+        border: 1px solid #e6d3d0;
+        border-radius: 10px;
+        padding: 14px;
+    }
+
+    .dato-cuenta span {
+        color: #6c757d;
+        display: block;
+        font-size: 13px;
+        margin-bottom: 4px;
+    }
+
+    .saldo-cuenta { color: #842029; font-size: 1.35rem; font-weight: 700; }
+
+    .formulario-abono {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 10px;
+        padding: 18px;
+        margin-bottom: 24px;
+    }
+
+    .btn-accion {
+        border: none;
+        border-radius: 8px;
+        color: white;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 14px;
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    .btn-accion:hover { color: white; }
+    .btn-guardar { background-color: #464482; }
+    .btn-volver { background-color: #824B44; }
+    .btn-anular { background-color: #842029; }
+</style>
+
+<div class="tarjeta-contenido">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4">
+        <div>
+            <h3 class="mb-1">Cuenta de la reservación #@Model.IdReserva</h3>
+            <p class="text-muted mb-0">Registro y corrección de abonos de la estadía.</p>
+        </div>
+        @if (volverCheckout)
+        {
+            <a asp-controller="Reservas" asp-action="Checkout" asp-route-id="@Model.IdReserva" class="btn-accion btn-volver">
+                <i class="bi bi-arrow-left"></i> Volver al check-out
+            </a>
+        }
+        else
+        {
+            <a asp-controller="CuentasPorCobrar" asp-action="Index" class="btn-accion btn-volver">
+                <i class="bi bi-arrow-left"></i> Volver al listado
+            </a>
+        }
+    </div>
+
+    @if (TempData["Exito"] != null)
+    {
+        <div class="alert alert-success">@TempData["Exito"]</div>
+    }
+
+    @if (TempData["Mensaje"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Mensaje"]</div>
+    }
+
+    <div class="resumen-cuenta">
+        <div class="dato-cuenta"><span>Cliente</span><strong>@Model.Cliente</strong></div>
+        <div class="dato-cuenta"><span>Habitación</span><strong>@Model.Habitacion</strong></div>
+        <div class="dato-cuenta"><span>Entrada</span><strong>@Model.FechaEntrada.ToString("dd/MM/yyyy")</strong></div>
+        <div class="dato-cuenta"><span>Salida</span><strong>@Model.FechaSalida.ToString("dd/MM/yyyy")</strong></div>
+        <div class="dato-cuenta"><span>Estado de la reserva</span><strong>@Model.EstadoReserva.Replace("_", " ")</strong></div>
+        <div class="dato-cuenta"><span>Saldo pendiente</span><strong class="saldo-cuenta">Q @Model.SaldoPendiente.ToString("N2")</strong></div>
+    </div>
+
+    @if (puedeCobrar && Model.SaldoPendiente > 0)
+    {
+        <div class="formulario-abono">
+            <h5>Registrar abono</h5>
+            <form asp-controller="CuentasPorCobrar" asp-action="RegistrarAbono" method="post" class="row g-3">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="idReserva" value="@Model.IdReserva" />
+                <input type="hidden" name="volverCheckout" value="@volverCheckout.ToString().ToLower()" />
+
+                <div class="col-md-4">
+                    <label for="monto" class="form-label">Monto</label>
+                    <input id="monto" name="monto" type="number" min="0.01" max="@Model.SaldoPendiente.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="0.01" class="form-control" required />
+                </div>
+                <div class="col-md-4">
+                    <label for="idFormaPago" class="form-label">Forma de pago</label>
+                    <select id="idFormaPago" name="idFormaPago" class="form-select" required>
+                        <option value="">Seleccione</option>
+                        @foreach (DataRow forma in formasPago.Rows)
+                        {
+                            <option value="@forma["id_formapago"]">@forma["nombre_forma"]</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="referencia" class="form-label">Referencia opcional</label>
+                    <input id="referencia" name="referencia" class="form-control" maxlength="100" placeholder="Transferencia o depósito" />
+                </div>
+                <div class="col-12">
+                    <label for="observaciones" class="form-label">Observaciones opcionales</label>
+                    <textarea id="observaciones" name="observaciones" class="form-control" rows="2" maxlength="140"></textarea>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn-accion btn-guardar"><i class="bi bi-cash-coin"></i> Registrar abono</button>
+                </div>
+            </form>
+        </div>
+    }
+    else if (!puedeCobrar && Model.SaldoPendiente > 0)
+    {
+        <div class="alert alert-warning">Puede consultar la cuenta, pero su rol no tiene permiso para registrar o corregir abonos.</div>
+    }
+
+    <h5>Historial de movimientos</h5>
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Fecha</th>
+                    <th>Tipo</th>
+                    <th>Descripción</th>
+                    <th>Forma de pago</th>
+                    <th>Monto</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Movimientos.Count == 0)
+                {
+                    <tr><td colspan="7" class="text-center py-3">No hay movimientos registrados.</td></tr>
+                }
+                else
+                {
+                    foreach (var movimiento in Model.Movimientos)
+                    {
+                        bool abonoActivo = movimiento.EsAbono && movimiento.Estado.Trim().ToLower() == "activo";
+                        <tr>
+                            <td>@movimiento.FechaHora.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>@movimiento.Tipo.Replace("_", " ")</td>
+                            <td>@movimiento.Descripcion</td>
+                            <td>@movimiento.FormaPago</td>
+                            <td>Q @movimiento.Monto.ToString("N2")</td>
+                            <td>@(movimiento.Estado.Trim().ToLower() == "activo" ? "Activo" : "Anulado")</td>
+                            <td>
+                                @if (puedeCobrar && abonoActivo)
+                                {
+                                    <form asp-controller="CuentasPorCobrar" asp-action="AnularAbono" method="post" onsubmit="return confirm('¿Desea anular este abono y devolver el importe al saldo pendiente?');">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="idMovimiento" value="@movimiento.IdMovimiento" />
+                                        <input type="hidden" name="idReserva" value="@Model.IdReserva" />
+                                        <input type="hidden" name="volverCheckout" value="@volverCheckout.ToString().ToLower()" />
+                                        <button type="submit" class="btn-accion btn-anular"><i class="bi bi-x-circle"></i> Anular</button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">-</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

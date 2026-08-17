@@ -5,8 +5,6 @@
     ViewData["Title"] = "Nueva Reserva";
     var clientes = ViewBag.Clientes as List<dynamic> ?? new List<dynamic>();
     var habitaciones = ViewBag.Habitaciones as List<dynamic> ?? new List<dynamic>();
-    var formasPago = ViewBag.FormasPago as List<dynamic> ?? new List<dynamic>();
-
     bool esClienteSesion = ViewBag.EsClienteSesion != null && (bool)ViewBag.EsClienteSesion;
     bool bloquearHabitacion = ViewBag.BloquearHabitacion != null && (bool)ViewBag.BloquearHabitacion;
     bool bloquearFechas = ViewBag.BloquearFechas != null && (bool)ViewBag.BloquearFechas;
@@ -303,29 +301,6 @@
                             <span asp-validation-for="CantidadPersonas" class="text-danger"></span>
                         </div>
 
-                        <div class="col-12 col-md-6 mb-3">
-                            <label asp-for="MontoPagoInicial" class="form-label">Pago inicial</label>
-                            <input asp-for="MontoPagoInicial" class="form-control" min="0" step="0.01" id="MontoPagoInicial" />
-                            <span asp-validation-for="MontoPagoInicial" class="text-danger"></span>
-                        </div>
-
-                        <div class="col-12 col-md-6 mb-3">
-                            <label asp-for="IdFormaPagoInicial" class="form-label">Forma de pago inicial</label>
-                            <select asp-for="IdFormaPagoInicial" class="form-select" id="IdFormaPagoInicial">
-                                <option value="">Seleccione una forma de pago</option>
-                                @foreach (var forma in formasPago)
-                                {
-                                    string nombreForma = forma.NombreForma?.ToString() ?? "";
-
-                                    if (!nombreForma.Trim().Equals("credito", StringComparison.OrdinalIgnoreCase))
-                                    {
-                                        <option value="@forma.IdFormaPago">@forma.NombreForma</option>
-                                    }
-                                }
-                            </select>
-                            <span asp-validation-for="IdFormaPagoInicial" class="text-danger"></span>
-                        </div>
-
                         <div class="col-12 mb-3">
                             <label asp-for="Observaciones" class="form-label">Observaciones</label>
                             <textarea asp-for="Observaciones" class="form-control" rows="4" id="Observaciones"></textarea>
@@ -373,8 +348,6 @@
             const fechaEntradaElement = document.getElementById("FechaEntrada");
             const fechaSalidaElement = document.getElementById("FechaSalida");
             const cantidadPersonasElement = document.getElementById("CantidadPersonas");
-            const montoPagoInicialElement = document.getElementById("MontoPagoInicial");
-            const idFormaPagoInicialElement = document.getElementById("IdFormaPagoInicial");
             const observacionesElement = document.getElementById("Observaciones");
 
             function limpiarListaClientes() {
@@ -478,8 +451,6 @@
                 const fechaEntrada = fechaEntradaElement ? fechaEntradaElement.value : "";
                 const fechaSalida = fechaSalidaElement ? fechaSalidaElement.value : "";
                 const cantidadPersonas = cantidadPersonasElement ? cantidadPersonasElement.value : "";
-                const montoPagoInicial = montoPagoInicialElement ? montoPagoInicialElement.value : "";
-                const idFormaPagoInicial = idFormaPagoInicialElement ? idFormaPagoInicialElement.value : "";
                 const observaciones = observacionesElement ? observacionesElement.value : "";
 
                 if (idHabitacion) {
@@ -496,14 +467,6 @@
 
                 if (cantidadPersonas) {
                     params.append("cantidadPersonas", cantidadPersonas);
-                }
-
-                if (montoPagoInicial) {
-                    params.append("montoPagoInicial", montoPagoInicial);
-                }
-
-                if (idFormaPagoInicial) {
-                    params.append("idFormaPagoInicial", idFormaPagoInicial);
                 }
 
                 if (observaciones) {
@@ -557,14 +520,6 @@
 
             if (cantidadPersonasElement) {
                 cantidadPersonasElement.addEventListener("input", actualizarEnlaceRegistrarCliente);
-            }
-
-            if (montoPagoInicialElement) {
-                montoPagoInicialElement.addEventListener("input", actualizarEnlaceRegistrarCliente);
-            }
-
-            if (idFormaPagoInicialElement) {
-                idFormaPagoInicialElement.addEventListener("change", actualizarEnlaceRegistrarCliente);
             }
 
             if (observacionesElement) {

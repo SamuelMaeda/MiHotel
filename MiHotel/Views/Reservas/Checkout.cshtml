@@ -1,0 +1,197 @@
+@model MiHotel.Models.CheckoutReservaViewModel
+
+@{
+    ViewData["Title"] = "Check-out de la estadía";
+    bool cuentaPagada = Model.SaldoPendiente <= 0;
+}
+
+<style>
+    .tarjeta-contenido {
+        background-color: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.10);
+    }
+
+    .resumen-checkout {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+        gap: 14px;
+        margin-bottom: 22px;
+    }
+
+    .dato-resumen {
+        background-color: #f5efee;
+        border: 1px solid #e6d3d0;
+        border-radius: 10px;
+        padding: 14px;
+    }
+
+    .dato-resumen span {
+        color: #6c757d;
+        display: block;
+        font-size: 13px;
+        margin-bottom: 4px;
+    }
+
+    .saldo-pendiente {
+        color: #842029;
+        font-size: 1.35rem;
+        font-weight: 700;
+    }
+
+    .saldo-pagado {
+        color: #146c43;
+        font-size: 1.35rem;
+        font-weight: 700;
+    }
+
+    .acciones-checkout {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 20px;
+    }
+
+    .btn-checkout {
+        border: none;
+        border-radius: 8px;
+        color: white;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 16px;
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    .btn-checkout:hover { color: white; }
+    .btn-pagar { background-color: #464482; }
+    .btn-finalizar { background-color: #198754; }
+    .btn-regresar { background-color: #824B44; }
+
+    .autorizacion-deuda {
+        background-color: #fff3cd;
+        border: 1px solid #ffecb5;
+        border-radius: 10px;
+        margin-top: 20px;
+        padding: 18px;
+    }
+</style>
+
+<div class="tarjeta-contenido">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4">
+        <div>
+            <h3 class="mb-1">Check-out de la reservación #@Model.IdReserva</h3>
+            <p class="text-muted mb-0">Revise la cuenta y registre los pagos antes de finalizar la estadía.</p>
+        </div>
+        <span class="badge rounded-pill text-bg-warning px-3 py-2">En check-out</span>
+    </div>
+
+    @if (TempData["Exito"] != null)
+    {
+        <div class="alert alert-success">@TempData["Exito"]</div>
+    }
+
+    @if (TempData["Mensaje"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Mensaje"]</div>
+    }
+
+    <div class="resumen-checkout">
+        <div class="dato-resumen"><span>Cliente</span><strong>@Model.Cliente</strong></div>
+        <div class="dato-resumen"><span>Habitación</span><strong>@Model.Habitacion</strong></div>
+        <div class="dato-resumen"><span>Entrada</span><strong>@Model.FechaEntrada.ToString("dd/MM/yyyy")</strong></div>
+        <div class="dato-resumen"><span>Salida</span><strong>@Model.FechaSalida.ToString("dd/MM/yyyy")</strong></div>
+        <div class="dato-resumen"><span>Total de hospedaje</span><strong>Q @Model.TotalReserva.ToString("N2")</strong></div>
+        <div class="dato-resumen">
+            <span>Saldo pendiente</span>
+            <strong class="@(cuentaPagada ? "saldo-pagado" : "saldo-pendiente")">Q @Model.SaldoPendiente.ToString("N2")</strong>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Model.Observaciones))
+    {
+        <div class="alert alert-light border"><strong>Observaciones:</strong> @Model.Observaciones</div>
+    }
+
+    <h5 class="mt-4">Movimientos de la cuenta</h5>
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Fecha</th>
+                    <th>Tipo</th>
+                    <th>Descripción</th>
+                    <th>Forma de pago</th>
+                    <th>Monto</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Movimientos.Count == 0)
+                {
+                    <tr><td colspan="6" class="text-center py-3">No hay movimientos registrados.</td></tr>
+                }
+                else
+                {
+                    foreach (var movimiento in Model.Movimientos)
+                    {
+                        <tr>
+                            <td>@movimiento.FechaHora.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>@movimiento.Tipo.Replace("_", " ")</td>
+                            <td>@movimiento.Descripcion</td>
+                            <td>@movimiento.FormaPago</td>
+                            <td>Q @movimiento.Monto.ToString("N2")</td>
+                            <td>@(movimiento.Estado.Trim().ToLower() == "activo" ? "Activo" : "Anulado")</td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="acciones-checkout">
+        <a asp-controller="CuentasPorCobrar" asp-action="Detalle" asp-route-id="@Model.IdReserva" class="btn-checkout btn-pagar">
+            <i class="bi bi-cash-coin"></i> @(cuentaPagada ? "Consultar o corregir abonos" : "Registrar o corregir abonos")
+        </a>
+
+        <form asp-controller="Reservas" asp-action="RegresarEnCurso" asp-route-id="@Model.IdReserva" method="post">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn-checkout btn-regresar" onclick="return confirm('¿Desea cancelar el check-out y permitir nuevamente consumos en la estadía?');">
+                <i class="bi bi-arrow-left-circle"></i> Regresar a en curso
+            </button>
+        </form>
+
+        @if (cuentaPagada)
+        {
+            <form asp-controller="Reservas" asp-action="FinalizarEstadia" asp-route-id="@Model.IdReserva" method="post">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn-checkout btn-finalizar" onclick="return confirm('¿Desea finalizar la estadía y liberar la habitación?');">
+                    <i class="bi bi-check-circle"></i> Finalizar estadía
+                </button>
+            </form>
+        }
+    </div>
+
+    @if (!cuentaPagada && Model.EsAdministrador)
+    {
+        <div class="autorizacion-deuda">
+            <h5>Salida excepcional con deuda</h5>
+            <p class="mb-3">Utilice esta opción únicamente cuando el huésped se retire dejando saldo. La habitación será liberada y la deuda permanecerá en Cuentas por Cobrar.</p>
+            <form asp-controller="Reservas" asp-action="FinalizarEstadia" asp-route-id="@Model.IdReserva" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="autorizarSaldoPendiente" value="true" />
+                <label for="observacionSalida" class="form-label">Explicación obligatoria</label>
+                <textarea id="observacionSalida" name="observacionSalida" class="form-control" rows="3" required maxlength="255" placeholder="Explique por qué se autoriza la salida con saldo pendiente."></textarea>
+                <button type="submit" class="btn-checkout btn-finalizar mt-3" onclick="return confirm('¿Confirma que desea finalizar esta estadía con deuda pendiente?');">
+                    <i class="bi bi-shield-check"></i> Autorizar y finalizar con deuda
+                </button>
+            </form>
+        </div>
+    }
+    else if (!cuentaPagada)
+    {
+        <div class="alert alert-warning mt-3 mb-0">La estadía podrá finalizar cuando el saldo llegue a Q0.00. Una salida con deuda requiere autorización administrativa.</div>
+    }
+</div>

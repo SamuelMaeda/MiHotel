@@ -25,11 +25,6 @@ namespace MiHotel.Models
 
         public decimal TotalReserva { get; set; } = 0;
 
-        [Range(typeof(decimal), "0", "999999999", ErrorMessage = "Ingrese un monto válido.")]
-        public decimal MontoPagoInicial { get; set; } = 0;
-
-        public int? IdFormaPagoInicial { get; set; }
-
         public string? Observaciones { get; set; }
 
         // ===============================

@@ -76,7 +76,7 @@ namespace MiHotel.Services
                       SELECT 1
                       FROM reserva r
                       WHERE r.id_habitacion = p.id_proser
-                        AND r.estado IN ('pendiente', 'confirmada', 'en_curso')
+                        AND r.estado IN ('pendiente', 'en_curso', 'en_checkout')
                         AND (
                             @fecha_entrada < r.fecha_salida
                             AND @fecha_salida > r.fecha_entrada
@@ -133,7 +133,7 @@ namespace MiHotel.Services
                 INNER JOIN proser p ON r.id_habitacion = p.id_proser
                 INNER JOIN tipo_estado te ON p.id_tipoestado = te.id_tipoestado
                 WHERE r.id_habitacion = @id_habitacion
-                  AND r.estado IN ('pendiente', 'confirmada', 'en_curso')
+                  AND r.estado IN ('pendiente', 'en_curso', 'en_checkout')
                   {excluirReserva}
                   AND (
                       @fecha_entrada < r.fecha_salida

@@ -55,12 +55,19 @@ namespace MiHotel.Controllers
             return ObtenerNombreRolSesion() == "cliente";
         }
 
+        private bool EsAdministradorSesion()
+        {
+            return ObtenerNombreRolSesion() == "admin";
+        }
+
         private IActionResult? ValidarAccesoSoloAdministrativo()
         {
             IActionResult? acceso = ValidarSesion();
             if (acceso != null) return acceso;
 
-            if (EsClienteSesion())
+            string rol = ObtenerNombreRolSesion();
+
+            if (rol != "admin" && rol != "recepcionista")
             {
                 TempData["Mensaje"] = "No tiene acceso a esa opción.";
                 return RedirectToAction("Index", "Panel");
@@ -498,39 +505,6 @@ namespace MiHotel.Controllers
         // CARGA DE COMBOS
         // ============================================================
 
-        private void CargarFormasPago()
-        {
-            List<dynamic> formasPago = new List<dynamic>();
-
-            try
-            {
-                using var conexion = _conexionBD.ObtenerConexion();
-                conexion.Open();
-
-                string consulta = @"
-                    SELECT id_formapago, nombre_forma
-                    FROM forma_pago
-                    ORDER BY nombre_forma;";
-
-                using var comando = new MySqlCommand(consulta, conexion);
-                using var lector = comando.ExecuteReader();
-
-                while (lector.Read())
-                {
-                    formasPago.Add(new
-                    {
-                        IdFormaPago = Convert.ToInt32(lector["id_formapago"]),
-                        NombreForma = lector["nombre_forma"]?.ToString() ?? ""
-                    });
-                }
-            }
-            catch
-            {
-            }
-
-            ViewBag.FormasPago = formasPago;
-        }
-
         private void CargarCombos(
             DateTime? fechaEntrada = null,
             DateTime? fechaSalida = null,
@@ -672,7 +646,7 @@ namespace MiHotel.Controllers
                 INNER JOIN tipo_movimiento tm ON m.id_tipomov = tm.id_tipomov
                 WHERE m.id_reserva = @id_reserva
                   AND m.estado = 'activo'
-                  AND LOWER(tm.nombre_tipomov) = 'reserva';";
+                  AND LOWER(tm.nombre_tipomov) IN ('reserva', 'abono');";
 
             using var comando = new MySqlCommand(consulta, conexion);
             comando.Parameters.AddWithValue("@id_reserva", idReserva);
@@ -789,8 +763,17 @@ namespace MiHotel.Controllers
                 using var conexion = _conexionBD.ObtenerConexion();
                 conexion.Open();
 
+                using (var comandoVencidas = new MySqlCommand(@"
+                    SELECT COUNT(*)
+                    FROM reserva
+                    WHERE estado = 'pendiente'
+                      AND fecha_entrada < CURDATE();", conexion))
+                {
+                    ViewBag.ReservasPendientesVencidas = Convert.ToInt32(comandoVencidas.ExecuteScalar());
+                }
+
                 string vistaNormalizada = vista.Trim().ToLower();
-                string[] estadosPermitidos = { "todas", "pendiente", "confirmada", "en_curso", "cancelada", "finalizada" };
+                string[] estadosPermitidos = { "todas", "pendiente", "en_curso", "en_checkout", "cancelada", "finalizada" };
 
                 if (!estadosPermitidos.Contains(vistaNormalizada))
                 {
@@ -1077,9 +1060,9 @@ namespace MiHotel.Controllers
 
                 string estadoActual = resultadoEstado.ToString()?.Trim().ToLower() ?? "";
 
-                if (estadoActual != "pendiente" && estadoActual != "confirmada")
+                if (estadoActual != "pendiente")
                 {
-                    TempData["Mensaje"] = "Solo se pueden cancelar reservaciones pendientes o confirmadas.";
+                    TempData["Mensaje"] = "Solo se pueden cancelar reservaciones pendientes de ingreso.";
                     return RedirectToAction("MisReservas");
                 }
 
@@ -1088,7 +1071,7 @@ namespace MiHotel.Controllers
                     SET estado = 'cancelada'
                     WHERE id_reserva = @id
                       AND id_clipro = @id_clipro
-                      AND estado IN ('pendiente', 'confirmada');";
+                      AND estado = 'pendiente';";
 
                 using var comando = new MySqlCommand(consulta, conexion);
                 comando.Parameters.AddWithValue("@id", id);
@@ -1213,8 +1196,6 @@ namespace MiHotel.Controllers
             DateTime? fechaEntrada = null,
             DateTime? fechaSalida = null,
             int? cantidadPersonas = null,
-            decimal? montoPagoInicial = null,
-            int? idFormaPagoInicial = null,
             string? observaciones = null)
         {
             IActionResult? acceso = ValidarSesion();
@@ -1239,8 +1220,6 @@ namespace MiHotel.Controllers
 
             if (idHabitacion.HasValue) modelo.IdHabitacion = idHabitacion.Value;
             if (cantidadPersonas.HasValue) modelo.CantidadPersonas = cantidadPersonas.Value;
-            if (montoPagoInicial.HasValue) modelo.MontoPagoInicial = montoPagoInicial.Value;
-            if (idFormaPagoInicial.HasValue) modelo.IdFormaPagoInicial = idFormaPagoInicial.Value;
             if (!string.IsNullOrWhiteSpace(observaciones)) modelo.Observaciones = observaciones;
 
             if (esCliente)
@@ -1266,7 +1245,6 @@ namespace MiHotel.Controllers
                 );
 
                 CargarCombos(modelo.FechaEntrada, modelo.FechaSalida, modelo.IdHabitacion);
-                CargarFormasPago();
                 ConfigurarVistaCrear(modelo, true, tokenFlujoCliente);
 
                 return View(modelo);
@@ -1278,7 +1256,6 @@ namespace MiHotel.Controllers
             }
 
             CargarCombos(modelo.FechaEntrada, modelo.FechaSalida, modelo.IdHabitacion);
-            CargarFormasPago();
             ConfigurarVistaCrear(modelo, false);
 
             return View(modelo);
@@ -1303,7 +1280,6 @@ namespace MiHotel.Controllers
             }
 
             CargarCombos(modelo.FechaEntrada, modelo.FechaSalida, modelo.IdHabitacion);
-            CargarFormasPago();
             ConfigurarVistaCrear(modelo, esCliente, tokenFlujoCliente);
 
             if (esCliente)
@@ -1355,18 +1331,6 @@ namespace MiHotel.Controllers
                 if (noches <= 0)
                 {
                     ModelState.AddModelError("", "La reserva debe tener al menos una noche.");
-                    return View(modelo);
-                }
-
-                if (modelo.MontoPagoInicial < 0)
-                {
-                    ModelState.AddModelError("", "El pago inicial no puede ser negativo.");
-                    return View(modelo);
-                }
-
-                if (modelo.MontoPagoInicial > 0 && !modelo.IdFormaPagoInicial.HasValue)
-                {
-                    ModelState.AddModelError("", "Debe seleccionar una forma de pago cuando ingrese un monto inicial.");
                     return View(modelo);
                 }
 
@@ -1431,13 +1395,7 @@ namespace MiHotel.Controllers
                 decimal precioHistorico = precioPorNoche;
                 decimal totalReserva = precioHistorico * noches;
 
-                if (modelo.MontoPagoInicial > totalReserva)
-                {
-                    ModelState.AddModelError("", "El pago inicial no puede ser mayor al total de la reserva.");
-                    return View(modelo);
-                }
-
-                decimal saldoPendiente = totalReserva - modelo.MontoPagoInicial;
+                decimal saldoPendiente = totalReserva;
 
                 using var transaccion = conexion.BeginTransaction();
 
@@ -1509,25 +1467,7 @@ namespace MiHotel.Controllers
                 //FIN DE CÓDIGO DE SEGURIDAD
 
                 int idUsuario = ObtenerIdUsuarioValidoParaMovimiento(conexion);
-                int idTipoMovimientoReserva = ObtenerIdTipoMovimiento(conexion, "reserva");
                 int idTipoMovimientoCxc = ObtenerIdTipoMovimiento(conexion, "cuenta_por_cobrar");
-
-                if (modelo.MontoPagoInicial > 0)
-                {
-                    RegistrarMovimientoReserva(
-                        conexion,
-                        transaccion,
-                        idReservaGenerada,
-                        idUsuario,
-                        modelo.IdClipro,
-                        modelo.IdHabitacion,
-                        modelo.IdFormaPagoInicial!.Value,
-                        idTipoMovimientoReserva,
-                        modelo.MontoPagoInicial,
-                        $"Pago inicial de reserva #{idReservaGenerada}",
-                        modelo.Observaciones
-                    );
-                }
 
                 if (saldoPendiente > 0)
                 {
@@ -1623,9 +1563,9 @@ namespace MiHotel.Controllers
 
                 string estado = lector["estado"]?.ToString()?.Trim().ToLower() ?? "";
 
-                if (estado != "pendiente" && estado != "confirmada")
+                if (estado != "pendiente")
                 {
-                    TempData["Mensaje"] = "Solo se pueden editar reservas pendientes o confirmadas.";
+                    TempData["Mensaje"] = "Solo se pueden editar reservas pendientes de ingreso.";
                     return RedirectToAction("Index");
                 }
 
@@ -1705,9 +1645,9 @@ namespace MiHotel.Controllers
 
                     string estadoActual = lector["estado"]?.ToString()?.Trim().ToLower() ?? "";
 
-                    if (estadoActual != "pendiente" && estadoActual != "confirmada")
+                    if (estadoActual != "pendiente")
                     {
-                        TempData["Mensaje"] = "Solo se pueden editar reservas pendientes o confirmadas.";
+                        TempData["Mensaje"] = "Solo se pueden editar reservas pendientes de ingreso.";
                         return RedirectToAction("Index");
                     }
 
@@ -1856,13 +1796,166 @@ namespace MiHotel.Controllers
     
 
         // ============================================================
-        // CAMBIOS DE ESTADO - ADMIN
+        // CAMBIOS DE ESTADO Y PROCESO DE CHECK-OUT
         // ============================================================
+
+        private CheckoutReservaViewModel? ObtenerCheckoutReserva(
+            MySqlConnection conexion,
+            int idReserva)
+        {
+            string consultaReserva = @"
+                SELECT
+                    r.id_reserva,
+                    c.nombre AS cliente,
+                    h.nombre_proser AS habitacion,
+                    r.fecha_entrada,
+                    r.fecha_salida,
+                    r.total_reserva,
+                    r.saldo_pendiente,
+                    r.estado,
+                    r.observaciones
+                FROM reserva r
+                INNER JOIN clipro c ON r.id_clipro = c.id_clipro
+                INNER JOIN proser h ON r.id_habitacion = h.id_proser
+                WHERE r.id_reserva = @id_reserva
+                LIMIT 1;";
+
+            CheckoutReservaViewModel? modelo = null;
+
+            using (var comando = new MySqlCommand(consultaReserva, conexion))
+            {
+                comando.Parameters.AddWithValue("@id_reserva", idReserva);
+
+                using var lector = comando.ExecuteReader();
+
+                if (!lector.Read())
+                {
+                    return null;
+                }
+
+                modelo = new CheckoutReservaViewModel
+                {
+                    IdReserva = Convert.ToInt32(lector["id_reserva"]),
+                    Cliente = lector["cliente"]?.ToString() ?? "",
+                    Habitacion = lector["habitacion"]?.ToString() ?? "",
+                    FechaEntrada = Convert.ToDateTime(lector["fecha_entrada"]),
+                    FechaSalida = Convert.ToDateTime(lector["fecha_salida"]),
+                    TotalReserva = Convert.ToDecimal(lector["total_reserva"]),
+                    SaldoPendiente = Convert.ToDecimal(lector["saldo_pendiente"]),
+                    Estado = lector["estado"]?.ToString()?.Trim().ToLower() ?? "",
+                    Observaciones = lector["observaciones"]?.ToString() ?? "",
+                    EsAdministrador = EsAdministradorSesion()
+                };
+            }
+
+            string consultaMovimientos = @"
+                SELECT
+                    m.id_movimiento,
+                    tm.nombre_tipomov AS tipo,
+                    fp.nombre_forma AS forma_pago,
+                    m.fecha_hora,
+                    m.estado,
+                    m.observaciones,
+                    COALESCE(SUM(d.subtotal), 0) AS monto,
+                    COALESCE(
+                        GROUP_CONCAT(
+                            DISTINCT COALESCE(
+                                NULLIF(d.descripcion, ''),
+                                p.nombre_proser,
+                                tm.nombre_tipomov
+                            )
+                            SEPARATOR ', '
+                        ),
+                        tm.nombre_tipomov
+                    ) AS descripcion
+                FROM movimiento m
+                INNER JOIN tipo_movimiento tm
+                    ON m.id_tipomov = tm.id_tipomov
+                INNER JOIN forma_pago fp
+                    ON m.id_formapago = fp.id_formapago
+                LEFT JOIN detalle d
+                    ON m.id_movimiento = d.id_movimiento
+                LEFT JOIN proser p
+                    ON d.id_proser = p.id_proser
+                WHERE m.id_reserva = @id_reserva
+                GROUP BY
+                    m.id_movimiento,
+                    tm.nombre_tipomov,
+                    fp.nombre_forma,
+                    m.fecha_hora,
+                    m.estado,
+                    m.observaciones
+                ORDER BY m.fecha_hora, m.id_movimiento;";
+
+            using (var comando = new MySqlCommand(consultaMovimientos, conexion))
+            {
+                comando.Parameters.AddWithValue("@id_reserva", idReserva);
+
+                using var lector = comando.ExecuteReader();
+
+                while (lector.Read())
+                {
+                    string tipo = lector["tipo"]?.ToString() ?? "";
+
+                    modelo.Movimientos.Add(new MovimientoCuentaViewModel
+                    {
+                        IdMovimiento = Convert.ToInt32(lector["id_movimiento"]),
+                        Tipo = tipo,
+                        Descripcion = lector["descripcion"]?.ToString() ?? "",
+                        FormaPago = lector["forma_pago"]?.ToString() ?? "",
+                        Monto = Convert.ToDecimal(lector["monto"]),
+                        FechaHora = Convert.ToDateTime(lector["fecha_hora"]),
+                        Estado = lector["estado"]?.ToString() ?? "",
+                        Observaciones = lector["observaciones"]?.ToString() ?? "",
+                        EsAbono = tipo.Trim().ToLower() == "abono"
+                    });
+                }
+            }
+
+            return modelo;
+        }
+
+        [HttpGet]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        public IActionResult Checkout(int id)
+        {
+            IActionResult? acceso = ValidarAccesoSoloAdministrativo();
+            if (acceso != null)
+            {
+                return acceso;
+            }
+
+            try
+            {
+                using var conexion = _conexionBD.ObtenerConexion();
+                conexion.Open();
+
+                CheckoutReservaViewModel? modelo = ObtenerCheckoutReserva(conexion, id);
+
+                if (modelo == null)
+                {
+                    TempData["Mensaje"] = "No se encontró la reservación solicitada.";
+                    return RedirectToAction("Index");
+                }
+
+                if (modelo.Estado != "en_checkout")
+                {
+                    TempData["Mensaje"] = "La reservación no se encuentra en proceso de check-out.";
+                    return RedirectToAction("Index");
+                }
+
+                return View(modelo);
+            }
+            catch (Exception ex)
+            {
+                TempData["Mensaje"] = "No se pudo cargar el check-out: " + ex.Message;
+                return RedirectToAction("Index");
+            }
+        }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
-        public IActionResult Confirmar(int id)
+        public IActionResult IniciarCheckout(int id)
         {
             IActionResult? acceso = ValidarAccesoSoloAdministrativo();
             if (acceso != null)
@@ -1877,30 +1970,26 @@ namespace MiHotel.Controllers
 
                 string consulta = @"
                     UPDATE reserva
-                    SET estado = 'confirmada'
+                    SET estado = 'en_checkout'
                     WHERE id_reserva = @id
-                      AND estado = 'pendiente';";
+                      AND estado = 'en_curso';";
 
                 using var comando = new MySqlCommand(consulta, conexion);
                 comando.Parameters.AddWithValue("@id", id);
 
-                int filas = comando.ExecuteNonQuery();
+                if (comando.ExecuteNonQuery() == 0)
+                {
+                    TempData["Mensaje"] = "Solo las reservaciones en curso pueden iniciar el check-out.";
+                    return RedirectToAction("Index");
+                }
 
-                if (filas == 0)
-                {
-                    TempData["Mensaje"] = "No se pudo confirmar la reserva.";
-                }
-                else
-                {
-                    TempData["Exito"] = "Reserva confirmada correctamente.";
-                }
+                return RedirectToAction("Checkout", new { id });
             }
             catch (Exception ex)
             {
-                TempData["Mensaje"] = "Error al confirmar la reserva: " + ex.Message;
+                TempData["Mensaje"] = "Error al iniciar el check-out: " + ex.Message;
+                return RedirectToAction("Index");
             }
-
-            return RedirectToAction("Index");
         }
 
         [HttpPost]
@@ -1921,12 +2010,13 @@ namespace MiHotel.Controllers
                 using var transaccion = conexion.BeginTransaction();
 
                 string consulta = @"
-                    SELECT id_reserva, id_habitacion, estado
+                    SELECT id_reserva, id_habitacion, fecha_entrada, estado
                     FROM reserva
                     WHERE id_reserva = @id
                     LIMIT 1;";
 
                 int idHabitacion;
+                DateTime fechaEntrada;
                 string estado;
 
                 using (var cmd = new MySqlCommand(consulta, conexion, transaccion))
@@ -1944,12 +2034,22 @@ namespace MiHotel.Controllers
 
                     estado = reader["estado"]?.ToString()?.Trim().ToLower() ?? "";
                     idHabitacion = Convert.ToInt32(reader["id_habitacion"]);
+                    fechaEntrada = Convert.ToDateTime(reader["fecha_entrada"]).Date;
                 }
 
-                if (estado != "confirmada")
+                if (estado != "pendiente")
                 {
                     transaccion.Rollback();
-                    TempData["Mensaje"] = "Solo las reservas confirmadas pueden realizar check-in.";
+                    TempData["Mensaje"] = "Solo las reservas pendientes de ingreso pueden realizar check-in.";
+                    return RedirectToAction("Index");
+                }
+
+                if (fechaEntrada != DateTime.Today)
+                {
+                    transaccion.Rollback();
+                    TempData["Mensaje"] = fechaEntrada > DateTime.Today
+                        ? "El check-in solo puede realizarse en la fecha de entrada programada."
+                        : "La fecha de entrada ya pasó. Cancele esta reservación y registre una nueva si el huésped aún desea hospedarse.";
                     return RedirectToAction("Index");
                 }
 
@@ -1992,7 +2092,7 @@ namespace MiHotel.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult CheckOut(int id)
+        public IActionResult RegresarEnCurso(int id)
         {
             IActionResult? acceso = ValidarAccesoSoloAdministrativo();
             if (acceso != null)
@@ -2005,73 +2105,155 @@ namespace MiHotel.Controllers
                 using var conexion = _conexionBD.ObtenerConexion();
                 conexion.Open();
 
-                using var transaccion = conexion.BeginTransaction();
-
                 string consulta = @"
-                    SELECT id_reserva, id_habitacion, estado
-                    FROM reserva
+                    UPDATE reserva
+                    SET estado = 'en_curso'
                     WHERE id_reserva = @id
-                    LIMIT 1;";
+                      AND estado = 'en_checkout';";
 
-                int idHabitacion;
-                string estado;
+                using var comando = new MySqlCommand(consulta, conexion);
+                comando.Parameters.AddWithValue("@id", id);
 
-                using (var cmd = new MySqlCommand(consulta, conexion, transaccion))
+                if (comando.ExecuteNonQuery() == 0)
                 {
-                    cmd.Parameters.AddWithValue("@id", id);
-
-                    using var reader = cmd.ExecuteReader();
-
-                    if (!reader.Read())
-                    {
-                        transaccion.Rollback();
-                        TempData["Mensaje"] = "Reserva no encontrada.";
-                        return RedirectToAction("Index");
-                    }
-
-                    estado = reader["estado"]?.ToString()?.Trim().ToLower() ?? "";
-                    idHabitacion = Convert.ToInt32(reader["id_habitacion"]);
-                }
-
-                if (estado != "en_curso")
-                {
-                    transaccion.Rollback();
-                    TempData["Mensaje"] = "Solo las reservas en curso pueden realizar check-out.";
+                    TempData["Mensaje"] = "No se pudo regresar la reservación a la estadía.";
                     return RedirectToAction("Index");
                 }
 
-                string updateReserva = @"
-                    UPDATE reserva
-                    SET estado = 'finalizada'
-                    WHERE id_reserva = @id;";
+                TempData["Exito"] = "El check-out fue cancelado y la estadía volvió a estar en curso.";
+            }
+            catch (Exception ex)
+            {
+                TempData["Mensaje"] = "Error al cancelar el check-out: " + ex.Message;
+            }
 
-                using (var cmd = new MySqlCommand(updateReserva, conexion, transaccion))
+            return RedirectToAction("Index");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult FinalizarEstadia(
+            int id,
+            bool autorizarSaldoPendiente = false,
+            string? observacionSalida = null)
+        {
+            IActionResult? acceso = ValidarAccesoSoloAdministrativo();
+            if (acceso != null)
+            {
+                return acceso;
+            }
+
+            try
+            {
+                using var conexion = _conexionBD.ObtenerConexion();
+                conexion.Open();
+                using var transaccion = conexion.BeginTransaction();
+
+                string consulta = @"
+                    SELECT id_habitacion, saldo_pendiente, estado
+                    FROM reserva
+                    WHERE id_reserva = @id
+                    LIMIT 1
+                    FOR UPDATE;";
+
+                int idHabitacion;
+                decimal saldoPendiente;
+                string estado;
+
+                using (var comando = new MySqlCommand(consulta, conexion, transaccion))
                 {
-                    cmd.Parameters.AddWithValue("@id", id);
-                    cmd.ExecuteNonQuery();
+                    comando.Parameters.AddWithValue("@id", id);
+
+                    using var lector = comando.ExecuteReader();
+
+                    if (!lector.Read())
+                    {
+                        transaccion.Rollback();
+                        TempData["Mensaje"] = "No se encontró la reservación.";
+                        return RedirectToAction("Index");
+                    }
+
+                    idHabitacion = Convert.ToInt32(lector["id_habitacion"]);
+                    saldoPendiente = Convert.ToDecimal(lector["saldo_pendiente"]);
+                    estado = lector["estado"]?.ToString()?.Trim().ToLower() ?? "";
+                }
+
+                if (estado != "en_checkout")
+                {
+                    transaccion.Rollback();
+                    TempData["Mensaje"] = "La reservación debe encontrarse en check-out para finalizarla.";
+                    return RedirectToAction("Index");
+                }
+
+                if (saldoPendiente > 0)
+                {
+                    if (!EsAdministradorSesion() || !autorizarSaldoPendiente)
+                    {
+                        transaccion.Rollback();
+                        TempData["Mensaje"] = "La cuenta todavía tiene saldo pendiente. Solo administración puede autorizar esta salida.";
+                        return RedirectToAction("Checkout", new { id });
+                    }
+
+                    if (string.IsNullOrWhiteSpace(observacionSalida))
+                    {
+                        transaccion.Rollback();
+                        TempData["Mensaje"] = "Debe explicar por qué la estadía finalizará con saldo pendiente.";
+                        return RedirectToAction("Checkout", new { id });
+                    }
+
+                    if (observacionSalida.Trim().Length > 255)
+                    {
+                        transaccion.Rollback();
+                        TempData["Mensaje"] = "La explicación no puede superar 255 caracteres.";
+                        return RedirectToAction("Checkout", new { id });
+                    }
+                }
+
+                string actualizarReserva = @"
+                    UPDATE reserva
+                    SET estado = 'finalizada',
+                        observaciones = CASE
+                            WHEN @observacion IS NULL THEN observaciones
+                            WHEN observaciones IS NULL OR TRIM(observaciones) = '' THEN @observacion
+                            ELSE CONCAT(observaciones, ' | ', @observacion)
+                        END
+                    WHERE id_reserva = @id
+                      AND estado = 'en_checkout';";
+
+                using (var comando = new MySqlCommand(actualizarReserva, conexion, transaccion))
+                {
+                    comando.Parameters.AddWithValue("@id", id);
+                    comando.Parameters.AddWithValue(
+                        "@observacion",
+                        string.IsNullOrWhiteSpace(observacionSalida)
+                            ? DBNull.Value
+                            : observacionSalida.Trim());
+                    comando.ExecuteNonQuery();
                 }
 
                 int idEstadoLibre = ObtenerIdEstadoHabitacion(conexion, "libre");
 
-                string updateHabitacion = @"
+                string liberarHabitacion = @"
                     UPDATE proser
                     SET id_tipoestado = @estado
-                    WHERE id_proser = @id;";
+                    WHERE id_proser = @id_habitacion;";
 
-                using (var cmd = new MySqlCommand(updateHabitacion, conexion, transaccion))
+                using (var comando = new MySqlCommand(liberarHabitacion, conexion, transaccion))
                 {
-                    cmd.Parameters.AddWithValue("@estado", idEstadoLibre);
-                    cmd.Parameters.AddWithValue("@id", idHabitacion);
-                    cmd.ExecuteNonQuery();
+                    comando.Parameters.AddWithValue("@estado", idEstadoLibre);
+                    comando.Parameters.AddWithValue("@id_habitacion", idHabitacion);
+                    comando.ExecuteNonQuery();
                 }
 
                 transaccion.Commit();
 
-                TempData["Exito"] = "Check-out realizado correctamente.";
+                TempData["Exito"] = saldoPendiente > 0
+                    ? "Estadía finalizada. La habitación fue liberada y la deuda permanece en Cuentas por Cobrar."
+                    : "Estadía finalizada y habitación liberada correctamente.";
             }
             catch (Exception ex)
             {
-                TempData["Mensaje"] = "Error al realizar el check-out: " + ex.Message;
+                TempData["Mensaje"] = "Error al finalizar la estadía: " + ex.Message;
             }
 
             return RedirectToAction("Index");
@@ -2097,7 +2279,7 @@ namespace MiHotel.Controllers
                     UPDATE reserva
                     SET estado = 'cancelada'
                     WHERE id_reserva = @id
-                      AND estado IN ('pendiente', 'confirmada');";
+                      AND estado = 'pendiente';";
 
                 using var comando = new MySqlCommand(consulta, conexion);
                 comando.Parameters.AddWithValue("@id", id);

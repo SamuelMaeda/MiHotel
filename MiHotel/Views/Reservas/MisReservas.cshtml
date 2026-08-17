@@ -83,8 +83,8 @@
         font-weight: bold;
     }
 
-    .estado-confirmada {
-        color: #0f5132;
+    .estado-en_checkout {
+        color: #b45309;
         font-weight: bold;
     }
 
@@ -161,7 +161,7 @@
                     {
                         string estado = fila["estado"]?.ToString()?.Trim().ToLower() ?? "";
                         int idReserva = Convert.ToInt32(fila["id_reserva"]);
-                        bool puedeCancelar = estado == "pendiente" || estado == "confirmada";
+                        bool puedeCancelar = estado == "pendiente";
 
                         <tr>
                             <td>@fila["habitacion"]</td>
@@ -174,15 +174,15 @@
                             <td>
                                 @if (estado == "pendiente")
                                 {
-                                    <span class="estado-pendiente">Pendiente</span>
-                                }
-                                else if (estado == "confirmada")
-                                {
-                                    <span class="estado-confirmada">Confirmada</span>
+                                    <span class="estado-pendiente">Pendiente de ingreso</span>
                                 }
                                 else if (estado == "en_curso")
                                 {
                                     <span class="estado-en_curso">En curso</span>
+                                }
+                                else if (estado == "en_checkout")
+                                {
+                                    <span class="estado-en_checkout">En check-out</span>
                                 }
                                 else if (estado == "cancelada")
                                 {

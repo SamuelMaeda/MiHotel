@@ -6,6 +6,7 @@
 
 using Microsoft.AspNetCore.Mvc;
 using MiHotel.Data;
+using MiHotel.Models;
 using MySql.Data.MySqlClient;
 using System.Data;
 
@@ -220,39 +221,30 @@ namespace MiHotel.Controllers
                     SELECT
                         'estadia' AS tipo_cuenta,
                         r.id_reserva,
-                        MIN(m.id_movimiento) AS id_movimiento_referencia,
+                        (
+                            SELECT MIN(m1.id_movimiento)
+                            FROM movimiento m1
+                            WHERE m1.id_reserva = r.id_reserva
+                        ) AS id_movimiento_referencia,
                         r.id_clipro,
                         c.nombre AS cliente,
                         h.nombre_proser AS habitacion,
                         r.fecha_entrada,
                         r.fecha_salida,
-                        MIN(m.fecha_hora) AS fecha_cuenta,
-                        SUM(d.subtotal) AS saldo,
-                        COUNT(DISTINCT m.id_movimiento)
-                            AS cantidad_movimientos
-                    FROM movimiento m
-                    INNER JOIN tipo_movimiento tm
-                        ON m.id_tipomov = tm.id_tipomov
-                    INNER JOIN reserva r
-                        ON m.id_reserva = r.id_reserva
+                        r.fecha_reserva AS fecha_cuenta,
+                        r.saldo_pendiente AS saldo,
+                        (
+                            SELECT COUNT(*)
+                            FROM movimiento m2
+                            WHERE m2.id_reserva = r.id_reserva
+                        ) AS cantidad_movimientos
+                    FROM reserva r
                     INNER JOIN clipro c
                         ON r.id_clipro = c.id_clipro
                     LEFT JOIN proser h
                         ON r.id_habitacion = h.id_proser
-                    INNER JOIN detalle d
-                        ON m.id_movimiento = d.id_movimiento
-                    WHERE LOWER(tm.nombre_tipomov) =
-                              'cuenta_por_cobrar'
-                      AND m.estado = 'activo'
-                      AND m.id_reserva IS NOT NULL
-                      AND d.subtotal > 0
-                    GROUP BY
-                        r.id_reserva,
-                        r.id_clipro,
-                        c.nombre,
-                        h.nombre_proser,
-                        r.fecha_entrada,
-                        r.fecha_salida
+                    WHERE r.saldo_pendiente > 0
+                      AND r.estado <> 'cancelada'
 
                     UNION ALL
 
@@ -414,6 +406,523 @@ namespace MiHotel.Controllers
             }
 
             return View(tablaCuentas);
+        }
+
+        private IActionResult? ValidarCobro()
+        {
+            IActionResult? acceso = ValidarAcceso();
+
+            if (acceso != null)
+            {
+                return acceso;
+            }
+
+            if (!TienePermiso("cobrar_cuenta"))
+            {
+                TempData["Mensaje"] = "No tiene permiso para registrar o corregir abonos.";
+                return RedirectToAction("Index");
+            }
+
+            return null;
+        }
+
+        private int ObtenerIdUsuarioSesion()
+        {
+            string? idUsuarioSesion = HttpContext.Session.GetString("IdUsuario");
+
+            if (!int.TryParse(idUsuarioSesion, out int idUsuario))
+            {
+                throw new InvalidOperationException("No se pudo identificar el usuario de la sesión.");
+            }
+
+            return idUsuario;
+        }
+
+        private CuentaPorCobrarDetalleViewModel? ObtenerDetalleCuenta(
+            MySqlConnection conexion,
+            int idReserva)
+        {
+            string consultaReserva = @"
+                SELECT
+                    r.id_reserva,
+                    c.nombre AS cliente,
+                    h.nombre_proser AS habitacion,
+                    r.fecha_entrada,
+                    r.fecha_salida,
+                    r.estado,
+                    r.saldo_pendiente
+                FROM reserva r
+                INNER JOIN clipro c ON r.id_clipro = c.id_clipro
+                INNER JOIN proser h ON r.id_habitacion = h.id_proser
+                WHERE r.id_reserva = @id_reserva
+                LIMIT 1;";
+
+            CuentaPorCobrarDetalleViewModel? modelo;
+
+            using (var comando = new MySqlCommand(consultaReserva, conexion))
+            {
+                comando.Parameters.AddWithValue("@id_reserva", idReserva);
+
+                using var lector = comando.ExecuteReader();
+
+                if (!lector.Read())
+                {
+                    return null;
+                }
+
+                modelo = new CuentaPorCobrarDetalleViewModel
+                {
+                    IdReserva = Convert.ToInt32(lector["id_reserva"]),
+                    Cliente = lector["cliente"]?.ToString() ?? "",
+                    Habitacion = lector["habitacion"]?.ToString() ?? "",
+                    FechaEntrada = Convert.ToDateTime(lector["fecha_entrada"]),
+                    FechaSalida = Convert.ToDateTime(lector["fecha_salida"]),
+                    EstadoReserva = lector["estado"]?.ToString() ?? "",
+                    SaldoPendiente = Convert.ToDecimal(lector["saldo_pendiente"])
+                };
+            }
+
+            string consultaMovimientos = @"
+                SELECT
+                    m.id_movimiento,
+                    tm.nombre_tipomov AS tipo,
+                    fp.nombre_forma AS forma_pago,
+                    m.fecha_hora,
+                    m.estado,
+                    m.observaciones,
+                    COALESCE(SUM(d.subtotal), 0) AS monto,
+                    COALESCE(
+                        GROUP_CONCAT(
+                            DISTINCT COALESCE(
+                                NULLIF(d.descripcion, ''),
+                                p.nombre_proser,
+                                tm.nombre_tipomov
+                            )
+                            SEPARATOR ', '
+                        ),
+                        tm.nombre_tipomov
+                    ) AS descripcion
+                FROM movimiento m
+                INNER JOIN tipo_movimiento tm
+                    ON m.id_tipomov = tm.id_tipomov
+                INNER JOIN forma_pago fp
+                    ON m.id_formapago = fp.id_formapago
+                LEFT JOIN detalle d
+                    ON m.id_movimiento = d.id_movimiento
+                LEFT JOIN proser p
+                    ON d.id_proser = p.id_proser
+                WHERE m.id_reserva = @id_reserva
+                GROUP BY
+                    m.id_movimiento,
+                    tm.nombre_tipomov,
+                    fp.nombre_forma,
+                    m.fecha_hora,
+                    m.estado,
+                    m.observaciones
+                ORDER BY m.fecha_hora DESC, m.id_movimiento DESC;";
+
+            using (var comando = new MySqlCommand(consultaMovimientos, conexion))
+            {
+                comando.Parameters.AddWithValue("@id_reserva", idReserva);
+
+                using var lector = comando.ExecuteReader();
+
+                while (lector.Read())
+                {
+                    string tipo = lector["tipo"]?.ToString() ?? "";
+
+                    modelo.Movimientos.Add(new MovimientoCuentaViewModel
+                    {
+                        IdMovimiento = Convert.ToInt32(lector["id_movimiento"]),
+                        Tipo = tipo,
+                        Descripcion = lector["descripcion"]?.ToString() ?? "",
+                        FormaPago = lector["forma_pago"]?.ToString() ?? "",
+                        Monto = Convert.ToDecimal(lector["monto"]),
+                        FechaHora = Convert.ToDateTime(lector["fecha_hora"]),
+                        Estado = lector["estado"]?.ToString() ?? "",
+                        Observaciones = lector["observaciones"]?.ToString() ?? "",
+                        EsAbono = tipo.Trim().ToLower() == "abono"
+                    });
+                }
+            }
+
+            return modelo;
+        }
+
+        private void CargarFormasPago(MySqlConnection conexion)
+        {
+            var formasPago = new DataTable();
+
+            using var adaptador = new MySqlDataAdapter(@"
+                SELECT id_formapago, nombre_forma
+                FROM forma_pago
+                WHERE LOWER(nombre_forma) <> 'credito'
+                ORDER BY nombre_forma;", conexion);
+
+            adaptador.Fill(formasPago);
+            ViewBag.FormasPago = formasPago;
+        }
+
+        [HttpGet]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        public IActionResult Detalle(int id)
+        {
+            IActionResult? acceso = ValidarAcceso();
+
+            if (acceso != null)
+            {
+                return acceso;
+            }
+
+            try
+            {
+                using var conexion = _conexionBD.ObtenerConexion();
+                conexion.Open();
+
+                CuentaPorCobrarDetalleViewModel? modelo = ObtenerDetalleCuenta(conexion, id);
+
+                if (modelo == null)
+                {
+                    TempData["Mensaje"] = "No se encontró la cuenta solicitada.";
+                    return RedirectToAction("Index");
+                }
+
+                CargarFormasPago(conexion);
+                ViewBag.PuedeCobrar = TienePermiso("cobrar_cuenta");
+
+                return View(modelo);
+            }
+            catch (Exception ex)
+            {
+                TempData["Mensaje"] = "No se pudo cargar la cuenta: " + ex.Message;
+                return RedirectToAction("Index");
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult RegistrarAbono(
+            int idReserva,
+            decimal monto,
+            int idFormaPago,
+            string? referencia,
+            string? observaciones,
+            bool volverCheckout = false)
+        {
+            IActionResult? acceso = ValidarCobro();
+
+            if (acceso != null)
+            {
+                return acceso;
+            }
+
+            if (monto <= 0)
+            {
+                TempData["Mensaje"] = "El abono debe ser mayor que Q0.00.";
+                return RedirectToAction("Detalle", new { id = idReserva });
+            }
+
+            try
+            {
+                using var conexion = _conexionBD.ObtenerConexion();
+                conexion.Open();
+                using var transaccion = conexion.BeginTransaction();
+
+                string consultaReserva = @"
+                    SELECT id_clipro, saldo_pendiente, estado
+                    FROM reserva
+                    WHERE id_reserva = @id_reserva
+                    LIMIT 1
+                    FOR UPDATE;";
+
+                int idCliente;
+                decimal saldoPendiente;
+                string estadoReserva;
+
+                using (var comando = new MySqlCommand(consultaReserva, conexion, transaccion))
+                {
+                    comando.Parameters.AddWithValue("@id_reserva", idReserva);
+
+                    using var lector = comando.ExecuteReader();
+
+                    if (!lector.Read())
+                    {
+                        transaccion.Rollback();
+                        TempData["Mensaje"] = "No se encontró la reservación.";
+                        return RedirectToAction("Index");
+                    }
+
+                    idCliente = Convert.ToInt32(lector["id_clipro"]);
+                    saldoPendiente = Convert.ToDecimal(lector["saldo_pendiente"]);
+                    estadoReserva = lector["estado"]?.ToString()?.Trim().ToLower() ?? "";
+                }
+
+                string[] estadosPermitidos = { "pendiente", "en_curso", "en_checkout", "finalizada" };
+
+                if (!estadosPermitidos.Contains(estadoReserva))
+                {
+                    transaccion.Rollback();
+                    TempData["Mensaje"] = "El estado de la reservación no permite registrar abonos.";
+                    return RedirectToAction("Detalle", new { id = idReserva });
+                }
+
+                if (monto > saldoPendiente)
+                {
+                    transaccion.Rollback();
+                    TempData["Mensaje"] = "El abono no puede ser mayor que el saldo pendiente.";
+                    return RedirectToAction("Detalle", new { id = idReserva });
+                }
+
+                string validarFormaPago = @"
+                    SELECT COUNT(*)
+                    FROM forma_pago
+                    WHERE id_formapago = @id_formapago
+                      AND LOWER(nombre_forma) <> 'credito';";
+
+                using (var comando = new MySqlCommand(validarFormaPago, conexion, transaccion))
+                {
+                    comando.Parameters.AddWithValue("@id_formapago", idFormaPago);
+
+                    if (Convert.ToInt32(comando.ExecuteScalar()) == 0)
+                    {
+                        transaccion.Rollback();
+                        TempData["Mensaje"] = "La forma de pago seleccionada no es válida.";
+                        return RedirectToAction("Detalle", new { id = idReserva });
+                    }
+                }
+
+                string obtenerTipoAbono = @"
+                    SELECT id_tipomov
+                    FROM tipo_movimiento
+                    WHERE LOWER(nombre_tipomov) = 'abono'
+                    LIMIT 1;";
+
+                int idTipoAbono;
+
+                using (var comando = new MySqlCommand(obtenerTipoAbono, conexion, transaccion))
+                {
+                    object? resultado = comando.ExecuteScalar();
+
+                    if (resultado == null)
+                    {
+                        throw new InvalidOperationException(
+                            "No existe el tipo de movimiento 'abono'. Aplique primero el cambio SQL indicado.");
+                    }
+
+                    idTipoAbono = Convert.ToInt32(resultado);
+                }
+
+                string observacionCompleta = string.Join(
+                    " | ",
+                    new[] { referencia?.Trim(), observaciones?.Trim() }
+                        .Where(valor => !string.IsNullOrWhiteSpace(valor)));
+
+                if (observacionCompleta.Length > 255)
+                {
+                    transaccion.Rollback();
+                    TempData["Mensaje"] = "La referencia y las observaciones no pueden superar 255 caracteres en total.";
+                    return RedirectToAction("Detalle", new { id = idReserva });
+                }
+
+                string insertarMovimiento = @"
+                    INSERT INTO movimiento
+                    (
+                        id_usuario,
+                        id_clipro,
+                        id_tipomov,
+                        id_formapago,
+                        id_reserva,
+                        fecha_hora,
+                        estado,
+                        observaciones
+                    )
+                    VALUES
+                    (
+                        @id_usuario,
+                        @id_clipro,
+                        @id_tipomov,
+                        @id_formapago,
+                        @id_reserva,
+                        NOW(),
+                        'activo',
+                        @observaciones
+                    );";
+
+                int idMovimiento;
+
+                using (var comando = new MySqlCommand(insertarMovimiento, conexion, transaccion))
+                {
+                    comando.Parameters.AddWithValue("@id_usuario", ObtenerIdUsuarioSesion());
+                    comando.Parameters.AddWithValue("@id_clipro", idCliente);
+                    comando.Parameters.AddWithValue("@id_tipomov", idTipoAbono);
+                    comando.Parameters.AddWithValue("@id_formapago", idFormaPago);
+                    comando.Parameters.AddWithValue("@id_reserva", idReserva);
+                    comando.Parameters.AddWithValue(
+                        "@observaciones",
+                        string.IsNullOrWhiteSpace(observacionCompleta)
+                            ? DBNull.Value
+                            : observacionCompleta);
+                    comando.ExecuteNonQuery();
+                    idMovimiento = Convert.ToInt32(comando.LastInsertedId);
+                }
+
+                string insertarDetalle = @"
+                    INSERT INTO detalle
+                    (
+                        id_movimiento,
+                        id_proser,
+                        cantidad,
+                        precio_unitario,
+                        subtotal,
+                        descripcion
+                    )
+                    VALUES
+                    (
+                        @id_movimiento,
+                        NULL,
+                        1,
+                        @monto,
+                        @monto,
+                        @descripcion
+                    );";
+
+                using (var comando = new MySqlCommand(insertarDetalle, conexion, transaccion))
+                {
+                    comando.Parameters.AddWithValue("@id_movimiento", idMovimiento);
+                    comando.Parameters.AddWithValue("@monto", monto);
+                    comando.Parameters.AddWithValue("@descripcion", $"Abono a reservación #{idReserva}");
+                    comando.ExecuteNonQuery();
+                }
+
+                string actualizarSaldo = @"
+                    UPDATE reserva
+                    SET saldo_pendiente = saldo_pendiente - @monto
+                    WHERE id_reserva = @id_reserva;";
+
+                using (var comando = new MySqlCommand(actualizarSaldo, conexion, transaccion))
+                {
+                    comando.Parameters.AddWithValue("@monto", monto);
+                    comando.Parameters.AddWithValue("@id_reserva", idReserva);
+                    comando.ExecuteNonQuery();
+                }
+
+                transaccion.Commit();
+                TempData["Exito"] = "Abono registrado correctamente.";
+
+                return volverCheckout
+                    ? RedirectToAction("Checkout", "Reservas", new { id = idReserva })
+                    : RedirectToAction("Detalle", new { id = idReserva });
+            }
+            catch (Exception ex)
+            {
+                TempData["Mensaje"] = "No se pudo registrar el abono: " + ex.Message;
+                return RedirectToAction("Detalle", new { id = idReserva });
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult AnularAbono(
+            int idMovimiento,
+            int idReserva,
+            bool volverCheckout = false)
+        {
+            IActionResult? acceso = ValidarCobro();
+
+            if (acceso != null)
+            {
+                return acceso;
+            }
+
+            try
+            {
+                using var conexion = _conexionBD.ObtenerConexion();
+                conexion.Open();
+                using var transaccion = conexion.BeginTransaction();
+
+                string consultaAbono = @"
+                    SELECT
+                        m.id_movimiento,
+                        (
+                            SELECT COALESCE(SUM(d.subtotal), 0)
+                            FROM detalle d
+                            WHERE d.id_movimiento = m.id_movimiento
+                        ) AS monto
+                    FROM movimiento m
+                    INNER JOIN tipo_movimiento tm
+                        ON m.id_tipomov = tm.id_tipomov
+                    WHERE m.id_movimiento = @id_movimiento
+                      AND m.id_reserva = @id_reserva
+                      AND m.estado = 'activo'
+                      AND LOWER(tm.nombre_tipomov) = 'abono'
+                    LIMIT 1
+                    FOR UPDATE;";
+
+                decimal monto;
+
+                using (var comando = new MySqlCommand(consultaAbono, conexion, transaccion))
+                {
+                    comando.Parameters.AddWithValue("@id_movimiento", idMovimiento);
+                    comando.Parameters.AddWithValue("@id_reserva", idReserva);
+
+                    using var lector = comando.ExecuteReader();
+
+                    if (!lector.Read())
+                    {
+                        transaccion.Rollback();
+                        TempData["Mensaje"] = "El abono no existe o ya fue anulado.";
+                        return RedirectToAction("Detalle", new { id = idReserva });
+                    }
+
+                    monto = Convert.ToDecimal(lector["monto"]);
+                }
+
+                using (var bloquearReserva = new MySqlCommand(@"
+                    SELECT id_reserva
+                    FROM reserva
+                    WHERE id_reserva = @id_reserva
+                    FOR UPDATE;", conexion, transaccion))
+                {
+                    bloquearReserva.Parameters.AddWithValue("@id_reserva", idReserva);
+                    bloquearReserva.ExecuteScalar();
+                }
+
+                using (var comando = new MySqlCommand(@"
+                    UPDATE movimiento
+                    SET estado = 'anulado'
+                    WHERE id_movimiento = @id_movimiento
+                      AND estado = 'activo';", conexion, transaccion))
+                {
+                    comando.Parameters.AddWithValue("@id_movimiento", idMovimiento);
+
+                    if (comando.ExecuteNonQuery() == 0)
+                    {
+                        throw new InvalidOperationException("El abono ya no se encuentra activo.");
+                    }
+                }
+
+                using (var comando = new MySqlCommand(@"
+                    UPDATE reserva
+                    SET saldo_pendiente = saldo_pendiente + @monto
+                    WHERE id_reserva = @id_reserva;", conexion, transaccion))
+                {
+                    comando.Parameters.AddWithValue("@monto", monto);
+                    comando.Parameters.AddWithValue("@id_reserva", idReserva);
+                    comando.ExecuteNonQuery();
+                }
+
+                transaccion.Commit();
+                TempData["Exito"] = "El abono fue anulado y el saldo se actualizó.";
+
+                return volverCheckout
+                    ? RedirectToAction("Checkout", "Reservas", new { id = idReserva })
+                    : RedirectToAction("Detalle", new { id = idReserva });
+            }
+            catch (Exception ex)
+            {
+                TempData["Mensaje"] = "No se pudo anular el abono: " + ex.Message;
+                return RedirectToAction("Detalle", new { id = idReserva });
+            }
         }
     }
 }

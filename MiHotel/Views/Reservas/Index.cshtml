@@ -10,6 +10,7 @@
     int paginaActual = ViewBag.PaginaActual ?? 1;
     int totalPaginas = ViewBag.TotalPaginas ?? 1;
     int totalRegistros = ViewBag.TotalRegistros ?? 0;
+    int reservasPendientesVencidas = ViewBag.ReservasPendientesVencidas ?? 0;
 
     string SiguienteDireccion(string columna)
     {
@@ -125,10 +126,6 @@
         background-color: #824B44;
     }
 
-    .btn-confirmar {
-        background-color: #198754;
-    }
-
     .btn-checkin {
         background-color: #0d6efd;
     }
@@ -146,13 +143,13 @@
         font-weight: bold;
     }
 
-    .estado-confirmada {
-        color: #0f5132;
+    .estado-en_curso {
+        color: #0c5460;
         font-weight: bold;
     }
 
-    .estado-en_curso {
-        color: #0c5460;
+    .estado-en_checkout {
+        color: #b45309;
         font-weight: bold;
     }
 
@@ -179,9 +176,9 @@
 
     <div class="tabs-vista">
         <a asp-controller="Reservas" asp-action="Index" asp-route-vista="todas" asp-route-busqueda="@busqueda" asp-route-ordenarPor="@ordenarPor" asp-route-direccion="@direccion" class="tab-vista @(vista == "todas" ? "activa" : "")">Todas</a>
-        <a asp-controller="Reservas" asp-action="Index" asp-route-vista="pendiente" asp-route-busqueda="@busqueda" asp-route-ordenarPor="@ordenarPor" asp-route-direccion="@direccion" class="tab-vista @(vista == "pendiente" ? "activa" : "")">Pendientes</a>
-        <a asp-controller="Reservas" asp-action="Index" asp-route-vista="confirmada" asp-route-busqueda="@busqueda" asp-route-ordenarPor="@ordenarPor" asp-route-direccion="@direccion" class="tab-vista @(vista == "confirmada" ? "activa" : "")">Confirmadas</a>
+        <a asp-controller="Reservas" asp-action="Index" asp-route-vista="pendiente" asp-route-busqueda="@busqueda" asp-route-ordenarPor="@ordenarPor" asp-route-direccion="@direccion" class="tab-vista @(vista == "pendiente" ? "activa" : "")">Pendientes de ingreso</a>
         <a asp-controller="Reservas" asp-action="Index" asp-route-vista="en_curso" asp-route-busqueda="@busqueda" asp-route-ordenarPor="@ordenarPor" asp-route-direccion="@direccion" class="tab-vista @(vista == "en_curso" ? "activa" : "")">En curso</a>
+        <a asp-controller="Reservas" asp-action="Index" asp-route-vista="en_checkout" asp-route-busqueda="@busqueda" asp-route-ordenarPor="@ordenarPor" asp-route-direccion="@direccion" class="tab-vista @(vista == "en_checkout" ? "activa" : "")">En check-out</a>
         <a asp-controller="Reservas" asp-action="Index" asp-route-vista="cancelada" asp-route-busqueda="@busqueda" asp-route-ordenarPor="@ordenarPor" asp-route-direccion="@direccion" class="tab-vista @(vista == "cancelada" ? "activa" : "")">Canceladas</a>
         <a asp-controller="Reservas" asp-action="Index" asp-route-vista="finalizada" asp-route-busqueda="@busqueda" asp-route-ordenarPor="@ordenarPor" asp-route-direccion="@direccion" class="tab-vista @(vista == "finalizada" ? "activa" : "")">Finalizadas</a>
     </div>
@@ -194,6 +191,17 @@
     @if (TempData["Mensaje"] != null)
     {
         <div class="alert alert-danger">@TempData["Mensaje"]</div>
+    }
+
+    @if (reservasPendientesVencidas > 0)
+    {
+        <div class="alert alert-warning d-flex align-items-start gap-2">
+            <i class="bi bi-exclamation-triangle-fill mt-1"></i>
+            <div>
+                <strong>@reservasPendientesVencidas reservación(es) no registraron check-in en la fecha prevista.</strong>
+                Revise las pendientes de ingreso y cancele manualmente las que no se presentaron.
+            </div>
+        </div>
     }
 
     <form id="formBusqueda" asp-controller="Reservas" asp-action="Index" method="get" class="mb-4">
@@ -244,6 +252,10 @@
                     foreach (System.Data.DataRow fila in Model.Rows)
                     {
                         string estado = fila["estado"]?.ToString()?.Trim().ToLower() ?? "";
+                        bool fechaIngresoVencida = estado == "pendiente"
+                            && Convert.ToDateTime(fila["fecha_entrada"]).Date < DateTime.Today;
+                        bool fechaIngresoHoy = estado == "pendiente"
+                            && Convert.ToDateTime(fila["fecha_entrada"]).Date == DateTime.Today;
 
                         <tr>
                             <td>@fila["nombre"]</td>
@@ -256,15 +268,17 @@
                             <td>
                                 @if (estado == "pendiente")
                                 {
-                                    <span class="estado-pendiente">Pendiente</span>
-                                }
-                                else if (estado == "confirmada")
-                                {
-                                    <span class="estado-confirmada">Confirmada</span>
+                                    <span class="estado-pendiente">
+                                        @(fechaIngresoVencida ? "Pendiente de ingreso — fecha vencida" : "Pendiente de ingreso")
+                                    </span>
                                 }
                                 else if (estado == "en_curso")
                                 {
                                     <span class="estado-en_curso">En curso</span>
+                                }
+                                else if (estado == "en_checkout")
+                                {
+                                    <span class="estado-en_checkout">En check-out</span>
                                 }
                                 else if (estado == "cancelada")
                                 {
@@ -283,24 +297,14 @@
                                     </a>
 
 
-                                    @if (estado == "pendiente" || estado == "confirmada")
+                                    @if (estado == "pendiente")
                                     {
                                         <a asp-controller="Reservas" asp-action="Editar" asp-route-id="@fila["id_reserva"]" class="btn-icono btn-editar" title="Editar reserva">
                                             <i class="bi bi-pencil-fill"></i>
                                         </a>
                                     }
 
-                                    @if (estado == "pendiente")
-                                    {
-                                        <form asp-controller="Reservas" asp-action="Confirmar" asp-route-id="@fila["id_reserva"]" method="post" class="form-accion">
-                                            @Html.AntiForgeryToken()
-                                            <button type="submit" class="btn-icono btn-confirmar" title="Confirmar reserva">
-                                                <i class="bi bi-check-circle-fill"></i>
-                                            </button>
-                                        </form>
-                                    }
-
-                                    @if (estado == "confirmada")
+                                    @if (fechaIngresoHoy)
                                     {
                                         <form asp-controller="Reservas" asp-action="CheckIn" asp-route-id="@fila["id_reserva"]" method="post" class="form-accion">
                                             @Html.AntiForgeryToken()
@@ -312,15 +316,22 @@
 
                                     @if (estado == "en_curso")
                                     {
-                                        <form asp-controller="Reservas" asp-action="CheckOut" asp-route-id="@fila["id_reserva"]" method="post" class="form-accion">
+                                        <form asp-controller="Reservas" asp-action="IniciarCheckout" asp-route-id="@fila["id_reserva"]" method="post" class="form-accion">
                                             @Html.AntiForgeryToken()
-                                            <button type="submit" class="btn-icono btn-checkout" title="Realizar check-out">
+                                            <button type="submit" class="btn-icono btn-checkout" title="Iniciar check-out">
                                                 <i class="bi bi-box-arrow-right"></i>
                                             </button>
                                         </form>
                                     }
 
-                                    @if (estado == "pendiente" || estado == "confirmada")
+                                    @if (estado == "en_checkout")
+                                    {
+                                        <a asp-controller="Reservas" asp-action="Checkout" asp-route-id="@fila["id_reserva"]" class="btn-icono btn-checkout" title="Continuar check-out">
+                                            <i class="bi bi-cash-coin"></i>
+                                        </a>
+                                    }
+
+                                    @if (estado == "pendiente")
                                     {
                                         <form asp-controller="Reservas" asp-action="Cancelar" asp-route-id="@fila["id_reserva"]" method="post" class="form-accion">
                                             @Html.AntiForgeryToken()

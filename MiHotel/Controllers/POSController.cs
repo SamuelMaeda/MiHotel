@@ -77,6 +77,7 @@ namespace MiHotel.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult GuardarVenta(string detalleJson, int? id_clipro, int? id_reserva, decimal montoPagado)
         {
             var acceso = ValidarSesion();
@@ -137,7 +138,25 @@ namespace MiHotel.Controllers
                 int idFormaPagoEfectivo = 1;
                 int idFormaPagoCredito = 5;
 
+                if (carrito == null || carrito.Count == 0)
+                {
+                    TempData["Error"] = "Debe agregar al menos un producto o servicio.";
+                    return RedirectToAction("Index");
+                }
+
                 decimal total = carrito.Sum(x => x.precio * x.cantidad);
+
+                if (montoPagado < 0 || montoPagado > total)
+                {
+                    TempData["Error"] = "El monto pagado debe encontrarse entre Q0.00 y el total de la venta.";
+                    return RedirectToAction("Index");
+                }
+
+                if (!id_reserva.HasValue && montoPagado < total)
+                {
+                    TempData["Error"] = "Las ventas de clientes sin hospedaje deben pagarse completamente al registrarlas.";
+                    return RedirectToAction("Index");
+                }
 
                 // 🔹 MOVIMIENTO VENTA
                 int idMovimientoVenta = InsertarMovimiento(conexion, tx, idTipoVenta, idClienteFinal, id_reserva, idUsuario, idFormaPagoEfectivo);
@@ -210,6 +229,24 @@ namespace MiHotel.Controllers
                             new("@r", restante)
                         }
                     }.ExecuteNonQuery();
+
+                    if (id_reserva.HasValue)
+                    {
+                        using var actualizarSaldo = new MySqlCommand(@"
+                            UPDATE reserva
+                            SET saldo_pendiente = saldo_pendiente + @restante
+                            WHERE id_reserva = @id_reserva
+                              AND estado = 'en_curso';", conexion, tx);
+
+                        actualizarSaldo.Parameters.AddWithValue("@restante", restante);
+                        actualizarSaldo.Parameters.AddWithValue("@id_reserva", id_reserva.Value);
+
+                        if (actualizarSaldo.ExecuteNonQuery() == 0)
+                        {
+                            throw new InvalidOperationException(
+                                "La estadía dejó de estar disponible antes de completar la venta.");
+                        }
+                    }
                 }
 
                 tx.Commit();
