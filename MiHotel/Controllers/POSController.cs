@@ -45,7 +45,14 @@ namespace MiHotel.Controllers
             WHERE LOWER(tp.nombre) IN ('producto', 'servicio')", conexion).Fill(dtProd);
 
             var dtCli = new DataTable();
-            new MySqlDataAdapter("SELECT id_clipro, nombre FROM clipro WHERE estado='activo'", conexion).Fill(dtCli);
+            new MySqlDataAdapter(@"
+                SELECT c.id_clipro, c.nombre
+                FROM clipro c
+                INNER JOIN tipo_clipro tc
+                    ON tc.id_tipoclipro = c.id_tipoclipro
+                WHERE c.estado = 'activo'
+                  AND LOWER(tc.tipo) = 'cliente'
+                ORDER BY c.nombre", conexion).Fill(dtCli);
 
                         var dtRes = new DataTable();
 
@@ -308,14 +315,46 @@ namespace MiHotel.Controllers
 
         private int ObtenerClienteGenerico(MySqlConnection c, MySqlTransaction tx)
         {
-            var cmd = new MySqlCommand("SELECT id_clipro FROM clipro WHERE nombre='CLIENTE GENERAL' LIMIT 1", c, tx);
+            var cmd = new MySqlCommand(@"
+                SELECT c.id_clipro
+                FROM clipro c
+                INNER JOIN tipo_clipro tc
+                    ON tc.id_tipoclipro = c.id_tipoclipro
+                WHERE c.nombre = 'CLIENTE GENERAL'
+                  AND LOWER(tc.tipo) = 'cliente'
+                LIMIT 1", c, tx);
             var r = cmd.ExecuteScalar();
 
             if (r != null) return Convert.ToInt32(r);
 
-            return Convert.ToInt32(new MySqlCommand(
-                "INSERT INTO clipro(nombre,estado) VALUES('CLIENTE GENERAL','activo'); SELECT LAST_INSERT_ID();",
-                c, tx).ExecuteScalar());
+            var cmdTipoCliente = new MySqlCommand(@"
+                SELECT id_tipoclipro
+                FROM tipo_clipro
+                WHERE LOWER(tipo) = 'cliente'
+                LIMIT 1", c, tx);
+            object? tipoCliente = cmdTipoCliente.ExecuteScalar();
+
+            if (tipoCliente == null)
+                throw new InvalidOperationException("No existe el tipo de cliente requerido por Punto de Venta.");
+
+            var cmdInsertar = new MySqlCommand(@"
+                INSERT INTO clipro
+                    (id_tipoclipro, nombre, telefono, estado)
+                VALUES
+                    (@tipo, 'CLIENTE GENERAL', '00000000', 'activo')", c, tx);
+            cmdInsertar.Parameters.AddWithValue("@tipo", Convert.ToInt32(tipoCliente));
+            cmdInsertar.ExecuteNonQuery();
+            int idCliente = Convert.ToInt32(cmdInsertar.LastInsertedId);
+
+            var cmdDetalle = new MySqlCommand(@"
+                INSERT INTO cliente_detalle
+                    (id_clipro, id_empresa_cliente, numero_dpi, placa_reciente, codigo_clasificacion)
+                VALUES
+                    (@id, NULL, NULL, NULL, 'B')", c, tx);
+            cmdDetalle.Parameters.AddWithValue("@id", idCliente);
+            cmdDetalle.ExecuteNonQuery();
+
+            return idCliente;
         }
 
         public class ItemCarrito

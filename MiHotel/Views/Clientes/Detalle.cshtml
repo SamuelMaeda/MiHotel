@@ -1,175 +1,23 @@
-﻿@model MiHotel.Models.ClienteDetalleViewModel
-
-@{
-    ViewData["Title"] = "Detalle del Cliente";
-
-    string MostrarTexto(string? valor)
-    {
-        return string.IsNullOrWhiteSpace(valor) ? "-" : valor;
-    }
-}
-
+@model MiHotel.Models.ClienteDetalleViewModel
+@{ ViewData["Title"]="Detalle del Cliente"; string Mostrar(string? v)=>string.IsNullOrWhiteSpace(v)?"-":v; string clase=Model.CodigoClasificacion switch{"A"=>"tipo-a","C"=>"tipo-c",_=>"tipo-b"}; }
 <style>
-    .tarjeta-contenido {
-        background-color: white;
-        border-radius: 15px;
-        padding: 25px;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.10);
-        max-width: 850px;
-    }
-
-    .detalle-label {
-        font-weight: 600;
-        color: #363636;
-        margin-bottom: 6px;
-    }
-
-    .detalle-valor {
-        background-color: #f8f9fa;
-        border: 1px solid #dee2e6;
-        border-radius: 8px;
-        padding: 10px 12px;
-        min-height: 44px;
-        display: flex;
-        align-items: center;
-        color: #363636;
-    }
-
-    .estado-activo {
-        color: green;
-        font-weight: bold;
-    }
-
-    .estado-inactivo {
-        color: red;
-        font-weight: bold;
-    }
-
-    .btn-volver {
-        background-color: #6c757d;
-        color: white;
-        text-decoration: none;
-        padding: 10px 18px;
-        border-radius: 8px;
-        font-weight: 500;
-        display: inline-block;
-    }
-
-        .btn-volver:hover {
-            background-color: #5a6268;
-            color: white;
-        }
-
-    .btn-editar {
-        background-color: #824B44;
-        color: white;
-        text-decoration: none;
-        padding: 10px 18px;
-        border-radius: 8px;
-        font-weight: 500;
-        display: inline-block;
-    }
-
-        .btn-editar:hover {
-            background-color: #6d3f39;
-            color: white;
-        }
-
-    .acciones-formulario {
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-        margin-top: 20px;
-    }
-
-    @@media (max-width: 768px) {
-        .tarjeta-contenido {
-            padding: 15px;
-        }
-
-        .btn-volver,
-        .btn-editar {
-            width: 100%;
-            text-align: center;
-        }
-    }
+ .tarjeta{background:#fff;border-radius:15px;padding:25px;box-shadow:0 4px 10px rgba(0,0,0,.1);max-width:1050px;margin:auto}.detalle-label{font-weight:600;color:#363636;margin-bottom:5px}.detalle-valor{background:#f8f9fa;border:1px solid #dee2e6;border-radius:8px;padding:10px 12px;min-height:44px}.tipo{display:inline-block;border-radius:999px;padding:5px 12px;font-weight:700}.tipo-a{background:#d9f2df;color:#17652b}.tipo-b{background:#fff0c9;color:#885b00}.tipo-c{background:#f7d7d9;color:#8f1d26}.fotos{display:flex;gap:18px;flex-wrap:wrap}.foto-dpi{width:min(100%,420px);height:250px;object-fit:contain;background:#f4f4f4;border:1px solid #ddd;border-radius:10px;padding:5px}.acciones{display:flex;gap:10px;margin-top:22px}.btn-accion{color:#fff;text-decoration:none;border-radius:8px;padding:10px 17px}.editar{background:#824B44}.volver{background:#6c757d}
 </style>
-
-<div class="tarjeta-contenido">
-    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-        <h3 class="m-0">Detalle del Cliente</h3>
-    </div>
-
-    @if (ViewBag.Mensaje != null)
-    {
-        <div class="alert alert-danger">
-            @ViewBag.Mensaje
-        </div>
-    }
-
-    <div class="row">
-        <div class="col-md-6 mb-3">
-            <div class="detalle-label">Nombre</div>
-            <div class="detalle-valor">@MostrarTexto(Model.Nombre)</div>
-        </div>
-
-        <div class="col-md-6 mb-3">
-            <div class="detalle-label">Teléfono</div>
-            <div class="detalle-valor">@MostrarTexto(Model.Telefono)</div>
-        </div>
-
-        <div class="col-md-6 mb-3">
-            <div class="detalle-label">NIT</div>
-            <div class="detalle-valor">@MostrarTexto(Model.Nit)</div>
-        </div>
-
-        <div class="col-md-6 mb-3">
-            <div class="detalle-label">Correo</div>
-            <div class="detalle-valor">@MostrarTexto(Model.Correo)</div>
-        </div>
-
-        <div class="col-12 mb-3">
-            <div class="detalle-label">Dirección</div>
-            <div class="detalle-valor">@MostrarTexto(Model.Direccion)</div>
-        </div>
-
-        <div class="col-md-6 mb-3">
-            <div class="detalle-label">Nombre de empresa</div>
-            <div class="detalle-valor">@MostrarTexto(Model.NombreEmpresa)</div>
-        </div>
-
-        <div class="col-md-6 mb-3">
-            <div class="detalle-label">Número de empresa</div>
-            <div class="detalle-valor">@MostrarTexto(Model.NumeroEmpresa)</div>
-        </div>
-
-        <div class="col-md-6 mb-3">
-            <div class="detalle-label">Estado</div>
-            <div class="detalle-valor">
-                @if ((Model.Estado ?? "").ToLower() == "activo")
-                {
-                    <span class="estado-activo">Activo</span>
-                }
-                else
-                {
-                    <span class="estado-inactivo">Inactivo</span>
-                }
-            </div>
-        </div>
-    </div>
-
-    <div class="acciones-formulario">
-        <a asp-controller="Clientes"
-           asp-action="Editar"
-           asp-route-id="@Model.IdClipro"
-           class="btn-editar">
-            Editar cliente
-        </a>
-
-        <a asp-controller="Clientes"
-           asp-action="Index"
-           class="btn-volver">
-            Volver al listado
-        </a>
-    </div>
-</div>
+<div class="container-fluid px-3 px-md-4 py-4"><div class="tarjeta"><h3 class="mb-4">Detalle del Cliente</h3>
+ <div class="row">
+  <div class="col-md-6 mb-3"><div class="detalle-label">Nombre</div><div class="detalle-valor">@Mostrar(Model.Nombre)</div></div>
+  <div class="col-md-6 mb-3"><div class="detalle-label">Tipo de cliente</div><div class="detalle-valor"><span class="tipo @clase">@Model.CodigoClasificacion - @Model.NombreClasificacion</span></div></div>
+  <div class="col-md-6 mb-3"><div class="detalle-label">Teléfono</div><div class="detalle-valor">@Mostrar(Model.Telefono)</div></div>
+  <div class="col-md-6 mb-3"><div class="detalle-label">Empresa de procedencia</div><div class="detalle-valor">@Mostrar(Model.EmpresaProcedencia)</div></div>
+  <div class="col-md-6 mb-3"><div class="detalle-label">NIT</div><div class="detalle-valor">@Mostrar(Model.Nit)</div></div>
+  <div class="col-md-6 mb-3"><div class="detalle-label">Número de DPI</div><div class="detalle-valor">@Mostrar(Model.NumeroDpi)</div></div>
+  <div class="col-md-6 mb-3"><div class="detalle-label">Correo</div><div class="detalle-valor">@Mostrar(Model.Correo)</div></div>
+  <div class="col-md-6 mb-3"><div class="detalle-label">Última placa registrada</div><div class="detalle-valor">@Mostrar(Model.PlacaReciente)</div></div>
+  <div class="col-12 mb-3"><div class="detalle-label">Dirección</div><div class="detalle-valor">@Mostrar(Model.Direccion)</div></div>
+  <div class="col-md-6 mb-3"><div class="detalle-label">Estado</div><div class="detalle-valor">@Model.Estado</div></div>
+ </div>
+ @if(Model.TieneDpiFrente){<hr/><h5 class="mb-3">Fotografía del DPI</h5><div class="fotos">
+  @if(Model.TieneDpiFrente){<div><div class="detalle-label">Parte frontal</div><img class="foto-dpi" src="@Url.Action("DocumentoDpi",new{id=Model.IdClipro,tipo="dpi_frente"})" alt="Parte frontal del DPI"/></div>}
+ </div>}
+ <div class="acciones"><a asp-action="Editar" asp-route-id="@Model.IdClipro" class="btn-accion editar">Editar cliente</a><a asp-action="Index" class="btn-accion volver">Volver al listado</a></div>
+</div></div>

@@ -601,6 +601,7 @@ namespace MiHotel.Controllers
                 }
 
                 string claveHash = SeguridadHelper.ObtenerSha256(modelo.Clave);
+                using var transaccion = conexion.BeginTransaction();
 
                 string insertar = @"
                     INSERT INTO clipro
@@ -609,8 +610,6 @@ namespace MiHotel.Controllers
                         nombre,
                         nit,
                         direccion,
-                        nombre_empresa,
-                        numero_empresa,
                         telefono,
                         correo,
                         clave,
@@ -626,8 +625,6 @@ namespace MiHotel.Controllers
                         @nombre,
                         NULL,
                         NULL,
-                        NULL,
-                        NULL,
                         @telefono,
                         @correo,
                         @clave,
@@ -638,7 +635,7 @@ namespace MiHotel.Controllers
                         'activo'
                     );";
 
-                using var comandoInsertar = new MySqlCommand(insertar, conexion);
+                using var comandoInsertar = new MySqlCommand(insertar, conexion, transaccion);
                 comandoInsertar.Parameters.AddWithValue("@id_tipoclipro", idTipoCliente);
                 comandoInsertar.Parameters.AddWithValue("@nombre", modelo.Nombre.Trim());
                 comandoInsertar.Parameters.AddWithValue("@telefono", modelo.Telefono);
@@ -646,6 +643,15 @@ namespace MiHotel.Controllers
                 comandoInsertar.Parameters.AddWithValue("@clave", claveHash);
 
                 comandoInsertar.ExecuteNonQuery();
+
+                int idCliente = Convert.ToInt32(comandoInsertar.LastInsertedId);
+                using var comandoDetalle = new MySqlCommand(@"
+                    INSERT INTO cliente_detalle
+                        (id_clipro, id_empresa_cliente, numero_dpi, placa_reciente, codigo_clasificacion)
+                    VALUES (@id, NULL, NULL, NULL, 'B');", conexion, transaccion);
+                comandoDetalle.Parameters.AddWithValue("@id", idCliente);
+                comandoDetalle.ExecuteNonQuery();
+                transaccion.Commit();
 
                 ViewBag.Exito = "Cuenta creada correctamente. Ahora puede iniciar sesión.";
                 ModelState.Clear();

@@ -102,7 +102,7 @@
 
                     <div class="row">
 
-                        <div class="col-12 col-lg-6 mb-3">
+                        <div class="col-12 mb-3">
                             <label asp-for="Nombre" class="form-label">Nombre</label>
                             <input asp-for="Nombre" class="form-control" />
                             <span asp-validation-for="Nombre" class="text-danger"></span>
@@ -140,24 +140,10 @@
 
                         <div class="col-12 col-lg-6 mb-3">
                             <label asp-for="NombreEmpresa" class="form-label">
-                                Nombre de empresa <span class="etiqueta-opcional">(Opcional)</span>
+                                Empresa proveedora <span class="etiqueta-opcional">(Opcional)</span>
                             </label>
                             <input asp-for="NombreEmpresa" class="form-control" />
                             <span asp-validation-for="NombreEmpresa" class="text-danger"></span>
-                        </div>
-
-                        <div class="col-12 col-lg-6 mb-2">
-                            <label asp-for="NumeroEmpresa" class="form-label">
-                                Teléfono de empresa <span class="etiqueta-opcional">(Opcional)</span>
-                            </label>
-                            <input asp-for="NumeroEmpresa" id="NumeroEmpresa" class="form-control" maxlength="9" />
-                            <span asp-validation-for="NumeroEmpresa" class="text-danger"></span>
-                        </div>
-
-                        <div class="col-12 mb-2">
-                            <div class="texto-ayuda">
-                                Si llena el nombre de empresa, también debe completar el teléfono de empresa, y viceversa.
-                            </div>
                         </div>
 
                     </div>
@@ -193,7 +179,6 @@
         }
 
         const telefono = document.getElementById("Telefono");
-        const numeroEmpresa = document.getElementById("NumeroEmpresa");
 
         if (telefono) {
             telefono.addEventListener("input", function () {
@@ -201,10 +186,5 @@
             });
         }
 
-        if (numeroEmpresa) {
-            numeroEmpresa.addEventListener("input", function () {
-                formatearTelefono(this);
-            });
-        }
     </script>
 }

@@ -1,0 +1,5 @@
+@model MiHotel.Models.EmpresaClienteViewModel
+@{ViewData["Title"]="Nueva empresa de procedencia";}
+<style>.tarjeta{background:#fff;border-radius:15px;padding:25px;box-shadow:0 4px 10px rgba(0,0,0,.1);max-width:700px}.btn-guardar,.btn-volver{color:#fff;border:0;text-decoration:none;padding:10px 16px;border-radius:8px}.btn-guardar{background:#464482}.btn-volver{background:#824B44}</style>
+<div class="tarjeta"><h3>Nueva empresa de procedencia</h3><p class="text-muted">Este catálogo corresponde a los clientes del hotel, no a las marcas de inventario.</p>@if(ViewBag.Mensaje!=null){<div class="alert alert-danger">@ViewBag.Mensaje</div>}<form method="post">@Html.AntiForgeryToken()<label asp-for="Nombre" class="form-label"></label><input asp-for="Nombre" class="form-control"/><span asp-validation-for="Nombre" class="text-danger"></span><div class="d-flex gap-2 mt-4"><button class="btn-guardar">Guardar empresa</button><a asp-action="Index" class="btn-volver">Volver</a></div></form></div>
+@section Scripts{<partial name="_ValidationScriptsPartial"/>}

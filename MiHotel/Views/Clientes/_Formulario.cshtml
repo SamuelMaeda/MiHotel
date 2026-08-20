@@ -1,0 +1,64 @@
+@model MiHotel.Models.ClienteAdmin
+
+<div class="row">
+    <div class="col-12 col-lg-6 mb-3">
+        <label asp-for="Nombre" class="form-label">Nombre</label>
+        <input asp-for="Nombre" class="form-control" />
+        <span asp-validation-for="Nombre" class="text-danger"></span>
+    </div>
+    <div class="col-12 col-lg-6 mb-3">
+        <label asp-for="Telefono" class="form-label">Teléfono</label>
+        <input asp-for="Telefono" class="form-control campo-telefono" maxlength="9" placeholder="1234 5678" />
+        <span asp-validation-for="Telefono" class="text-danger"></span>
+    </div>
+    <div class="col-12 col-lg-6 mb-3">
+        <label asp-for="Nit" class="form-label">NIT <span class="texto-opcional">(Opcional)</span></label>
+        <input asp-for="Nit" class="form-control" />
+        <span asp-validation-for="Nit" class="text-danger"></span>
+    </div>
+    <div class="col-12 col-lg-6 mb-3">
+        <label asp-for="NumeroDpi" class="form-label">Número de DPI <span class="texto-opcional">(Opcional)</span></label>
+        <input asp-for="NumeroDpi" class="form-control" maxlength="13" inputmode="numeric" placeholder="13 dígitos" />
+        <span asp-validation-for="NumeroDpi" class="text-danger"></span>
+    </div>
+    <div class="col-12 col-lg-6 mb-3">
+        <label asp-for="Correo" class="form-label">Correo <span class="texto-opcional">(Opcional)</span></label>
+        <input asp-for="Correo" class="form-control" />
+        <span asp-validation-for="Correo" class="text-danger"></span>
+    </div>
+    <div class="col-12 col-lg-6 mb-3">
+        <label asp-for="PlacaReciente" class="form-label">Última placa registrada <span class="texto-opcional">(Opcional)</span></label>
+        <input asp-for="PlacaReciente" class="form-control text-uppercase" maxlength="15" placeholder="P123ABC" />
+        <span asp-validation-for="PlacaReciente" class="text-danger"></span>
+        <div class="form-text">Se conserva únicamente el vehículo más reciente.</div>
+    </div>
+    <div class="col-12 mb-3">
+        <label asp-for="Direccion" class="form-label">Dirección <span class="texto-opcional">(Opcional)</span></label>
+        <textarea asp-for="Direccion" class="form-control" rows="2"></textarea>
+        <span asp-validation-for="Direccion" class="text-danger"></span>
+    </div>
+    <div class="col-12 col-lg-6 mb-3">
+        <label asp-for="IdEmpresaCliente" class="form-label">Empresa de procedencia <span class="texto-opcional">(Opcional)</span></label>
+        <select asp-for="IdEmpresaCliente" asp-items="ViewBag.EmpresasCliente" class="form-select">
+            <option value="">Sin empresa</option>
+        </select>
+        <span asp-validation-for="IdEmpresaCliente" class="text-danger"></span>
+        <a asp-controller="EmpresasClientes" asp-action="Index" class="btn-catalogo">
+            <i class="bi bi-buildings-fill"></i>
+            Administrar empresas de procedencia
+        </a>
+    </div>
+    <div class="col-12 col-lg-6 mb-3">
+        <label asp-for="CodigoClasificacion" class="form-label">Tipo de cliente</label>
+        <select asp-for="CodigoClasificacion" asp-items="ViewBag.ClasificacionesCliente" class="form-select"></select>
+        <span asp-validation-for="CodigoClasificacion" class="text-danger"></span>
+        <div class="form-text">A: Tranquilo, B: Neutral, C: Problemático. Uso interno.</div>
+    </div>
+    <div class="col-12 mt-2 mb-2"><h5>Fotografía del DPI <span class="texto-opcional">(Opcional)</span></h5></div>
+    <div class="col-12 mb-3">
+        <label asp-for="DpiFrente" class="form-label">Parte frontal del DPI</label>
+        <input asp-for="DpiFrente" type="file" class="form-control" accept="image/jpeg,image/png,image/webp" />
+        <span asp-validation-for="DpiFrente" class="text-danger"></span>
+    </div>
+    <div class="col-12"><div class="nota-imagen">Nota: las imágenes tienen que tener el formato JPG, PNG o WEBP. El tamaño máximo es de 10 MB por fotografía.</div></div>
+</div>

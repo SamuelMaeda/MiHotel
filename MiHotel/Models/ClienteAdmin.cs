@@ -1,59 +1,51 @@
-﻿using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace MiHotel.Models
 {
-    public class ClienteAdmin : IValidatableObject
+    public class ClienteAdmin
     {
         [Required(ErrorMessage = "El nombre es obligatorio.")]
         [StringLength(150)]
-        [Display(Name = "Nombre")]
         public string Nombre { get; set; } = string.Empty;
 
         [StringLength(20)]
-        [Display(Name = "NIT")]
         public string? Nit { get; set; }
 
         [Required(ErrorMessage = "El teléfono es obligatorio.")]
         [RegularExpression(@"^\d{4}\s?\d{4}$", ErrorMessage = "Ingrese un teléfono válido de 8 dígitos.")]
-        [Display(Name = "Teléfono")]
         public string Telefono { get; set; } = string.Empty;
 
         [EmailAddress(ErrorMessage = "Ingrese un correo válido.")]
         [StringLength(150)]
-        [Display(Name = "Correo")]
         public string? Correo { get; set; }
 
         [StringLength(255)]
-        [Display(Name = "Dirección")]
         public string? Direccion { get; set; }
 
+        // Se conserva únicamente para el módulo de proveedores.
         [StringLength(150)]
-        [Display(Name = "Nombre de empresa")]
+        [Display(Name = "Empresa proveedora")]
         public string? NombreEmpresa { get; set; }
 
-        [RegularExpression(@"^\d{4}\s?\d{4}$", ErrorMessage = "Ingrese un número de empresa válido de 8 dígitos.")]
-        [Display(Name = "Número de empresa")]
-        public string? NumeroEmpresa { get; set; }
+        [Display(Name = "Empresa de procedencia")]
+        public int? IdEmpresaCliente { get; set; }
 
-        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
-        {
-            bool tieneNombreEmpresa = !string.IsNullOrWhiteSpace(NombreEmpresa);
-            bool tieneNumeroEmpresa = !string.IsNullOrWhiteSpace(NumeroEmpresa);
+        [RegularExpression(@"^\d{13}$", ErrorMessage = "El DPI debe contener exactamente 13 dígitos.")]
+        [Display(Name = "Número de DPI")]
+        public string? NumeroDpi { get; set; }
 
-            if (tieneNombreEmpresa && !tieneNumeroEmpresa)
-            {
-                yield return new ValidationResult(
-                    "Debe ingresar el número de la empresa cuando se indique el nombre de la empresa.",
-                    new[] { nameof(NumeroEmpresa) });
-            }
+        [StringLength(15)]
+        [RegularExpression(@"^[A-Za-z0-9-]+$", ErrorMessage = "La placa solo puede contener letras, números y guiones.")]
+        [Display(Name = "Última placa registrada")]
+        public string? PlacaReciente { get; set; }
 
-            if (!tieneNombreEmpresa && tieneNumeroEmpresa)
-            {
-                yield return new ValidationResult(
-                    "Debe ingresar el nombre de la empresa cuando se indique el número de la empresa.",
-                    new[] { nameof(NombreEmpresa) });
-            }
-        }
+        [Required(ErrorMessage = "Seleccione el tipo de cliente.")]
+        [RegularExpression("^[ABC]$", ErrorMessage = "Seleccione un tipo de cliente válido.")]
+        [Display(Name = "Tipo de cliente")]
+        public string CodigoClasificacion { get; set; } = "B";
+
+        [Display(Name = "Fotografía frontal del DPI")]
+        public IFormFile? DpiFrente { get; set; }
+
     }
 }

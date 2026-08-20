@@ -130,8 +130,8 @@ namespace MiHotel.Controllers
             // ============================================================
 
             string sql = @"INSERT INTO clipro
-            (id_tipoclipro,nombre,nit,telefono,correo,direccion,nombre_empresa,numero_empresa,estado)
-            VALUES (@tipo,@nombre,@nit,@tel,@correo,@dir,@emp,@num,'activo')";
+            (id_tipoclipro,nombre,nit,telefono,correo,direccion,nombre_empresa,estado)
+            VALUES (@tipo,@nombre,@nit,@tel,@correo,@dir,@emp,'activo')";
 
             using var cmd = new MySqlCommand(sql, conexion);
 
@@ -142,7 +142,6 @@ namespace MiHotel.Controllers
             cmd.Parameters.AddWithValue("@correo", (object?)modelo.Correo ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@dir", (object?)modelo.Direccion ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@emp", (object?)modelo.NombreEmpresa ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@num", (object?)modelo.NumeroEmpresa ?? DBNull.Value);
 
             cmd.ExecuteNonQuery();
 
@@ -173,8 +172,7 @@ namespace MiHotel.Controllers
                 Telefono = dr["telefono"].ToString(),
                 Correo = dr["correo"]?.ToString(),
                 Direccion = dr["direccion"]?.ToString(),
-                NombreEmpresa = dr["nombre_empresa"]?.ToString(),
-                NumeroEmpresa = dr["numero_empresa"]?.ToString()
+                NombreEmpresa = dr["nombre_empresa"]?.ToString()
             };
 
             return View(m);
@@ -214,7 +212,7 @@ namespace MiHotel.Controllers
             string sql = @"UPDATE clipro SET
                 nombre=@n, nit=@nit, telefono=@tel,
                 correo=@c, direccion=@d,
-                nombre_empresa=@e, numero_empresa=@ne
+                nombre_empresa=@e
                 WHERE id_clipro=@id";
 
             using var cmd = new MySqlCommand(sql, conexion);
@@ -225,7 +223,6 @@ namespace MiHotel.Controllers
             cmd.Parameters.AddWithValue("@c", (object?)modelo.Correo ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@d", (object?)modelo.Direccion ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@e", (object?)modelo.NombreEmpresa ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@ne", (object?)modelo.NumeroEmpresa ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@id", modelo.IdClipro);
 
             cmd.ExecuteNonQuery();
@@ -257,7 +254,6 @@ namespace MiHotel.Controllers
                 Correo = dr["correo"]?.ToString(),
                 Direccion = dr["direccion"]?.ToString(),
                 NombreEmpresa = dr["nombre_empresa"]?.ToString(),
-                NumeroEmpresa = dr["numero_empresa"]?.ToString(),
                 Estado = dr["estado"].ToString()
             };
 

@@ -1,0 +1,24 @@
+@model MiHotel.Models.TrabajadorViewModel
+
+<div class="row">
+    <div class="col-12 col-lg-6 mb-3">
+        <label asp-for="Nombre" class="form-label">Nombre</label>
+        <input asp-for="Nombre" class="form-control" />
+        <span asp-validation-for="Nombre" class="text-danger"></span>
+    </div>
+    <div class="col-12 col-lg-6 mb-3">
+        <label asp-for="Telefono" class="form-label">Teléfono</label>
+        <input asp-for="Telefono" class="form-control campo-telefono" maxlength="9" placeholder="1234 5678" />
+        <span asp-validation-for="Telefono" class="text-danger"></span>
+    </div>
+    <div class="col-12 mb-3">
+        <label asp-for="CodigoServicio" class="form-label">Código de servicio <span class="texto-opcional">(Opcional)</span></label>
+        <input asp-for="CodigoServicio" class="form-control text-uppercase" maxlength="50" placeholder="Código asignado por la empresa" />
+        <span asp-validation-for="CodigoServicio" class="text-danger"></span>
+    </div>
+    <div class="col-12 mb-3">
+        <label asp-for="Observaciones" class="form-label">Observaciones <span class="texto-opcional">(Opcional)</span></label>
+        <textarea asp-for="Observaciones" class="form-control" rows="4" maxlength="500" placeholder="Información adicional del contacto"></textarea>
+        <span asp-validation-for="Observaciones" class="text-danger"></span>
+    </div>
+</div>
