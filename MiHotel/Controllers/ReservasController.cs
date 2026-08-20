@@ -1983,7 +1983,8 @@ namespace MiHotel.Controllers
                     return RedirectToAction("Index");
                 }
 
-                return RedirectToAction("Checkout", new { id });
+                TempData["Exito"] = "La reservación pasó a check-out correctamente.";
+                return RedirectToAction("Index", new { vista = "en_checkout" });
             }
             catch (Exception ex)
             {

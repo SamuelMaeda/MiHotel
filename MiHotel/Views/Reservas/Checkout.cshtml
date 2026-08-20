@@ -70,13 +70,6 @@
     .btn-finalizar { background-color: #198754; }
     .btn-regresar { background-color: #824B44; }
 
-    .autorizacion-deuda {
-        background-color: #fff3cd;
-        border: 1px solid #ffecb5;
-        border-radius: 10px;
-        margin-top: 20px;
-        padding: 18px;
-    }
 </style>
 
 <div class="tarjeta-contenido">
@@ -172,26 +165,71 @@
                 </button>
             </form>
         }
+        else
+        {
+            <button type="button"
+                    class="btn-checkout btn-finalizar"
+                    data-bs-toggle="modal"
+                    data-bs-target="#modalFinalizarConDeuda">
+                <i class="bi bi-check-circle"></i> Finalizar estadía
+            </button>
+        }
     </div>
-
-    @if (!cuentaPagada && Model.EsAdministrador)
-    {
-        <div class="autorizacion-deuda">
-            <h5>Salida excepcional con deuda</h5>
-            <p class="mb-3">Utilice esta opción únicamente cuando el huésped se retire dejando saldo. La habitación será liberada y la deuda permanecerá en Cuentas por Cobrar.</p>
-            <form asp-controller="Reservas" asp-action="FinalizarEstadia" asp-route-id="@Model.IdReserva" method="post">
-                @Html.AntiForgeryToken()
-                <input type="hidden" name="autorizarSaldoPendiente" value="true" />
-                <label for="observacionSalida" class="form-label">Explicación obligatoria</label>
-                <textarea id="observacionSalida" name="observacionSalida" class="form-control" rows="3" required maxlength="255" placeholder="Explique por qué se autoriza la salida con saldo pendiente."></textarea>
-                <button type="submit" class="btn-checkout btn-finalizar mt-3" onclick="return confirm('¿Confirma que desea finalizar esta estadía con deuda pendiente?');">
-                    <i class="bi bi-shield-check"></i> Autorizar y finalizar con deuda
-                </button>
-            </form>
-        </div>
-    }
-    else if (!cuentaPagada)
-    {
-        <div class="alert alert-warning mt-3 mb-0">La estadía podrá finalizar cuando el saldo llegue a Q0.00. Una salida con deuda requiere autorización administrativa.</div>
-    }
 </div>
+
+@if (!cuentaPagada)
+{
+    <div class="modal fade" id="modalFinalizarConDeuda" tabindex="-1" aria-labelledby="tituloFinalizarConDeuda" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="tituloFinalizarConDeuda">La cuenta todavía tiene saldo pendiente</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+
+                @if (Model.EsAdministrador)
+                {
+                    <form asp-controller="Reservas" asp-action="FinalizarEstadia" asp-route-id="@Model.IdReserva" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="autorizarSaldoPendiente" value="true" />
+
+                        <div class="modal-body">
+                            <div class="alert alert-warning">
+                                El saldo pendiente es de <strong>Q @Model.SaldoPendiente.ToString("N2")</strong>.
+                                Si continúa, la habitación será liberada y la deuda permanecerá en Cuentas por Cobrar.
+                            </div>
+
+                            <label for="observacionSalida" class="form-label">Explique por qué se autoriza la salida con deuda</label>
+                            <textarea id="observacionSalida"
+                                      name="observacionSalida"
+                                      class="form-control"
+                                      rows="3"
+                                      required
+                                      maxlength="255"
+                                      placeholder="Explicación obligatoria"></textarea>
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Continuar cobrando</button>
+                            <button type="submit" class="btn btn-success" onclick="return confirm('¿Confirma que desea finalizar esta estadía con deuda pendiente?');">
+                                Autorizar y finalizar con deuda
+                            </button>
+                        </div>
+                    </form>
+                }
+                else
+                {
+                    <div class="modal-body">
+                        <div class="alert alert-warning mb-0">
+                            La cuenta tiene un saldo pendiente de <strong>Q @Model.SaldoPendiente.ToString("N2")</strong>.
+                            Registre el pago para finalizar la estadía. Si el huésped debe retirarse con deuda, solicite autorización administrativa.
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Continuar cobrando</button>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
