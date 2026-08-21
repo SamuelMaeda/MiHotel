@@ -488,7 +488,7 @@ namespace MiHotel.Controllers
 
             int idReserva = Convert.ToInt32(resultado);
 
-            // reutiliza tu método existente
+            // reutiliza tu método existente.
             return RedirectToAction("Detalle", new { id = idReserva });
         }
 
