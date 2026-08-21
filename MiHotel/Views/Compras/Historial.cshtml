@@ -1,0 +1,112 @@
+@model System.Data.DataTable
+@{
+    ViewData["Title"] = "Historial de compras";
+    string busqueda = ViewBag.Busqueda ?? "";
+    string ordenarPor = ViewBag.OrdenarPor ?? "fecha_hora";
+    string direccion = ViewBag.Direccion ?? "desc";
+    int paginaActual = ViewBag.PaginaActual ?? 1;
+    int totalPaginas = ViewBag.TotalPaginas ?? 1;
+    int totalRegistros = ViewBag.TotalRegistros ?? 0;
+
+    string SiguienteDireccion(string columna) =>
+        ordenarPor == columna && direccion == "asc" ? "desc" : "asc";
+    string IconoOrden(string columna) =>
+        ordenarPor != columna ? "bi-arrow-down-up" : direccion == "asc" ? "bi-sort-alpha-down" : "bi-sort-alpha-up";
+}
+
+<style>
+    .tarjeta-contenido { background-color:white;border-radius:15px;padding:25px;box-shadow:0 4px 10px rgba(0,0,0,.10); }
+    .btn-nuevo,.btn-volver { color:white;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:500;display:inline-flex;align-items:center;gap:7px; }
+    .btn-nuevo { background-color:#464482; }
+    .btn-nuevo:hover { background-color:#36366b;color:white; }
+    .btn-volver { background-color:#824B44; }
+    .btn-volver:hover { background-color:#6e3f39;color:white; }
+    .encabezado-orden { color:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:6px;font-weight:600; }
+    .btn-detalle { width:38px;height:38px;border-radius:8px;background-color:#464482;color:white;text-decoration:none;display:inline-flex;align-items:center;justify-content:center; }
+    .btn-detalle:hover { background-color:#36366b;color:white; }
+    .paginacion { display:flex;gap:8px;flex-wrap:wrap;margin-top:20px; }
+    .pagina-link { padding:8px 12px;border-radius:8px;text-decoration:none;background-color:#E6D3D0;color:#363636; }
+    .pagina-link.activa { background-color:#464482;color:white;font-weight:bold; }
+</style>
+
+<div class="tarjeta-contenido">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <div>
+            <h3 class="m-0">Historial de Compras</h3>
+            <p class="text-muted mb-0 mt-1">Consulte los productos ingresados anteriormente al inventario.</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a asp-action="Crear" class="btn-nuevo"><i class="bi bi-plus-lg"></i> Nuevo ingreso</a>
+            <a asp-controller="Inventario" asp-action="Index" class="btn-volver"><i class="bi bi-arrow-left-circle"></i> Volver al inventario</a>
+        </div>
+    </div>
+
+    @if (TempData["Mensaje"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Mensaje"]</div>
+    }
+
+    <form id="formBusqueda" asp-action="Historial" method="get" class="mb-4">
+        <input type="hidden" name="ordenarPor" value="@ordenarPor" />
+        <input type="hidden" name="direccion" value="@direccion" />
+        <label class="form-label">Buscar compra</label>
+        <input id="busqueda" name="busqueda" value="@busqueda" class="form-control" placeholder="Buscar por proveedor, producto o usuario" />
+    </form>
+
+    <div class="mb-3"><strong>Total de registros:</strong> @totalRegistros</div>
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th><a asp-action="Historial" asp-route-busqueda="@busqueda" asp-route-ordenarPor="fecha_hora" asp-route-direccion="@SiguienteDireccion("fecha_hora")" class="encabezado-orden">Fecha y hora <i class="bi @IconoOrden("fecha_hora")"></i></a></th>
+                    <th><a asp-action="Historial" asp-route-busqueda="@busqueda" asp-route-ordenarPor="proveedor" asp-route-direccion="@SiguienteDireccion("proveedor")" class="encabezado-orden">Proveedor <i class="bi @IconoOrden("proveedor")"></i></a></th>
+                    <th><a asp-action="Historial" asp-route-busqueda="@busqueda" asp-route-ordenarPor="productos" asp-route-direccion="@SiguienteDireccion("productos")" class="encabezado-orden">Productos distintos <i class="bi @IconoOrden("productos")"></i></a></th>
+                    <th><a asp-action="Historial" asp-route-busqueda="@busqueda" asp-route-ordenarPor="unidades" asp-route-direccion="@SiguienteDireccion("unidades")" class="encabezado-orden">Unidades recibidas <i class="bi @IconoOrden("unidades")"></i></a></th>
+                    <th><a asp-action="Historial" asp-route-busqueda="@busqueda" asp-route-ordenarPor="usuario" asp-route-direccion="@SiguienteDireccion("usuario")" class="encabezado-orden">Registrado por <i class="bi @IconoOrden("usuario")"></i></a></th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Rows.Count == 0)
+                {
+                    <tr><td colspan="6" class="text-center">No se encontraron compras registradas.</td></tr>
+                }
+                else
+                {
+                    foreach (System.Data.DataRow fila in Model.Rows)
+                    {
+                        <tr>
+                            <td>@Convert.ToDateTime(fila["fecha_hora"]).ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>@fila["proveedor"]</td>
+                            <td>@fila["cantidad_productos"]</td>
+                            <td>@fila["total_unidades"]</td>
+                            <td>@fila["usuario"]</td>
+                            <td><a asp-action="Detalle" asp-route-id="@fila["id_movimiento"]" class="btn-detalle" title="Ver detalle"><i class="bi bi-eye-fill"></i></a></td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (totalPaginas > 1)
+    {
+        <div class="paginacion">
+            @for (int i = 1; i <= totalPaginas; i++)
+            {
+                <a asp-action="Historial" asp-route-busqueda="@busqueda" asp-route-ordenarPor="@ordenarPor" asp-route-direccion="@direccion" asp-route-pagina="@i" class="pagina-link @(i == paginaActual ? "activa" : "")">@i</a>
+            }
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        let temporizador;
+        document.getElementById("busqueda").addEventListener("input", function () {
+            clearTimeout(temporizador);
+            temporizador = setTimeout(() => document.getElementById("formBusqueda").submit(), 350);
+        });
+    </script>
+}

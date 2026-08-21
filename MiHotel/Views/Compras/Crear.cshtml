@@ -1,7 +1,26 @@
-﻿@{
-    ViewData["Title"] = "Compras";
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Cuentas por pagar";
     var proveedores = ViewBag.Proveedores as System.Data.DataTable;
     var productos = ViewBag.Productos as System.Data.DataTable;
+    bool hayProveedores = proveedores != null && proveedores.Rows.Count > 0;
+    bool hayProductos = productos != null && productos.Rows.Count > 0;
+    var listaProductos = new List<object>();
+
+    if (productos != null)
+    {
+        foreach (System.Data.DataRow fila in productos.Rows)
+        {
+            listaProductos.Add(new
+            {
+                id = Convert.ToInt32(fila["id_proser"]),
+                nombre = fila["nombre_proser"]?.ToString() ?? "",
+                stock = Convert.ToInt32(fila["stock"])
+            });
+        }
+    }
+
+    string productosJson = JsonSerializer.Serialize(listaProductos);
 }
 
 <style>
@@ -12,211 +31,274 @@
         box-shadow: 0 4px 10px rgba(0,0,0,0.10);
     }
 
-    .form-label-custom {
-        font-weight: 600;
-        color: #363636;
-        margin-bottom: 6px;
-    }
-
-    .form-control-custom {
-        background-color: #f8f9fa;
-        border: 1px solid #dee2e6;
-        border-radius: 8px;
-        padding: 10px 12px;
-        width: 100%;
-    }
-
-    .btn-principal {
-        background-color: #464482;
+    .btn-guardar,
+    .btn-agregar,
+    .btn-volver,
+    .btn-eliminar {
         color: white;
-        padding: 10px 16px;
-        border-radius: 8px;
         border: none;
+        border-radius: 8px;
         font-weight: 500;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
     }
 
-        .btn-principal:hover {
+    .btn-guardar {
+        background-color: #464482;
+        padding: 10px 16px;
+    }
+
+        .btn-guardar:hover {
             background-color: #36366b;
+            color: white;
+        }
+
+    .btn-volver {
+        background-color: #824B44;
+        padding: 10px 16px;
+    }
+
+        .btn-volver:hover {
+            background-color: #6e3f39;
+            color: white;
         }
 
     .btn-agregar {
-        background-color: #4a7c59;
-        color: white;
-        border: none;
-        padding: 8px 14px;
-        border-radius: 8px;
+        background-color: #198754;
+        padding: 10px 16px;
     }
+
+        .btn-agregar:hover {
+            background-color: #157347;
+            color: white;
+        }
+
+    .btn-historial {
+        background-color: #363636;
+        color: white;
+        padding: 10px 16px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+    }
+
+        .btn-historial:hover {
+            background-color: #222222;
+            color: white;
+        }
 
     .btn-eliminar {
-        background-color: #dc3545;
-        color: white;
-        border: none;
-        padding: 6px 10px;
-        border-radius: 6px;
+        background-color: #363636;
+        width: 40px;
+        height: 40px;
     }
 
-    table {
-        width: 100%;
-        margin-top: 15px;
+        .btn-eliminar:hover {
+            background-color: #222222;
+            color: white;
+        }
+
+    .tabla-productos {
+        min-width: 760px;
     }
 
-    th {
-        background-color: #212529;
-        color: white;
+        .tabla-productos th {
+            white-space: nowrap;
+        }
+
+    .acciones-formulario {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 20px;
     }
 
-    th, td {
-        padding: 10px;
-        text-align: center;
+    .nota {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+
+    .campo-solo-lectura {
+        background-color: #f8f9fa;
+    }
+
+    @@media (max-width: 768px) {
+        .tarjeta-contenido {
+            padding: 15px;
+        }
+
+        .btn-guardar,
+        .btn-volver {
+            width: 100%;
+        }
     }
 </style>
 
 <div class="tarjeta-contenido">
-
-    <!-- ENCABEZADO CONSISTENTE -->
-    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-        <h3 class="m-0">Registro de Compras</h3>
-    </div>
-
-    <!-- ALERTAS -->
-    @if (TempData["Exito"] != null)
-    {
-        <div class="alert alert-success">
-            @TempData["Exito"]
-        </div>
-    }
-
-    @if (TempData["Mensaje"] != null)
-    {
-        <div class="alert alert-danger">
-            @TempData["Mensaje"]
-        </div>
-    }
-
-    <form method="post">
-
-        <!-- PROVEEDOR -->
-        <div class="mb-4">
-            <div class="form-label-custom">Proveedor</div>
-            <select name="idProveedor" class="form-control-custom" required>
-                <option value="">Seleccione proveedor</option>
-                @foreach (System.Data.DataRow fila in proveedores.Rows)
-                {
-                    <option value="@fila["id_clipro"]">
-                        @fila["nombre"]
-                    </option>
-                }
-            </select>
+        <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+            <div>
+                <h3 class="m-0">Cuentas por Pagar</h3>
+                <p class="text-muted mb-0 mt-1">Registre productos recibidos para aumentar sus existencias en inventario.</p>
+            </div>
+            <a asp-action="Historial" class="btn-historial">
+                <i class="bi bi-clock-history"></i> Historial de compras
+            </a>
         </div>
 
-        <!-- TABLA -->
-        <div class="table-responsive">
-            <table class="table table-bordered table-striped" id="tablaProductos">
-                <thead>
-                    <tr>
-                        <th>Producto</th>
-                        <th>Stock actual</th>
-                        <th>Cantidad</th>
-                        <th>Precio</th>
-                        <th>Acción</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        </div>
+        <p class="nota mb-4">Nota: este apartado únicamente registra ingresos de productos. No administra deudas, vencimientos ni pagos pendientes a proveedores.</p>
 
-        <button type="button" class="btn-agregar" onclick="agregarFila()">
-            + Agregar producto
-        </button>
+        @if (TempData["Exito"] != null)
+        {
+            <div class="alert alert-success">@TempData["Exito"]</div>
+        }
+        @if (TempData["Mensaje"] != null)
+        {
+            <div class="alert alert-danger">@TempData["Mensaje"]</div>
+        }
+        @if (!hayProveedores)
+        {
+            <div class="alert alert-warning">Debe registrar al menos un proveedor activo antes de ingresar existencias.</div>
+        }
+        @if (!hayProductos)
+        {
+            <div class="alert alert-warning">No existen productos activos disponibles para actualizar.</div>
+        }
 
-        <div class="mt-4 d-flex gap-2 flex-wrap">
-            <button type="submit" class="btn-principal">
-                Guardar Compra
+        <form asp-action="Crear" method="post" id="formIngresoStock" onsubmit="return confirmarIngreso();">
+            @Html.AntiForgeryToken()
+
+            <div class="row">
+                <div class="col-md-6 mb-4">
+                    <label for="idProveedor" class="form-label">Proveedor</label>
+                    <select id="idProveedor" name="idProveedor" class="form-select" required>
+                        <option value="">Seleccione un proveedor</option>
+                        @if (proveedores != null)
+                        {
+                            foreach (System.Data.DataRow fila in proveedores.Rows)
+                            {
+                                <option value="@fila["id_clipro"]">@fila["nombre"]</option>
+                            }
+                        }
+                    </select>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped align-middle tabla-productos" id="tablaProductos">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Producto</th>
+                            <th>Stock actual</th>
+                            <th>Cantidad recibida</th>
+                            <th>Nuevo stock</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <button type="button" class="btn-agregar" onclick="agregarFila()" @(!hayProductos ? "disabled" : null)>
+                <i class="bi bi-plus-lg"></i> Agregar producto
             </button>
-        </div>
 
-    </form>
-
+            <div class="acciones-formulario">
+                <button type="submit" class="btn-guardar" @(!hayProveedores || !hayProductos ? "disabled" : null)>
+                    <i class="bi bi-box-arrow-in-down"></i> Registrar ingreso
+                </button>
+                <a asp-controller="Inventario" asp-action="Index" class="btn-volver">
+                    <i class="bi bi-arrow-left-circle"></i> Volver al inventario
+                </a>
+            </div>
+        </form>
 </div>
 
 <script>
-    const productos = [
-        @foreach (System.Data.DataRow fila in productos.Rows)
-        {
-                <text>
-                {
-                    id: @fila["id_proser"],
-                    nombre: "@fila["nombre_proser"]",
-                    stock: @fila["stock"],
-                    precio: @fila["precio"]
-                },
-                </text>
-        }
-    ];
+    const productos = @Html.Raw(productosJson);
 
-    function productoYaExiste(id, filaActual) {
-        let existe = false;
+    function opcionesProductos() {
+        return productos.map(producto =>
+            `<option value="${producto.id}" data-stock="${producto.stock}">${escaparHtml(producto.nombre)}</option>`
+        ).join("");
+    }
 
-        document.querySelectorAll("select[name='idProducto']").forEach(sel => {
-            if (sel !== filaActual && sel.value == id) {
-                existe = true;
-            }
-        });
+    function escaparHtml(texto) {
+        const elemento = document.createElement("div");
+        elemento.textContent = texto;
+        return elemento.innerHTML;
+    }
 
-        return existe;
+    function productoYaSeleccionado(id, selectorActual) {
+        return Array.from(document.querySelectorAll("select[name='idProducto']"))
+            .some(selector => selector !== selectorActual && selector.value === id);
     }
 
     function agregarFila() {
+        if (productos.length === 0) return;
 
-        let fila = `
-        <tr>
+        const fila = document.createElement("tr");
+        fila.innerHTML = `
             <td>
-                <select name="idProducto" class="form-control-custom" required onchange="actualizarFila(this)">
-                    <option value="">Seleccione</option>
-                    ${productos.map(p => `<option value="${p.id}" data-stock="${p.stock}" data-precio="${p.precio}">${p.nombre}</option>`).join('')}
+                <select name="idProducto" class="form-select producto" required>
+                    <option value="">Seleccione un producto</option>
+                    ${opcionesProductos()}
                 </select>
             </td>
+            <td><input type="text" class="form-control campo-solo-lectura stock-actual" value="-" readonly></td>
+            <td><input type="number" name="cantidad" class="form-control cantidad" min="1" max="999999" required></td>
+            <td><input type="text" class="form-control campo-solo-lectura stock-nuevo" value="-" readonly></td>
+            <td><button type="button" class="btn-eliminar" title="Quitar producto"><i class="bi bi-trash-fill"></i></button></td>`;
 
-            <td>
-                <input type="text" class="form-control-custom stock" readonly>
-            </td>
-
-            <td>
-                <input type="number" name="cantidad" class="form-control-custom" min="1" required>
-            </td>
-
-            <td>
-                <input type="number" name="precio" class="form-control-custom precio" readonly>
-            </td>
-
-            <td>
-                <button type="button" class="btn-eliminar" onclick="eliminarFila(this)">X</button>
-            </td>
-        </tr>
-        `;
-
-        document.querySelector("#tablaProductos tbody").insertAdjacentHTML("beforeend", fila);
+        fila.querySelector(".producto").addEventListener("change", actualizarFila);
+        fila.querySelector(".cantidad").addEventListener("input", actualizarNuevoStock);
+        fila.querySelector(".btn-eliminar").addEventListener("click", () => fila.remove());
+        document.querySelector("#tablaProductos tbody").appendChild(fila);
     }
 
-    function eliminarFila(btn) {
-        btn.closest("tr").remove();
-    }
-
-    function actualizarFila(select) {
-
-        if (productoYaExiste(select.value, select)) {
+    function actualizarFila(evento) {
+        const selector = evento.target;
+        if (selector.value && productoYaSeleccionado(selector.value, selector)) {
             alert("Este producto ya fue agregado.");
-            select.value = "";
+            selector.value = "";
+        }
+
+        const fila = selector.closest("tr");
+        const opcion = selector.options[selector.selectedIndex];
+        const stock = selector.value ? Number(opcion.dataset.stock || 0) : null;
+        fila.querySelector(".stock-actual").value = stock === null ? "-" : stock;
+        actualizarNuevoStock({ target: fila.querySelector(".cantidad") });
+    }
+
+    function actualizarNuevoStock(evento) {
+        const fila = evento.target.closest("tr");
+        const selector = fila.querySelector(".producto");
+        const opcion = selector.options[selector.selectedIndex];
+        if (!selector.value) {
+            fila.querySelector(".stock-nuevo").value = "-";
             return;
         }
 
-        let option = select.options[select.selectedIndex];
-        let fila = select.closest("tr");
-
-        let stock = parseInt(option.getAttribute("data-stock")) || 0;
-        let precio = parseFloat(option.getAttribute("data-precio")) || 0;
-
-        fila.querySelector(".stock").value = stock;
-        fila.querySelector(".precio").value = precio;
+        const stock = Number(opcion.dataset.stock || 0);
+        const cantidad = Number(fila.querySelector(".cantidad").value || 0);
+        fila.querySelector(".stock-nuevo").value = stock + cantidad;
     }
+
+    function confirmarIngreso() {
+        const filas = document.querySelectorAll("#tablaProductos tbody tr");
+        if (filas.length === 0) {
+            alert("Agregue al menos un producto.");
+            return false;
+        }
+        return confirm("¿Confirma que desea aumentar las existencias de los productos seleccionados?");
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        if (productos.length > 0) agregarFila();
+    });
 </script>

@@ -1,0 +1,58 @@
+@model System.Data.DataRow
+@{
+    ViewData["Title"] = "Detalle de compra";
+    var productosCompra = ViewBag.ProductosCompra as System.Data.DataTable;
+    int totalUnidades = 0;
+    if (productosCompra != null)
+    {
+        foreach (System.Data.DataRow fila in productosCompra.Rows)
+        {
+            totalUnidades += Convert.ToInt32(fila["cantidad"]);
+        }
+    }
+}
+
+<style>
+    .tarjeta-contenido { background-color:white;border-radius:15px;padding:25px;box-shadow:0 4px 10px rgba(0,0,0,.10); }
+    .resumen { display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:15px;margin:20px 0 25px; }
+    .resumen-item { background-color:#f7f1f0;border:1px solid #E6D3D0;border-radius:10px;padding:16px; }
+    .resumen-label { color:#6c757d;font-size:.9rem;margin-bottom:5px; }
+    .resumen-valor { color:#212529;font-weight:600;font-size:1.05rem; }
+    .btn-volver { background-color:#824B44;color:white;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:500;display:inline-flex;align-items:center;gap:7px; }
+    .btn-volver:hover { background-color:#6e3f39;color:white; }
+</style>
+
+<div class="tarjeta-contenido">
+    <div>
+        <h3 class="m-0">Detalle de la Compra #@Model["id_movimiento"]</h3>
+        <p class="text-muted mb-0 mt-1">Productos y cantidades que se agregaron al inventario.</p>
+    </div>
+
+    <div class="resumen">
+        <div class="resumen-item"><div class="resumen-label">Proveedor</div><div class="resumen-valor">@Model["proveedor"]</div></div>
+        <div class="resumen-item"><div class="resumen-label">Fecha y hora</div><div class="resumen-valor">@Convert.ToDateTime(Model["fecha_hora"]).ToString("dd/MM/yyyy HH:mm")</div></div>
+        <div class="resumen-item"><div class="resumen-label">Registrado por</div><div class="resumen-valor">@Model["usuario"]</div></div>
+        <div class="resumen-item"><div class="resumen-label">Total de unidades</div><div class="resumen-valor">@totalUnidades</div></div>
+    </div>
+
+    <div class="table-responsive mb-4">
+        <table class="table table-bordered table-striped align-middle">
+            <thead class="table-dark"><tr><th>Producto</th><th>Cantidad recibida</th></tr></thead>
+            <tbody>
+                @if (productosCompra == null || productosCompra.Rows.Count == 0)
+                {
+                    <tr><td colspan="2" class="text-center">No hay productos registrados.</td></tr>
+                }
+                else
+                {
+                    foreach (System.Data.DataRow fila in productosCompra.Rows)
+                    {
+                        <tr><td>@fila["producto"]</td><td>@fila["cantidad"]</td></tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <a asp-action="Historial" class="btn-volver"><i class="bi bi-arrow-left-circle"></i> Volver al historial</a>
+</div>
