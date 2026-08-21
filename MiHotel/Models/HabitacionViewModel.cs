@@ -13,5 +13,6 @@ namespace MiHotel.Models
         public string Estado { get; set; } = string.Empty;
         public string? Piso { get; set; }
         public string? Descripcion { get; set; }
+        public List<HabitacionFotografiaViewModel> Fotografias { get; set; } = new();
     }
 }

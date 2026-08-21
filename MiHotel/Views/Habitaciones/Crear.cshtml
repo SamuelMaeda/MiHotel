@@ -11,6 +11,7 @@
         padding: 25px;
         box-shadow: 0 4px 10px rgba(0,0,0,0.10);
         max-width: 700px;
+        margin: 0 auto;
     }
 
     .btn-guardar {
@@ -38,7 +39,7 @@
         </div>
     }
 
-    <form asp-action="Crear" method="post">
+    <form asp-action="Crear" method="post" enctype="multipart/form-data">
         @Html.AntiForgeryToken()
 
         <div class="mb-3">
@@ -83,6 +84,19 @@
             <label class="form-label">Descripción</label>
             <textarea asp-for="Descripcion" class="form-control" rows="4"></textarea>
             <span asp-validation-for="Descripcion" class="text-danger"></span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Fotografias" class="form-label">Fotografías de la habitación (Opcional)</label>
+            <input asp-for="Fotografias"
+                   class="form-control"
+                   type="file"
+                   accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                   multiple />
+            <span asp-validation-for="Fotografias" class="text-danger d-block"></span>
+            <div class="form-text">
+                Nota: puede seleccionar hasta 6 fotografías en formato JPG, PNG o WEBP. El tamaño máximo es de 10 MB por fotografía.
+            </div>
         </div>
 
         <div class="mt-4">

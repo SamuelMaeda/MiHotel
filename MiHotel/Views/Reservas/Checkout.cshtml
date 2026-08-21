@@ -93,8 +93,10 @@
 
     <div class="resumen-checkout">
         <div class="dato-resumen"><span>Cliente</span><strong>@Model.Cliente</strong></div>
+        <div class="dato-resumen"><span>Empresa de procedencia</span><strong>@(string.IsNullOrWhiteSpace(Model.EmpresaProcedencia) ? "-" : Model.EmpresaProcedencia)</strong></div>
         <div class="dato-resumen"><span>Habitación</span><strong>@Model.Habitacion</strong></div>
         <div class="dato-resumen"><span>Entrada</span><strong>@Model.FechaEntrada.ToString("dd/MM/yyyy")</strong></div>
+        <div class="dato-resumen"><span>Check-in realizado</span><strong>@(Model.FechaHoraCheckIn?.ToString("dd/MM/yyyy HH:mm") ?? "-")</strong></div>
         <div class="dato-resumen"><span>Salida</span><strong>@Model.FechaSalida.ToString("dd/MM/yyyy")</strong></div>
         <div class="dato-resumen"><span>Total de hospedaje</span><strong>Q @Model.TotalReserva.ToString("N2")</strong></div>
         <div class="dato-resumen">

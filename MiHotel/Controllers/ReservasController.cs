@@ -227,7 +227,10 @@ namespace MiHotel.Controllers
             return columna.Trim().ToLower() switch
             {
                 "cliente" => "c.nombre",
+                "empresa" => "ec.nombre",
                 "fecha_entrada" => "r.fecha_entrada",
+                "hora_checkin" => "r.fecha_hora_checkin",
+                "hora_checkout" => "r.fecha_hora_checkout",
                 _ => "r.fecha_entrada"
             };
         }
@@ -339,9 +342,12 @@ namespace MiHotel.Controllers
                     r.id_reserva,
                     r.id_clipro,
                     c.nombre AS cliente,
+                    ec.nombre AS empresa_procedencia,
                     p.codigo AS habitacion,
                     r.fecha_entrada,
                     r.fecha_salida,
+                    r.fecha_hora_checkin,
+                    r.fecha_hora_checkout,
                     r.codigo_seguridad,
                     r.cantidad_personas,
                     r.total_reserva,
@@ -350,6 +356,8 @@ namespace MiHotel.Controllers
                     r.observaciones
                 FROM reserva r
                 INNER JOIN clipro c ON r.id_clipro = c.id_clipro
+                LEFT JOIN cliente_detalle cd ON c.id_clipro = cd.id_clipro
+                LEFT JOIN empresa_cliente ec ON cd.id_empresa_cliente = ec.id_empresa_cliente
                 INNER JOIN proser p ON r.id_habitacion = p.id_proser
                 WHERE r.id_reserva = @id
                 {filtroCliente}
@@ -374,9 +382,18 @@ namespace MiHotel.Controllers
             {
                 IdReserva = Convert.ToInt32(lector["id_reserva"]),
                 Cliente = lector["cliente"]?.ToString() ?? "",
+                EmpresaProcedencia = lector["empresa_procedencia"] == DBNull.Value
+                    ? null
+                    : lector["empresa_procedencia"]?.ToString(),
                 Habitacion = lector["habitacion"]?.ToString() ?? "",
                 FechaEntrada = Convert.ToDateTime(lector["fecha_entrada"]),
                 FechaSalida = Convert.ToDateTime(lector["fecha_salida"]),
+                FechaHoraCheckIn = lector["fecha_hora_checkin"] == DBNull.Value
+                    ? null
+                    : Convert.ToDateTime(lector["fecha_hora_checkin"]),
+                FechaHoraCheckOut = lector["fecha_hora_checkout"] == DBNull.Value
+                    ? null
+                    : Convert.ToDateTime(lector["fecha_hora_checkout"]),
                 CantidadPersonas = Convert.ToInt32(lector["cantidad_personas"]),
                 TotalReserva = Convert.ToDecimal(lector["total_reserva"]),
                 SaldoPendiente = Convert.ToDecimal(lector["saldo_pendiente"]),
@@ -746,7 +763,7 @@ namespace MiHotel.Controllers
         public IActionResult Index(
             string busqueda = "",
             string ordenarPor = "fecha_entrada",
-            string direccion = "asc",
+            string direccion = "desc",
             string vista = "pendiente",
             int pagina = 1)
         {
@@ -796,6 +813,7 @@ namespace MiHotel.Controllers
                     condicionBusqueda = @"
                         AND (
                             c.nombre LIKE @busqueda
+                            OR ec.nombre LIKE @busqueda
                             OR p.codigo LIKE @busqueda
                             OR r.observaciones LIKE @busqueda
                         ) ";
@@ -805,6 +823,8 @@ namespace MiHotel.Controllers
                     SELECT COUNT(*)
                     FROM reserva r
                     INNER JOIN clipro c ON r.id_clipro = c.id_clipro
+                    LEFT JOIN cliente_detalle cd ON c.id_clipro = cd.id_clipro
+                    LEFT JOIN empresa_cliente ec ON cd.id_empresa_cliente = ec.id_empresa_cliente
                     INNER JOIN proser p ON r.id_habitacion = p.id_proser
                     WHERE 1 = 1
                     {condicionEstado}
@@ -841,15 +861,20 @@ namespace MiHotel.Controllers
                     SELECT
                         r.id_reserva,
                         c.nombre,
+                        ec.nombre AS empresa_procedencia,
                         p.codigo AS habitacion,
                         r.fecha_entrada,
                         r.fecha_salida,
+                        r.fecha_hora_checkin,
+                        r.fecha_hora_checkout,
                         r.total_reserva,
                         r.saldo_pendiente,
                         r.estado,
                         r.observaciones
                     FROM reserva r
                     INNER JOIN clipro c ON r.id_clipro = c.id_clipro
+                    LEFT JOIN cliente_detalle cd ON c.id_clipro = cd.id_clipro
+                    LEFT JOIN empresa_cliente ec ON cd.id_empresa_cliente = ec.id_empresa_cliente
                     INNER JOIN proser p ON r.id_habitacion = p.id_proser
                     WHERE 1 = 1
                     {condicionEstado}
@@ -948,6 +973,8 @@ namespace MiHotel.Controllers
                         p.codigo AS habitacion,
                         r.fecha_entrada,
                         r.fecha_salida,
+                        r.fecha_hora_checkin,
+                        r.fecha_hora_checkout,
                         r.cantidad_personas,
                         r.total_reserva,
                         r.saldo_pendiente,
@@ -1807,15 +1834,19 @@ namespace MiHotel.Controllers
                 SELECT
                     r.id_reserva,
                     c.nombre AS cliente,
+                    ec.nombre AS empresa_procedencia,
                     h.nombre_proser AS habitacion,
                     r.fecha_entrada,
                     r.fecha_salida,
+                    r.fecha_hora_checkin,
                     r.total_reserva,
                     r.saldo_pendiente,
                     r.estado,
                     r.observaciones
                 FROM reserva r
                 INNER JOIN clipro c ON r.id_clipro = c.id_clipro
+                LEFT JOIN cliente_detalle cd ON c.id_clipro = cd.id_clipro
+                LEFT JOIN empresa_cliente ec ON cd.id_empresa_cliente = ec.id_empresa_cliente
                 INNER JOIN proser h ON r.id_habitacion = h.id_proser
                 WHERE r.id_reserva = @id_reserva
                 LIMIT 1;";
@@ -1837,9 +1868,15 @@ namespace MiHotel.Controllers
                 {
                     IdReserva = Convert.ToInt32(lector["id_reserva"]),
                     Cliente = lector["cliente"]?.ToString() ?? "",
+                    EmpresaProcedencia = lector["empresa_procedencia"] == DBNull.Value
+                        ? null
+                        : lector["empresa_procedencia"]?.ToString(),
                     Habitacion = lector["habitacion"]?.ToString() ?? "",
                     FechaEntrada = Convert.ToDateTime(lector["fecha_entrada"]),
                     FechaSalida = Convert.ToDateTime(lector["fecha_salida"]),
+                    FechaHoraCheckIn = lector["fecha_hora_checkin"] == DBNull.Value
+                        ? null
+                        : Convert.ToDateTime(lector["fecha_hora_checkin"]),
                     TotalReserva = Convert.ToDecimal(lector["total_reserva"]),
                     SaldoPendiente = Convert.ToDecimal(lector["saldo_pendiente"]),
                     Estado = lector["estado"]?.ToString()?.Trim().ToLower() ?? "",
@@ -2056,7 +2093,8 @@ namespace MiHotel.Controllers
 
                 string updateReserva = @"
                     UPDATE reserva
-                    SET estado = 'en_curso'
+                    SET estado = 'en_curso',
+                        fecha_hora_checkin = CURRENT_TIMESTAMP
                     WHERE id_reserva = @id;";
 
                 using (var cmd = new MySqlCommand(updateReserva, conexion, transaccion))
@@ -2213,6 +2251,7 @@ namespace MiHotel.Controllers
                 string actualizarReserva = @"
                     UPDATE reserva
                     SET estado = 'finalizada',
+                        fecha_hora_checkout = CURRENT_TIMESTAMP,
                         observaciones = CASE
                             WHEN @observacion IS NULL THEN observaciones
                             WHEN observaciones IS NULL OR TRIM(observaciones) = '' THEN @observacion

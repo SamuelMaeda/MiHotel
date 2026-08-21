@@ -1,7 +1,7 @@
 ﻿@model MiHotel.Models.HabitacionFormViewModel
 
 @{
-    ViewData["Title"] = "Crear Habitación";
+    ViewData["Title"] = "Editar Habitación";
 }
 
 <style>
@@ -11,6 +11,7 @@
         padding: 25px;
         box-shadow: 0 4px 10px rgba(0,0,0,0.10);
         max-width: 700px;
+        margin: 0 auto;
     }
 
     .btn-guardar {
@@ -25,11 +26,48 @@
         .btn-guardar:hover {
             background-color: #36366b;
         }
+
+    .galeria-fotografias {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 15px;
+        margin-top: 12px;
+    }
+
+    .fotografia-item {
+        border: 1px solid #dedede;
+        border-radius: 10px;
+        padding: 10px;
+        background-color: #f8f8f8;
+    }
+
+    .fotografia-item img {
+        width: 100%;
+        height: 140px;
+        object-fit: cover;
+        border-radius: 8px;
+        display: block;
+    }
+
+    .btn-eliminar-foto {
+        width: 100%;
+        margin-top: 9px;
+        border: none;
+        border-radius: 7px;
+        padding: 8px 10px;
+        color: white;
+        background-color: #824B44;
+    }
 </style>
 
 <div class="tarjeta-contenido">
 
-    <h3 class="mb-4">Crear nueva habitación</h3>
+    <h3 class="mb-4">Editar habitación</h3>
+
+    @if (TempData["Exito"] != null)
+    {
+        <div class="alert alert-success">@TempData["Exito"]</div>
+    }
 
     @if (ViewBag.Mensaje != null)
     {
@@ -38,8 +76,9 @@
         </div>
     }
 
-    <form asp-action="Crear" method="post">
+    <form asp-action="Editar" method="post" enctype="multipart/form-data">
         @Html.AntiForgeryToken()
+        <input asp-for="IdProser" type="hidden" />
 
         <div class="mb-3">
             <label class="form-label">Número de habitación</label>
@@ -85,9 +124,22 @@
             <span asp-validation-for="Descripcion" class="text-danger"></span>
         </div>
 
+        <div class="mb-3">
+            <label asp-for="Fotografias" class="form-label">Agregar fotografías (Opcional)</label>
+            <input asp-for="Fotografias"
+                   class="form-control"
+                   type="file"
+                   accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                   multiple />
+            <span asp-validation-for="Fotografias" class="text-danger d-block"></span>
+            <div class="form-text">
+                Nota: la habitación puede conservar hasta 6 fotografías en formato JPG, PNG o WEBP. El tamaño máximo es de 10 MB por fotografía.
+            </div>
+        </div>
+
         <div class="mt-4">
             <button type="submit" class="btn-guardar">
-                Guardar habitación
+                Guardar cambios
             </button>
 
             <a asp-controller="Habitaciones" asp-action="Index" class="btn btn-secondary ms-2">
@@ -95,6 +147,39 @@
             </a>
         </div>
     </form>
+
+    <hr class="my-4" />
+    <h5 class="mb-1">Fotografías guardadas</h5>
+    <p class="text-muted mb-2">Puede consultar o eliminar las fotografías actuales de la habitación.</p>
+
+    @if (Model.FotografiasExistentes.Count == 0)
+    {
+        <p class="text-muted mb-0">Esta habitación todavía no tiene fotografías.</p>
+    }
+    else
+    {
+        <div class="galeria-fotografias">
+            @foreach (var fotografia in Model.FotografiasExistentes)
+            {
+                <div class="fotografia-item">
+                    <a asp-action="Fotografia" asp-route-id="@fotografia.IdFotografia" target="_blank" title="Ver fotografía completa">
+                        <img src="@Url.Action("Fotografia", "Habitaciones", new { id = fotografia.IdFotografia })"
+                             alt="Fotografía de la habitación" />
+                    </a>
+                    <form asp-action="EliminarFotografia"
+                          method="post"
+                          onsubmit="return confirm('¿Desea eliminar esta fotografía?');">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@fotografia.IdFotografia" />
+                        <input type="hidden" name="idHabitacion" value="@Model.IdProser" />
+                        <button type="submit" class="btn-eliminar-foto">
+                            <i class="bi bi-trash-fill"></i> Eliminar
+                        </button>
+                    </form>
+                </div>
+            }
+        </div>
+    }
 
 </div>
 

@@ -120,6 +120,10 @@
                     <td>@Model.Cliente</td>
                 </tr>
                 <tr>
+                    <th>Empresa de procedencia</th>
+                    <td>@(string.IsNullOrWhiteSpace(Model.EmpresaProcedencia) ? "-" : Model.EmpresaProcedencia)</td>
+                </tr>
+                <tr>
                     <th>Habitación</th>
                     <td>@Model.Habitacion</td>
                 </tr>
@@ -130,6 +134,14 @@
                 <tr>
                     <th>Fecha de salida</th>
                     <td>@Model.FechaSalida.ToString("dd/MM/yyyy")</td>
+                </tr>
+                <tr>
+                    <th>Check-in realizado</th>
+                    <td>@(Model.FechaHoraCheckIn?.ToString("dd/MM/yyyy HH:mm") ?? "-")</td>
+                </tr>
+                <tr>
+                    <th>Check-out realizado</th>
+                    <td>@(Model.FechaHoraCheckOut?.ToString("dd/MM/yyyy HH:mm") ?? "-")</td>
                 </tr>
                 <tr>
                     <th>Cantidad de personas</th>

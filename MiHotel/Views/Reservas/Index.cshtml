@@ -5,7 +5,7 @@
 
     string busqueda = ViewBag.Busqueda ?? "";
     string ordenarPor = ViewBag.OrdenarPor ?? "fecha_entrada";
-    string direccion = ViewBag.Direccion ?? "asc";
+    string direccion = ViewBag.Direccion ?? "desc";
     string vista = ViewBag.Vista ?? "pendiente";
     int paginaActual = ViewBag.PaginaActual ?? 1;
     int totalPaginas = ViewBag.TotalPaginas ?? 1;
@@ -210,7 +210,7 @@
         <input type="hidden" name="direccion" value="@direccion" />
 
         <label class="form-label">Buscar reserva</label>
-        <input type="text" id="busqueda" name="busqueda" value="@busqueda" class="form-control" placeholder="Buscar por cliente, habitación u observaciones" />
+        <input type="text" id="busqueda" name="busqueda" value="@busqueda" class="form-control" placeholder="Buscar por cliente, empresa, habitación u observaciones" />
     </form>
 
     <div class="mb-3">
@@ -226,6 +226,11 @@
                             Cliente <i class="bi @IconoOrden("cliente")"></i>
                         </a>
                     </th>
+                    <th>
+                        <a asp-controller="Reservas" asp-action="Index" asp-route-busqueda="@busqueda" asp-route-ordenarPor="empresa" asp-route-direccion="@SiguienteDireccion("empresa")" asp-route-vista="@vista" class="encabezado-orden">
+                            Empresa <i class="bi @IconoOrden("empresa")"></i>
+                        </a>
+                    </th>
                     <th>Habitación</th>
                     <th>
                         <a asp-controller="Reservas" asp-action="Index" asp-route-busqueda="@busqueda" asp-route-ordenarPor="fecha_entrada" asp-route-direccion="@SiguienteDireccion("fecha_entrada")" asp-route-vista="@vista" class="encabezado-orden">
@@ -233,6 +238,19 @@
                         </a>
                     </th>
                     <th>Salida</th>
+                    @if (vista == "finalizada")
+                    {
+                        <th>
+                            <a asp-controller="Reservas" asp-action="Index" asp-route-busqueda="@busqueda" asp-route-ordenarPor="hora_checkin" asp-route-direccion="@SiguienteDireccion("hora_checkin")" asp-route-vista="@vista" class="encabezado-orden">
+                                Hora de check-in <i class="bi @IconoOrden("hora_checkin")"></i>
+                            </a>
+                        </th>
+                        <th>
+                            <a asp-controller="Reservas" asp-action="Index" asp-route-busqueda="@busqueda" asp-route-ordenarPor="hora_checkout" asp-route-direccion="@SiguienteDireccion("hora_checkout")" asp-route-vista="@vista" class="encabezado-orden">
+                                Hora de check-out <i class="bi @IconoOrden("hora_checkout")"></i>
+                            </a>
+                        </th>
+                    }
                     <th>Total</th>
                     <th>Pago Pendiente</th>
                     <th>Estado</th>
@@ -244,7 +262,7 @@
                 @if (Model.Rows.Count == 0)
                 {
                     <tr>
-                        <td colspan="8" class="text-center">No se encontraron reservas.</td>
+                        <td colspan="@(vista == "finalizada" ? 11 : 9)" class="text-center">No se encontraron reservas.</td>
                     </tr>
                 }
                 else
@@ -259,9 +277,15 @@
 
                         <tr>
                             <td>@fila["nombre"]</td>
+                            <td>@(fila["empresa_procedencia"] == DBNull.Value ? "-" : fila["empresa_procedencia"])</td>
                             <td>@fila["habitacion"]</td>
                             <td>@Convert.ToDateTime(fila["fecha_entrada"]).ToString("dd/MM/yyyy")</td>
                             <td>@Convert.ToDateTime(fila["fecha_salida"]).ToString("dd/MM/yyyy")</td>
+                            @if (vista == "finalizada")
+                            {
+                                <td>@(fila["fecha_hora_checkin"] == DBNull.Value ? "-" : Convert.ToDateTime(fila["fecha_hora_checkin"]).ToString("HH:mm"))</td>
+                                <td>@(fila["fecha_hora_checkout"] == DBNull.Value ? "-" : Convert.ToDateTime(fila["fecha_hora_checkout"]).ToString("HH:mm"))</td>
+                            }
                             <td>Q @Convert.ToDecimal(fila["total_reserva"]).ToString("N2")</td>
                             <td>Q @Convert.ToDecimal(fila["saldo_pendiente"]).ToString("N2")</td>
 

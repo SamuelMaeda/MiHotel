@@ -39,6 +39,7 @@
         padding: 25px;
         box-shadow: 0 4px 10px rgba(0,0,0,0.10);
         overflow: hidden;
+        margin: 0 auto;
     }
 
     .tabla-habitaciones-wrapper {
@@ -118,6 +119,10 @@
 
     .btn-editar {
         background-color: #824B44;
+    }
+
+    .btn-detalle {
+        background-color: #464482;
     }
 
     .btn-estado {
@@ -463,6 +468,14 @@
                         </td>
                         <td>
                             <div class="acciones-contenedor">
+                                <a asp-controller="Habitaciones"
+                                   asp-action="Detalle"
+                                   asp-route-id="@fila["id_proser"]"
+                                   class="btn-icono btn-detalle"
+                                   title="Ver detalle">
+                                    <i class="bi bi-eye-fill"></i>
+                                </a>
+
                                 <a asp-controller="Habitaciones"
                                    asp-action="Editar"
                                    asp-route-id="@fila["id_proser"]"

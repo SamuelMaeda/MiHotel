@@ -123,6 +123,10 @@
             </div>
         </div>
         <div class="col-md-6 mb-3">
+            <div class="detalle-label">Empresa de procedencia</div>
+            <div class="detalle-valor">@MostrarTexto(Model.EmpresaProcedencia)</div>
+        </div>
+        <div class="col-md-6 mb-3">
             <div class="detalle-label">Habitación</div>
             <div class="detalle-valor">Habitación @MostrarTexto(Model.Habitacion)</div>
         </div>
@@ -135,6 +139,16 @@
         <div class="col-md-6 mb-3">
             <div class="detalle-label">Fecha de salida</div>
             <div class="detalle-valor">@Model.FechaSalida.ToString("dd/MM/yyyy")</div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <div class="detalle-label">Check-in realizado</div>
+            <div class="detalle-valor">@(Model.FechaHoraCheckIn?.ToString("dd/MM/yyyy HH:mm") ?? "-")</div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <div class="detalle-label">Check-out realizado</div>
+            <div class="detalle-valor">@(Model.FechaHoraCheckOut?.ToString("dd/MM/yyyy HH:mm") ?? "-")</div>
         </div>
 
         <div class="col-md-6 mb-3">

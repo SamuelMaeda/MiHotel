@@ -21,5 +21,10 @@ namespace MiHotel.Models
 
         [StringLength(255, ErrorMessage = "La descripción no puede exceder 255 caracteres.")]
         public string? Descripcion { get; set; }
+
+        [Display(Name = "Fotografías de la habitación")]
+        public List<IFormFile> Fotografias { get; set; } = new();
+
+        public List<HabitacionFotografiaViewModel> FotografiasExistentes { get; set; } = new();
     }
 }

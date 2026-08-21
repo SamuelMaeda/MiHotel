@@ -109,6 +109,10 @@
                         <td>@Model.Cliente</td>
                     </tr>
                     <tr>
+                        <th>Empresa de procedencia</th>
+                        <td>@(string.IsNullOrWhiteSpace(Model.EmpresaProcedencia) ? "-" : Model.EmpresaProcedencia)</td>
+                    </tr>
+                    <tr>
                         <th>Habitación</th>
                         <td>@Model.Habitacion</td>
                     </tr>

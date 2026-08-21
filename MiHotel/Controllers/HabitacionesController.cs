@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using MiHotel.Data;
 using MiHotel.Models;
 using MySql.Data.MySqlClient;
+using SkiaSharp;
 using System.Data;
 
 namespace MiHotel.Controllers
@@ -14,6 +15,9 @@ namespace MiHotel.Controllers
     {
         private readonly ConexionBD _conexionBD;
         private const int RegistrosPorPagina = 20;
+        private const int MaximoFotografiasPorHabitacion = 6;
+        private const long TamanoMaximoFotografia = 10 * 1024 * 1024;
+        private const int DimensionMaximaFotografia = 1800;
 
         public HabitacionesController(ConexionBD conexionBD)
         {
@@ -34,6 +38,134 @@ namespace MiHotel.Controllers
             }
 
             return null;
+        }
+
+        private bool ValidarFotografias(IEnumerable<IFormFile>? archivos)
+        {
+            if (archivos == null) return true;
+
+            bool validas = true;
+            foreach (IFormFile archivo in archivos.Where(a => a.Length > 0))
+            {
+                if (archivo.Length > TamanoMaximoFotografia)
+                {
+                    ModelState.AddModelError(nameof(HabitacionFormViewModel.Fotografias),
+                        $"La fotografía {archivo.FileName} supera el máximo de 10 MB.");
+                    validas = false;
+                }
+
+                string extension = Path.GetExtension(archivo.FileName).ToLowerInvariant();
+                if (extension is not ".jpg" and not ".jpeg" and not ".png" and not ".webp")
+                {
+                    ModelState.AddModelError(nameof(HabitacionFormViewModel.Fotografias),
+                        $"La fotografía {archivo.FileName} debe tener formato JPG, PNG o WEBP.");
+                    validas = false;
+                }
+            }
+
+            return validas;
+        }
+
+        private static byte[] ComprimirFotografia(IFormFile archivo)
+        {
+            using Stream entrada = archivo.OpenReadStream();
+            using SKBitmap original = SKBitmap.Decode(entrada)
+                ?? throw new InvalidOperationException("Uno de los archivos seleccionados no es una imagen válida.");
+
+            double escala = Math.Min(1d,
+                DimensionMaximaFotografia / (double)Math.Max(original.Width, original.Height));
+            int ancho = Math.Max(1, (int)Math.Round(original.Width * escala));
+            int alto = Math.Max(1, (int)Math.Round(original.Height * escala));
+
+            using var redimensionada = new SKBitmap(
+                new SKImageInfo(ancho, alto, SKColorType.Rgba8888, SKAlphaType.Opaque));
+            using (var lienzo = new SKCanvas(redimensionada))
+            using (var pintura = new SKPaint { IsAntialias = true })
+            {
+                lienzo.Clear(SKColors.White);
+                lienzo.DrawBitmap(
+                    original,
+                    new SKRect(0, 0, ancho, alto),
+                    new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear),
+                    pintura);
+                lienzo.Flush();
+            }
+
+            using SKImage imagen = SKImage.FromBitmap(redimensionada);
+            using SKData datos = imagen.Encode(SKEncodedImageFormat.Jpeg, 80)
+                ?? throw new InvalidOperationException("No fue posible comprimir una fotografía.");
+            return datos.ToArray();
+        }
+
+        private static void GuardarFotografias(
+            MySqlConnection conexion,
+            MySqlTransaction transaccion,
+            int idHabitacion,
+            IEnumerable<IFormFile>? archivos)
+        {
+            if (archivos == null) return;
+
+            const string sql = @"
+                INSERT INTO habitacion_fotografia
+                    (id_proser,contenido,tipo_mime,nombre_original,tamano_original,tamano_comprimido)
+                VALUES
+                    (@id,@contenido,'image/jpeg',@nombre,@original,@comprimido);";
+
+            foreach (IFormFile archivo in archivos.Where(a => a.Length > 0))
+            {
+                byte[] contenido = ComprimirFotografia(archivo);
+                using var comando = new MySqlCommand(sql, conexion, transaccion);
+                comando.Parameters.AddWithValue("@id", idHabitacion);
+                comando.Parameters.Add("@contenido", MySqlDbType.LongBlob).Value = contenido;
+                comando.Parameters.AddWithValue("@nombre", Path.GetFileName(archivo.FileName));
+                comando.Parameters.AddWithValue("@original", archivo.Length);
+                comando.Parameters.AddWithValue("@comprimido", contenido.Length);
+                comando.ExecuteNonQuery();
+            }
+        }
+
+        private static int ContarFotografias(
+            MySqlConnection conexion,
+            int idHabitacion,
+            MySqlTransaction? transaccion = null)
+        {
+            using var comando = new MySqlCommand(
+                "SELECT COUNT(*) FROM habitacion_fotografia WHERE id_proser=@id;",
+                conexion,
+                transaccion);
+            comando.Parameters.AddWithValue("@id", idHabitacion);
+            return Convert.ToInt32(comando.ExecuteScalar());
+        }
+
+        private List<HabitacionFotografiaViewModel> ObtenerFotografias(int idHabitacion)
+        {
+            var fotografias = new List<HabitacionFotografiaViewModel>();
+            if (idHabitacion <= 0) return fotografias;
+
+            using var conexion = _conexionBD.ObtenerConexion();
+            conexion.Open();
+            using var comando = new MySqlCommand(@"
+                SELECT id_fotografia,fecha_subida
+                FROM habitacion_fotografia
+                WHERE id_proser=@id
+                ORDER BY fecha_subida,id_fotografia;", conexion);
+            comando.Parameters.AddWithValue("@id", idHabitacion);
+            using var lector = comando.ExecuteReader();
+            while (lector.Read())
+            {
+                fotografias.Add(new HabitacionFotografiaViewModel
+                {
+                    IdFotografia = Convert.ToInt32(lector["id_fotografia"]),
+                    FechaSubida = Convert.ToDateTime(lector["fecha_subida"])
+                });
+            }
+
+            return fotografias;
+        }
+
+        private void CargarFotografiasExistentes(HabitacionFormViewModel modelo)
+        {
+            modelo.FotografiasExistentes = ObtenerFotografias(modelo.IdProser);
         }
 
         private string ObtenerColumnaOrden(string columna)
@@ -235,12 +367,21 @@ namespace MiHotel.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [RequestSizeLimit(65 * 1024 * 1024)]
         public IActionResult Crear(HabitacionFormViewModel modelo)
         {
             IActionResult? acceso = ValidarSesion();
             if (acceso != null) return acceso;
 
             CargarCombos();
+
+            ValidarFotografias(modelo.Fotografias);
+            int nuevasFotografias = modelo.Fotografias.Count(a => a.Length > 0);
+            if (nuevasFotografias > MaximoFotografiasPorHabitacion)
+            {
+                ModelState.AddModelError(nameof(modelo.Fotografias),
+                    $"Puede registrar un máximo de {MaximoFotografiasPorHabitacion} fotografías por habitación.");
+            }
 
             if (!ModelState.IsValid) return View(modelo);
 
@@ -252,6 +393,7 @@ namespace MiHotel.Controllers
                 int idTipo = ObtenerIdTipoProserHabitacion(conexion);
                 int idCategoria = ObtenerIdCategoriaHabitaciones(conexion);
                 int idUnidad = ObtenerIdUnidadNoche(conexion);
+                using var transaccion = conexion.BeginTransaction();
 
                 string insertar = @"
                     INSERT INTO proser
@@ -281,7 +423,7 @@ namespace MiHotel.Controllers
                         @descripcion
                     );";
 
-                using var comandoInsertar = new MySqlCommand(insertar, conexion);
+                using var comandoInsertar = new MySqlCommand(insertar, conexion, transaccion);
                 comandoInsertar.Parameters.AddWithValue("@id_categoria", idCategoria);
                 comandoInsertar.Parameters.AddWithValue("@id_subcategoria", modelo.IdSubcategoria);
                 comandoInsertar.Parameters.AddWithValue("@id_umedida", idUnidad);
@@ -292,6 +434,9 @@ namespace MiHotel.Controllers
                 comandoInsertar.Parameters.AddWithValue("@descripcion", (object?)modelo.Descripcion ?? DBNull.Value);
 
                 comandoInsertar.ExecuteNonQuery();
+                int idHabitacion = Convert.ToInt32(comandoInsertar.LastInsertedId);
+                GuardarFotografias(conexion, transaccion, idHabitacion, modelo.Fotografias);
+                transaccion.Commit();
 
                 TempData["Exito"] = "Habitación creada correctamente.";
                 return RedirectToAction("Index");
@@ -345,10 +490,52 @@ namespace MiHotel.Controllers
                 Descripcion = lector["descripcion"]?.ToString()
             };
 
+            lector.Close();
+            CargarFotografiasExistentes(modelo);
+
+            return View(modelo);
+        }
+
+        [HttpGet]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        public IActionResult Detalle(int id)
+        {
+            IActionResult? acceso = ValidarSesion();
+            if (acceso != null) return acceso;
+
+            using var conexion = _conexionBD.ObtenerConexion();
+            conexion.Open();
+            using var comando = new MySqlCommand(@"
+                SELECT p.id_proser,p.codigo,s.nombre_subcategoria,s.precio,
+                       te.estado,p.descripcion
+                FROM proser p
+                LEFT JOIN subcategoria s ON p.id_subcategoria=s.id_subcategoria
+                INNER JOIN tipo_estado te ON p.id_tipoestado=te.id_tipoestado
+                INNER JOIN tipo_proser tp ON p.id_tipoproser=tp.id_tipoproser
+                WHERE p.id_proser=@id AND LOWER(tp.nombre)='habitacion'
+                LIMIT 1;", conexion);
+            comando.Parameters.AddWithValue("@id", id);
+            using var lector = comando.ExecuteReader();
+            if (!lector.Read()) return RedirectToAction("Index");
+
+            var modelo = new HabitacionViewModel
+            {
+                IdProser = Convert.ToInt32(lector["id_proser"]),
+                NumeroHabitacion = lector["codigo"]?.ToString() ?? "",
+                TipoHabitacion = lector["nombre_subcategoria"]?.ToString() ?? "",
+                Precio = lector["precio"] == DBNull.Value ? 0 : Convert.ToDecimal(lector["precio"]),
+                Estado = lector["estado"]?.ToString() ?? "",
+                Descripcion = lector["descripcion"]?.ToString()
+            };
+
+            lector.Close();
+            modelo.Fotografias = ObtenerFotografias(modelo.IdProser);
             return View(modelo);
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
+        [RequestSizeLimit(65 * 1024 * 1024)]
         public IActionResult Editar(HabitacionFormViewModel modelo)
         {
             IActionResult? acceso = ValidarSesion();
@@ -356,31 +543,101 @@ namespace MiHotel.Controllers
 
             CargarCombos();
 
-            if (!ModelState.IsValid) return View(modelo);
+            ValidarFotografias(modelo.Fotografias);
+            if (!ModelState.IsValid)
+            {
+                CargarFotografiasExistentes(modelo);
+                return View(modelo);
+            }
+
+            try
+            {
+                using var conexion = _conexionBD.ObtenerConexion();
+                conexion.Open();
+                using var transaccion = conexion.BeginTransaction();
+
+                int existentes = ContarFotografias(conexion, modelo.IdProser, transaccion);
+                int nuevas = modelo.Fotografias.Count(a => a.Length > 0);
+                if (existentes + nuevas > MaximoFotografiasPorHabitacion)
+                {
+                    transaccion.Rollback();
+                    ModelState.AddModelError(nameof(modelo.Fotografias),
+                        $"La habitación puede conservar un máximo de {MaximoFotografiasPorHabitacion} fotografías. Elimine alguna antes de agregar más.");
+                    CargarFotografiasExistentes(modelo);
+                    return View(modelo);
+                }
+
+                string actualizar = @"
+                    UPDATE proser
+                    SET id_subcategoria = @id_subcategoria,
+                        id_tipoestado = @id_tipoestado,
+                        codigo = @codigo,
+                        nombre_proser = @nombre_proser,
+                        descripcion = @descripcion
+                    WHERE id_proser = @id_proser;";
+
+                using var comandoActualizar = new MySqlCommand(actualizar, conexion, transaccion);
+                comandoActualizar.Parameters.AddWithValue("@id_subcategoria", modelo.IdSubcategoria);
+                comandoActualizar.Parameters.AddWithValue("@id_tipoestado", modelo.IdTipoEstado);
+                comandoActualizar.Parameters.AddWithValue("@codigo", modelo.NumeroHabitacion.Trim());
+                comandoActualizar.Parameters.AddWithValue("@nombre_proser", "Habitación " + modelo.NumeroHabitacion.Trim());
+                comandoActualizar.Parameters.AddWithValue("@descripcion", (object?)modelo.Descripcion ?? DBNull.Value);
+                comandoActualizar.Parameters.AddWithValue("@id_proser", modelo.IdProser);
+
+                comandoActualizar.ExecuteNonQuery();
+                GuardarFotografias(conexion, transaccion, modelo.IdProser, modelo.Fotografias);
+                transaccion.Commit();
+
+                TempData["Exito"] = "Habitación actualizada correctamente.";
+
+                return RedirectToAction("Index");
+            }
+            catch (Exception ex)
+            {
+                ViewBag.Mensaje = "Ocurrió un error al actualizar la habitación: " + ex.Message;
+                CargarFotografiasExistentes(modelo);
+                return View(modelo);
+            }
+        }
+
+        [HttpGet]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        public IActionResult Fotografia(int id)
+        {
+            IActionResult? acceso = ValidarSesion();
+            if (acceso != null) return acceso;
 
             using var conexion = _conexionBD.ObtenerConexion();
             conexion.Open();
+            using var comando = new MySqlCommand(@"
+                SELECT contenido,tipo_mime
+                FROM habitacion_fotografia
+                WHERE id_fotografia=@id
+                LIMIT 1;", conexion);
+            comando.Parameters.AddWithValue("@id", id);
+            using var lector = comando.ExecuteReader();
+            if (!lector.Read()) return NotFound();
 
-            string actualizar = @"
-                UPDATE proser
-                SET id_subcategoria = @id_subcategoria,
-                    id_tipoestado = @id_tipoestado,
-                    codigo = @codigo,
-                    nombre_proser = @nombre_proser,
-                    descripcion = @descripcion
-                WHERE id_proser = @id_proser;";
+            return File((byte[])lector["contenido"], lector["tipo_mime"]?.ToString() ?? "image/jpeg");
+        }
 
-            using var comandoActualizar = new MySqlCommand(actualizar, conexion);
-            comandoActualizar.Parameters.AddWithValue("@id_subcategoria", modelo.IdSubcategoria);
-            comandoActualizar.Parameters.AddWithValue("@id_tipoestado", modelo.IdTipoEstado);
-            comandoActualizar.Parameters.AddWithValue("@codigo", modelo.NumeroHabitacion.Trim());
-            comandoActualizar.Parameters.AddWithValue("@nombre_proser", "Habitación " + modelo.NumeroHabitacion.Trim());
-            comandoActualizar.Parameters.AddWithValue("@descripcion", (object?)modelo.Descripcion ?? DBNull.Value);
-            comandoActualizar.Parameters.AddWithValue("@id_proser", modelo.IdProser);
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult EliminarFotografia(int id, int idHabitacion)
+        {
+            IActionResult? acceso = ValidarSesion();
+            if (acceso != null) return acceso;
 
-            comandoActualizar.ExecuteNonQuery();
-
-            return RedirectToAction("Index");
+            using var conexion = _conexionBD.ObtenerConexion();
+            conexion.Open();
+            using var comando = new MySqlCommand(@"
+                DELETE FROM habitacion_fotografia
+                WHERE id_fotografia=@id AND id_proser=@habitacion;", conexion);
+            comando.Parameters.AddWithValue("@id", id);
+            comando.Parameters.AddWithValue("@habitacion", idHabitacion);
+            comando.ExecuteNonQuery();
+            TempData["Exito"] = "Fotografía eliminada correctamente.";
+            return RedirectToAction("Editar", new { id = idHabitacion });
         }
 
         private void CargarCombos()

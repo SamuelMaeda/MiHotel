@@ -1,0 +1,82 @@
+@model MiHotel.Models.HabitacionViewModel
+
+@{
+    ViewData["Title"] = "Detalle de la Habitación";
+    string Mostrar(string? valor) => string.IsNullOrWhiteSpace(valor) ? "-" : valor;
+    string estadoNormalizado = Model.Estado.Trim().ToLowerInvariant();
+    string claseEstado = estadoNormalizado switch
+    {
+        "libre" => "estado-libre",
+        "ocupada" => "estado-ocupada",
+        "remodelacion" => "estado-remodelacion",
+        "renta" => "estado-renta",
+        _ => "estado-default"
+    };
+}
+
+<style>
+    .tarjeta-detalle{background:#fff;border-radius:15px;padding:25px;box-shadow:0 4px 10px rgba(0,0,0,.1);max-width:1050px;margin:0 auto}
+    .detalle-label{font-weight:600;color:#363636;margin-bottom:5px}
+    .detalle-valor{background:#f8f9fa;border:1px solid #dee2e6;border-radius:8px;padding:10px 12px;min-height:44px}
+    .estado-libre{color:green;font-weight:700}.estado-ocupada{color:#824B44;font-weight:700}.estado-remodelacion{color:#b26b00;font-weight:700}.estado-renta{color:#464482;font-weight:700}.estado-default{color:#363636;font-weight:700}
+    .galeria{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
+    .foto{width:100%;height:180px;object-fit:cover;border-radius:10px;border:1px solid #ddd;background:#f4f4f4;display:block}
+    .acciones{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}.btn-accion{color:#fff;text-decoration:none;border-radius:8px;padding:10px 17px}.btn-editar-detalle{background:#824B44}.btn-volver{background:#6c757d}.btn-accion:hover{color:#fff;opacity:.92}
+</style>
+
+<div class="container-fluid px-3 px-md-4 py-4">
+    <div class="tarjeta-detalle">
+        <h3 class="mb-4">Detalle de la Habitación</h3>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <div class="detalle-label">Número de habitación</div>
+                <div class="detalle-valor">@Mostrar(Model.NumeroHabitacion)</div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <div class="detalle-label">Tipo de habitación</div>
+                <div class="detalle-valor">@Mostrar(Model.TipoHabitacion)</div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <div class="detalle-label">Precio por noche</div>
+                <div class="detalle-valor">Q @Model.Precio.ToString("N2")</div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <div class="detalle-label">Estado</div>
+                <div class="detalle-valor"><span class="@claseEstado">@Mostrar(Model.Estado)</span></div>
+            </div>
+            <div class="col-12 mb-3">
+                <div class="detalle-label">Descripción</div>
+                <div class="detalle-valor">@Mostrar(Model.Descripcion)</div>
+            </div>
+        </div>
+
+        <hr />
+        <h5 class="mb-3">Fotografías de la habitación</h5>
+        @if (Model.Fotografias.Count == 0)
+        {
+            <p class="text-muted">Esta habitación todavía no tiene fotografías.</p>
+        }
+        else
+        {
+            <div class="galeria">
+                @foreach (var fotografia in Model.Fotografias)
+                {
+                    <a asp-action="Fotografia"
+                       asp-route-id="@fotografia.IdFotografia"
+                       target="_blank"
+                       title="Ver fotografía completa">
+                        <img class="foto"
+                             src="@Url.Action("Fotografia", "Habitaciones", new { id = fotografia.IdFotografia })"
+                             alt="Fotografía de la habitación @Model.NumeroHabitacion" />
+                    </a>
+                }
+            </div>
+        }
+
+        <div class="acciones">
+            <a asp-action="Editar" asp-route-id="@Model.IdProser" class="btn-accion btn-editar-detalle">Editar habitación</a>
+            <a asp-action="Index" class="btn-accion btn-volver">Volver al listado</a>
+        </div>
+    </div>
+</div>
