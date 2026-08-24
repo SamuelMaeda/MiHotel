@@ -447,7 +447,7 @@ namespace MiHotel.Controllers
 
 
         //
-        // METODO DE VALIDACIÓN DE RESERVAS
+        // METODO DE VALIDACIÓN DE RESERVAS.
         //
 
         [HttpGet]
