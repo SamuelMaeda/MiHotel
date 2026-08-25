@@ -15,8 +15,16 @@ namespace MiHotel.Controllers
                 return RedirectToAction("Login", "Acceso");
             }
 
+            string nombreRol = HttpContext.Session.GetString("NombreRol")?.Trim().ToLower() ?? "";
+
+            if (nombreRol == "cliente")
+            {
+                HttpContext.Session.Clear();
+                return RedirectToAction("Login", "Acceso");
+            }
+
             ViewBag.NombreUsuario = HttpContext.Session.GetString("NombreUsuario");
-            ViewBag.NombreRol = HttpContext.Session.GetString("NombreRol");
+            ViewBag.NombreRol = nombreRol;
 
             return View();
         }

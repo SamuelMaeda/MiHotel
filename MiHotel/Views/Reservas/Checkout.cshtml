@@ -76,7 +76,16 @@
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4">
         <div>
             <h3 class="mb-1">Check-out de la reservación #@Model.IdReserva</h3>
-            <p class="text-muted mb-0">Revise la cuenta y registre los pagos antes de finalizar la estadía.</p>
+            <p class="text-muted mb-0">
+                @if (Model.EsReservaAgrupada)
+                {
+                    <text>Esta estadía pertenece al grupo #@Model.IdReservaGrupo. Los pagos se administran en una sola cuenta agrupada.</text>
+                }
+                else
+                {
+                    <text>Revise la cuenta y registre los pagos antes de finalizar la estadía.</text>
+                }
+            </p>
         </div>
         <span class="badge rounded-pill text-bg-warning px-3 py-2">En check-out</span>
     </div>

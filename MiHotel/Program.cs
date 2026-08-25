@@ -5,6 +5,8 @@
 using MiHotel.Data;
 using MiHotel.Models.Configuracion;
 using MiHotel.Services;
+using Microsoft.AspNetCore.DataProtection;
+using System.Net;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -66,7 +68,7 @@ if (!File.Exists(rutaConfig))
             <body>
                 <div class='contenedor'>
                     <h1>De momento no es posible acceder al sistema</h1>
-                    <p>No se encontr� el archivo de configuraci�n requerido.</p>
+                    <p>No se encontr� el archivo de configuraci�n requerido.</p>
                     <p>Contacte al administrador del sistema.</p>
                 </div>
             </body>
@@ -110,7 +112,14 @@ builder.Services.AddSession(options =>
     options.IdleTimeout = TimeSpan.FromMinutes(30);
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
+    options.Cookie.SameSite = SameSiteMode.Strict;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
 });
+
+// No existen cookies persistentes ni enlaces públicos que deban sobrevivir al
+// reinicio. Cada ejecución genera sus propias llaves y cierra sesiones previas.
+builder.Services.AddSingleton<IDataProtectionProvider>(
+    new EphemeralDataProtectionProvider());
 
 var app = builder.Build();
 
@@ -121,15 +130,54 @@ var app = builder.Build();
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
-    app.UseHsts();
 }
 
-app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
 
 app.UseSession();
+
+// El sistema se ejecuta únicamente en la computadora local. Aunque un perfil
+// se configure accidentalmente para escuchar en la red, las solicitudes de
+// otros equipos se rechazan antes de llegar a los controladores.
+app.Use(async (context, next) =>
+{
+    IPAddress? direccionRemota = context.Connection.RemoteIpAddress;
+
+    if (direccionRemota != null && !IPAddress.IsLoopback(direccionRemota))
+    {
+        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+        await context.Response.WriteAsync("El sistema solo está disponible localmente.");
+        return;
+    }
+
+    await next();
+});
+
+// Solo el login puede consultarse sin una sesión interna activa. Las cuentas
+// de clientes y sus antiguos flujos de autoservicio quedan deshabilitados.
+app.Use(async (context, next) =>
+{
+    PathString ruta = context.Request.Path;
+    bool esLogin = ruta.StartsWithSegments("/Acceso/Login");
+    bool esError = ruta.StartsWithSegments("/Home/Error");
+
+    if (!esLogin && !esError)
+    {
+        string? idUsuario = context.Session.GetString("IdUsuario");
+        string rol = context.Session.GetString("NombreRol")?.Trim().ToLower() ?? "";
+
+        if (string.IsNullOrWhiteSpace(idUsuario) || rol == "cliente")
+        {
+            context.Session.Clear();
+            context.Response.Redirect("/Acceso/Login");
+            return;
+        }
+    }
+
+    await next();
+});
 
 app.UseAuthorization();
 

@@ -130,6 +130,52 @@
         padding: 10px 12px;
         color: #6c757d;
     }
+
+    .selector-tipo-reserva {
+        background-color: #f8f5f4;
+        border: 1px solid #e6d3d0;
+        border-radius: 10px;
+        padding: 14px 16px;
+    }
+
+    .panel-fechas-separadas {
+        background-color: #fafafa;
+        border: 1px solid #dee2e6;
+        border-radius: 10px;
+        padding: 16px;
+    }
+
+    .fecha-separada-fila {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+
+    .btn-agregar-fecha,
+    .btn-quitar-fecha {
+        border: none;
+        border-radius: 8px;
+        color: white;
+        font-weight: 500;
+    }
+
+    .btn-agregar-fecha {
+        background-color: #198754;
+        padding: 9px 14px;
+    }
+
+    .btn-quitar-fecha {
+        background-color: #824B44;
+        min-width: 40px;
+        height: 40px;
+    }
+
+    .nota-fechas {
+        color: #6c757d;
+        font-size: 0.92rem;
+        margin-bottom: 12px;
+    }
 </style>
 
 <div class="container-fluid px-3 px-md-4 py-4">
@@ -257,7 +303,50 @@
                             <input type="text" id="precioHabitacion" class="form-control campo-solo-lectura" readonly />
                         </div>
 
-                        <div class="col-12 col-md-6 col-lg-4 mb-3">
+                        @if (!esClienteSesion)
+                        {
+                            <div class="col-12 mb-3">
+                                <div class="selector-tipo-reserva">
+                                    <div class="form-check">
+                                        <input asp-for="UsarFechasSeparadas" class="form-check-input" id="UsarFechasSeparadas" />
+                                        <label asp-for="UsarFechasSeparadas" class="form-check-label fw-semibold">
+                                            El huésped se hospedará en fechas separadas
+                                        </label>
+                                    </div>
+                                    <div class="nota-fechas mb-0 mt-1">
+                                        Cada fecha representa una noche. Entre fechas puede haber como máximo uno o dos días intermedios.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-12 mb-3" id="panelFechasSeparadas" style="display: none;">
+                                <div class="panel-fechas-separadas">
+                                    <label class="form-label fw-semibold">Fechas de hospedaje</label>
+                                    <div class="nota-fechas">Todas las fechas utilizarán la habitación seleccionada.</div>
+
+                                    <div id="listaFechasSeparadas">
+                                        @foreach (DateTime fecha in Model.FechasSeparadas)
+                                        {
+                                            <div class="fecha-separada-fila">
+                                                <input type="date"
+                                                       name="FechasSeparadas"
+                                                       value="@fecha.ToString("yyyy-MM-dd")"
+                                                       class="form-control fecha-separada-input" />
+                                                <button type="button" class="btn-quitar-fecha" title="Quitar fecha">
+                                                    <i class="bi bi-trash-fill"></i>
+                                                </button>
+                                            </div>
+                                        }
+                                    </div>
+
+                                    <button type="button" id="btnAgregarFecha" class="btn-agregar-fecha">
+                                        <i class="bi bi-plus-lg"></i> Agregar fecha
+                                    </button>
+                                </div>
+                            </div>
+                        }
+
+                        <div class="col-12 col-md-6 col-lg-4 mb-3 campo-periodo-continuo">
                             <label asp-for="FechaEntrada" class="form-label">Fecha de entrada</label>
 
                             @if (bloquearFechas)
@@ -276,7 +365,7 @@
                             <span asp-validation-for="FechaEntrada" class="text-danger"></span>
                         </div>
 
-                        <div class="col-12 col-md-6 col-lg-4 mb-3">
+                        <div class="col-12 col-md-6 col-lg-4 mb-3 campo-periodo-continuo">
                             <label asp-for="FechaSalida" class="form-label">Fecha de salida</label>
 
                             @if (bloquearFechas)
@@ -349,6 +438,95 @@
             const fechaSalidaElement = document.getElementById("FechaSalida");
             const cantidadPersonasElement = document.getElementById("CantidadPersonas");
             const observacionesElement = document.getElementById("Observaciones");
+            const formReserva = document.getElementById("formReserva");
+            const usarFechasSeparadasElement = document.getElementById("UsarFechasSeparadas");
+            const panelFechasSeparadas = document.getElementById("panelFechasSeparadas");
+            const listaFechasSeparadas = document.getElementById("listaFechasSeparadas");
+            const btnAgregarFecha = document.getElementById("btnAgregarFecha");
+            const camposPeriodoContinuo = document.querySelectorAll(".campo-periodo-continuo");
+
+            function fechaIso(fecha) {
+                const anio = fecha.getFullYear();
+                const mes = String(fecha.getMonth() + 1).padStart(2, "0");
+                const dia = String(fecha.getDate()).padStart(2, "0");
+                return `${anio}-${mes}-${dia}`;
+            }
+
+            function crearFilaFecha(valor) {
+                if (!listaFechasSeparadas) {
+                    return;
+                }
+
+                const fila = document.createElement("div");
+                fila.className = "fecha-separada-fila";
+
+                const input = document.createElement("input");
+                input.type = "date";
+                input.name = "FechasSeparadas";
+                input.className = "form-control fecha-separada-input";
+                input.min = fechaIso(new Date());
+                input.value = valor || "";
+                input.addEventListener("change", actualizarEnlaceRegistrarCliente);
+
+                const boton = document.createElement("button");
+                boton.type = "button";
+                boton.className = "btn-quitar-fecha";
+                boton.title = "Quitar fecha";
+                boton.innerHTML = '<i class="bi bi-trash-fill"></i>';
+                boton.addEventListener("click", function () {
+                    fila.remove();
+                    actualizarEnlaceRegistrarCliente();
+                });
+
+                fila.appendChild(input);
+                fila.appendChild(boton);
+                listaFechasSeparadas.appendChild(fila);
+            }
+
+            function prepararBotonesQuitarFecha() {
+                document.querySelectorAll(".fecha-separada-fila").forEach(function (fila) {
+                    const boton = fila.querySelector(".btn-quitar-fecha");
+                    const input = fila.querySelector(".fecha-separada-input");
+
+                    if (input) {
+                        input.min = fechaIso(new Date());
+                        input.addEventListener("change", actualizarEnlaceRegistrarCliente);
+                    }
+
+                    if (boton) {
+                        boton.addEventListener("click", function () {
+                            fila.remove();
+                            actualizarEnlaceRegistrarCliente();
+                        });
+                    }
+                });
+            }
+
+            function actualizarModoFechas() {
+                if (!usarFechasSeparadasElement || !panelFechasSeparadas) {
+                    return;
+                }
+
+                const esAgrupada = usarFechasSeparadasElement.checked;
+                panelFechasSeparadas.style.display = esAgrupada ? "block" : "none";
+
+                camposPeriodoContinuo.forEach(function (campo) {
+                    campo.style.display = esAgrupada ? "none" : "block";
+                });
+
+                if (esAgrupada && listaFechasSeparadas && listaFechasSeparadas.children.length === 0) {
+                    const fechaInicial = fechaEntradaElement && fechaEntradaElement.value
+                        ? new Date(fechaEntradaElement.value + "T00:00:00")
+                        : new Date();
+                    const segundaFecha = new Date(fechaInicial);
+                    segundaFecha.setDate(segundaFecha.getDate() + 2);
+
+                    crearFilaFecha(fechaIso(fechaInicial));
+                    crearFilaFecha(fechaIso(segundaFecha));
+                }
+
+                actualizarEnlaceRegistrarCliente();
+            }
 
             function limpiarListaClientes() {
                 if (!listaClientes) {
@@ -473,6 +651,16 @@
                     params.append("observaciones", observaciones);
                 }
 
+                if (usarFechasSeparadasElement && usarFechasSeparadasElement.checked) {
+                    params.append("usarFechasSeparadas", "true");
+
+                    document.querySelectorAll(".fecha-separada-input").forEach(function (input) {
+                        if (input.value) {
+                            params.append("fechasSeparadas", input.value);
+                        }
+                    });
+                }
+
                 const returnUrl = "/Reservas/Crear" + (params.toString() ? "?" + params.toString() : "");
                 const hrefFinal = urlBaseCrearCliente + "?returnUrl=" + encodeURIComponent(returnUrl);
 
@@ -526,8 +714,43 @@
                 observacionesElement.addEventListener("input", actualizarEnlaceRegistrarCliente);
             }
 
+            if (usarFechasSeparadasElement) {
+                usarFechasSeparadasElement.addEventListener("change", actualizarModoFechas);
+            }
+
+            if (btnAgregarFecha) {
+                btnAgregarFecha.addEventListener("click", function () {
+                    crearFilaFecha("");
+                    actualizarEnlaceRegistrarCliente();
+                });
+            }
+
+            if (formReserva) {
+                formReserva.addEventListener("submit", function (event) {
+                    if (!usarFechasSeparadasElement || !usarFechasSeparadasElement.checked) {
+                        return;
+                    }
+
+                    document.querySelectorAll(".fecha-separada-input").forEach(function (input) {
+                        if (!input.value) {
+                            input.closest(".fecha-separada-fila")?.remove();
+                        }
+                    });
+
+                    const fechasCompletas = Array.from(document.querySelectorAll(".fecha-separada-input"))
+                        .filter(function (input) { return input.value; });
+
+                    if (fechasCompletas.length < 2) {
+                        event.preventDefault();
+                        alert("Seleccione al menos dos fechas para la reserva agrupada.");
+                    }
+                });
+            }
+
+            prepararBotonesQuitarFecha();
             cargarClienteSeleccionadoInicial();
             actualizarDatosHabitacion();
+            actualizarModoFechas();
             actualizarEnlaceRegistrarCliente();
         });
     </script>

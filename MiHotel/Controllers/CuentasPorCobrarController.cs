@@ -219,8 +219,43 @@ namespace MiHotel.Controllers
 
                 string consultaBase = @"
                     SELECT
+                        'grupo' AS tipo_cuenta,
+                        NULL AS id_reserva,
+                        rg.id_reserva_grupo,
+                        (
+                            SELECT MIN(mg.id_movimiento)
+                            FROM movimiento mg
+                            WHERE mg.id_reserva_grupo = rg.id_reserva_grupo
+                        ) AS id_movimiento_referencia,
+                        rg.id_clipro,
+                        c.nombre AS cliente,
+                        GROUP_CONCAT(DISTINCT h.nombre_proser ORDER BY h.nombre_proser SEPARATOR ', ') AS habitacion,
+                        MIN(r.fecha_entrada) AS fecha_entrada,
+                        MAX(r.fecha_salida) AS fecha_salida,
+                        rg.fecha_creacion AS fecha_cuenta,
+                        SUM(CASE WHEN r.estado <> 'cancelada' THEN r.saldo_pendiente ELSE 0 END) AS saldo,
+                        (
+                            SELECT COUNT(*)
+                            FROM movimiento mg2
+                            WHERE mg2.id_reserva_grupo = rg.id_reserva_grupo
+                        ) AS cantidad_movimientos
+                    FROM reserva_grupo rg
+                    INNER JOIN reserva r ON r.id_reserva_grupo = rg.id_reserva_grupo
+                    INNER JOIN clipro c ON rg.id_clipro = c.id_clipro
+                    LEFT JOIN proser h ON r.id_habitacion = h.id_proser
+                    GROUP BY
+                        rg.id_reserva_grupo,
+                        rg.id_clipro,
+                        c.nombre,
+                        rg.fecha_creacion
+                    HAVING SUM(CASE WHEN r.estado <> 'cancelada' THEN r.saldo_pendiente ELSE 0 END) > 0
+
+                    UNION ALL
+
+                    SELECT
                         'estadia' AS tipo_cuenta,
                         r.id_reserva,
+                        NULL AS id_reserva_grupo,
                         (
                             SELECT MIN(m1.id_movimiento)
                             FROM movimiento m1
@@ -239,11 +274,10 @@ namespace MiHotel.Controllers
                             WHERE m2.id_reserva = r.id_reserva
                         ) AS cantidad_movimientos
                     FROM reserva r
-                    INNER JOIN clipro c
-                        ON r.id_clipro = c.id_clipro
-                    LEFT JOIN proser h
-                        ON r.id_habitacion = h.id_proser
-                    WHERE r.saldo_pendiente > 0
+                    INNER JOIN clipro c ON r.id_clipro = c.id_clipro
+                    LEFT JOIN proser h ON r.id_habitacion = h.id_proser
+                    WHERE r.id_reserva_grupo IS NULL
+                      AND r.saldo_pendiente > 0
                       AND r.estado <> 'cancelada'
 
                     UNION ALL
@@ -251,8 +285,8 @@ namespace MiHotel.Controllers
                     SELECT
                         'independiente' AS tipo_cuenta,
                         NULL AS id_reserva,
-                        m.id_movimiento
-                            AS id_movimiento_referencia,
+                        NULL AS id_reserva_grupo,
+                        m.id_movimiento AS id_movimiento_referencia,
                         m.id_clipro,
                         c.nombre AS cliente,
                         NULL AS habitacion,
@@ -262,16 +296,13 @@ namespace MiHotel.Controllers
                         SUM(d.subtotal) AS saldo,
                         1 AS cantidad_movimientos
                     FROM movimiento m
-                    INNER JOIN tipo_movimiento tm
-                        ON m.id_tipomov = tm.id_tipomov
-                    INNER JOIN clipro c
-                        ON m.id_clipro = c.id_clipro
-                    INNER JOIN detalle d
-                        ON m.id_movimiento = d.id_movimiento
-                    WHERE LOWER(tm.nombre_tipomov) =
-                              'cuenta_por_cobrar'
+                    INNER JOIN tipo_movimiento tm ON m.id_tipomov = tm.id_tipomov
+                    INNER JOIN clipro c ON m.id_clipro = c.id_clipro
+                    INNER JOIN detalle d ON m.id_movimiento = d.id_movimiento
+                    WHERE LOWER(tm.nombre_tipomov) = 'cuenta_por_cobrar'
                       AND m.estado = 'activo'
                       AND m.id_reserva IS NULL
+                      AND m.id_reserva_grupo IS NULL
                       AND d.subtotal > 0
                     GROUP BY
                         m.id_movimiento,
@@ -289,6 +320,9 @@ namespace MiHotel.Controllers
                             OR cuenta.habitacion LIKE @busqueda
                             OR CAST(
                                 cuenta.id_reserva AS CHAR
+                            ) LIKE @busqueda
+                            OR CAST(
+                                cuenta.id_reserva_grupo AS CHAR
                             ) LIKE @busqueda
                             OR CAST(
                                 cuenta.id_movimiento_referencia AS CHAR
@@ -347,6 +381,7 @@ namespace MiHotel.Controllers
                     SELECT
                         cuenta.tipo_cuenta,
                         cuenta.id_reserva,
+                        cuenta.id_reserva_grupo,
                         cuenta.id_movimiento_referencia,
                         cuenta.id_clipro,
                         cuenta.cliente,
@@ -445,6 +480,7 @@ namespace MiHotel.Controllers
             string consultaReserva = @"
                 SELECT
                     r.id_reserva,
+                    r.id_reserva_grupo,
                     c.nombre AS cliente,
                     h.nombre_proser AS habitacion,
                     r.fecha_entrada,
@@ -473,6 +509,9 @@ namespace MiHotel.Controllers
                 modelo = new CuentaPorCobrarDetalleViewModel
                 {
                     IdReserva = Convert.ToInt32(lector["id_reserva"]),
+                    IdReservaGrupo = lector["id_reserva_grupo"] == DBNull.Value
+                        ? null
+                        : Convert.ToInt32(lector["id_reserva_grupo"]),
                     Cliente = lector["cliente"]?.ToString() ?? "",
                     Habitacion = lector["habitacion"]?.ToString() ?? "",
                     FechaEntrada = Convert.ToDateTime(lector["fecha_entrada"]),
@@ -549,6 +588,140 @@ namespace MiHotel.Controllers
             return modelo;
         }
 
+        private CuentaPorCobrarDetalleViewModel? ObtenerDetalleCuentaGrupo(
+            MySqlConnection conexion,
+            int idReservaGrupo,
+            int? idReservaRetorno = null)
+        {
+            const string consultaGrupo = @"
+                SELECT
+                    rg.id_reserva_grupo,
+                    rg.id_clipro,
+                    c.nombre AS cliente,
+                    GROUP_CONCAT(DISTINCT h.nombre_proser ORDER BY h.nombre_proser SEPARATOR ', ') AS habitacion,
+                    MIN(r.fecha_entrada) AS fecha_entrada,
+                    MAX(r.fecha_salida) AS fecha_salida,
+                    SUM(CASE WHEN r.estado <> 'cancelada' THEN r.saldo_pendiente ELSE 0 END) AS saldo_pendiente
+                FROM reserva_grupo rg
+                INNER JOIN clipro c ON rg.id_clipro = c.id_clipro
+                INNER JOIN reserva r ON r.id_reserva_grupo = rg.id_reserva_grupo
+                INNER JOIN proser h ON r.id_habitacion = h.id_proser
+                WHERE rg.id_reserva_grupo = @id_reserva_grupo
+                GROUP BY rg.id_reserva_grupo, rg.id_clipro, c.nombre
+                LIMIT 1;";
+
+            CuentaPorCobrarDetalleViewModel? modelo;
+
+            using (var comando = new MySqlCommand(consultaGrupo, conexion))
+            {
+                comando.Parameters.AddWithValue("@id_reserva_grupo", idReservaGrupo);
+                using var lector = comando.ExecuteReader();
+
+                if (!lector.Read())
+                {
+                    return null;
+                }
+
+                modelo = new CuentaPorCobrarDetalleViewModel
+                {
+                    IdReservaGrupo = Convert.ToInt32(lector["id_reserva_grupo"]),
+                    IdReservaRetorno = idReservaRetorno,
+                    Cliente = lector["cliente"]?.ToString() ?? "",
+                    Habitacion = lector["habitacion"]?.ToString() ?? "",
+                    FechaEntrada = Convert.ToDateTime(lector["fecha_entrada"]),
+                    FechaSalida = Convert.ToDateTime(lector["fecha_salida"]),
+                    EstadoReserva = "varias_estadias",
+                    SaldoPendiente = Convert.ToDecimal(lector["saldo_pendiente"])
+                };
+            }
+
+            using (var comando = new MySqlCommand(@"
+                SELECT
+                    r.id_reserva,
+                    h.nombre_proser AS habitacion,
+                    r.fecha_entrada,
+                    r.fecha_salida,
+                    r.total_reserva,
+                    r.saldo_pendiente,
+                    r.estado
+                FROM reserva r
+                INNER JOIN proser h ON r.id_habitacion = h.id_proser
+                WHERE r.id_reserva_grupo = @id_reserva_grupo
+                ORDER BY r.fecha_entrada, r.id_reserva;", conexion))
+            {
+                comando.Parameters.AddWithValue("@id_reserva_grupo", idReservaGrupo);
+                using var lector = comando.ExecuteReader();
+
+                while (lector.Read())
+                {
+                    modelo.EstadiasAgrupadas.Add(new ReservaGrupoItemViewModel
+                    {
+                        IdReserva = Convert.ToInt32(lector["id_reserva"]),
+                        Habitacion = lector["habitacion"]?.ToString() ?? "",
+                        FechaEntrada = Convert.ToDateTime(lector["fecha_entrada"]),
+                        FechaSalida = Convert.ToDateTime(lector["fecha_salida"]),
+                        TotalReserva = Convert.ToDecimal(lector["total_reserva"]),
+                        SaldoPendiente = Convert.ToDecimal(lector["saldo_pendiente"]),
+                        Estado = lector["estado"]?.ToString() ?? ""
+                    });
+                }
+            }
+
+            using (var comando = new MySqlCommand(@"
+                SELECT
+                    m.id_movimiento,
+                    tm.nombre_tipomov AS tipo,
+                    fp.nombre_forma AS forma_pago,
+                    m.fecha_hora,
+                    m.estado,
+                    m.observaciones,
+                    COALESCE(SUM(d.subtotal), 0) AS monto,
+                    COALESCE(
+                        GROUP_CONCAT(
+                            DISTINCT COALESCE(NULLIF(d.descripcion, ''), p.nombre_proser, tm.nombre_tipomov)
+                            SEPARATOR ', '
+                        ),
+                        tm.nombre_tipomov
+                    ) AS descripcion
+                FROM movimiento m
+                INNER JOIN tipo_movimiento tm ON m.id_tipomov = tm.id_tipomov
+                INNER JOIN forma_pago fp ON m.id_formapago = fp.id_formapago
+                LEFT JOIN detalle d ON m.id_movimiento = d.id_movimiento
+                LEFT JOIN proser p ON d.id_proser = p.id_proser
+                WHERE m.id_reserva_grupo = @id_reserva_grupo
+                GROUP BY
+                    m.id_movimiento,
+                    tm.nombre_tipomov,
+                    fp.nombre_forma,
+                    m.fecha_hora,
+                    m.estado,
+                    m.observaciones
+                ORDER BY m.fecha_hora DESC, m.id_movimiento DESC;", conexion))
+            {
+                comando.Parameters.AddWithValue("@id_reserva_grupo", idReservaGrupo);
+                using var lector = comando.ExecuteReader();
+
+                while (lector.Read())
+                {
+                    string tipo = lector["tipo"]?.ToString() ?? "";
+                    modelo.Movimientos.Add(new MovimientoCuentaViewModel
+                    {
+                        IdMovimiento = Convert.ToInt32(lector["id_movimiento"]),
+                        Tipo = tipo,
+                        Descripcion = lector["descripcion"]?.ToString() ?? "",
+                        FormaPago = lector["forma_pago"]?.ToString() ?? "",
+                        Monto = Convert.ToDecimal(lector["monto"]),
+                        FechaHora = Convert.ToDateTime(lector["fecha_hora"]),
+                        Estado = lector["estado"]?.ToString() ?? "",
+                        Observaciones = lector["observaciones"]?.ToString() ?? "",
+                        EsAbono = tipo.Trim().ToLower() == "abono"
+                    });
+                }
+            }
+
+            return modelo;
+        }
+
         private void CargarFormasPago(MySqlConnection conexion)
         {
             var formasPago = new DataTable();
@@ -587,6 +760,15 @@ namespace MiHotel.Controllers
                     return RedirectToAction("Index");
                 }
 
+                if (modelo.IdReservaGrupo.HasValue)
+                {
+                    return RedirectToAction("DetalleGrupo", new
+                    {
+                        id = modelo.IdReservaGrupo.Value,
+                        idReservaRetorno = id
+                    });
+                }
+
                 CargarFormasPago(conexion);
                 ViewBag.PuedeCobrar = TienePermiso("cobrar_cuenta");
 
@@ -595,6 +777,41 @@ namespace MiHotel.Controllers
             catch (Exception ex)
             {
                 TempData["Mensaje"] = "No se pudo cargar la cuenta: " + ex.Message;
+                return RedirectToAction("Index");
+            }
+        }
+
+        [HttpGet]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        public IActionResult DetalleGrupo(int id, int? idReservaRetorno = null)
+        {
+            IActionResult? acceso = ValidarAcceso();
+
+            if (acceso != null)
+            {
+                return acceso;
+            }
+
+            try
+            {
+                using var conexion = _conexionBD.ObtenerConexion();
+                conexion.Open();
+
+                CuentaPorCobrarDetalleViewModel? modelo = ObtenerDetalleCuentaGrupo(conexion, id, idReservaRetorno);
+
+                if (modelo == null)
+                {
+                    TempData["Mensaje"] = "No se encontró la cuenta agrupada solicitada.";
+                    return RedirectToAction("Index");
+                }
+
+                CargarFormasPago(conexion);
+                ViewBag.PuedeCobrar = TienePermiso("cobrar_cuenta");
+                return View("Detalle", modelo);
+            }
+            catch (Exception ex)
+            {
+                TempData["Mensaje"] = "No se pudo cargar la cuenta agrupada: " + ex.Message;
                 return RedirectToAction("Index");
             }
         }
@@ -822,6 +1039,265 @@ namespace MiHotel.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        public IActionResult RegistrarAbonoGrupo(
+            int idReservaGrupo,
+            decimal monto,
+            int idFormaPago,
+            string? referencia,
+            string? observaciones,
+            int? idReservaRetorno = null,
+            bool volverCheckout = false)
+        {
+            IActionResult? acceso = ValidarCobro();
+
+            if (acceso != null)
+            {
+                return acceso;
+            }
+
+            if (monto <= 0)
+            {
+                TempData["Mensaje"] = "El abono debe ser mayor que Q0.00.";
+                return RedirectToAction("DetalleGrupo", new { id = idReservaGrupo, idReservaRetorno });
+            }
+
+            try
+            {
+                using var conexion = _conexionBD.ObtenerConexion();
+                conexion.Open();
+                using var transaccion = conexion.BeginTransaction();
+
+                int idCliente;
+
+                using (var comando = new MySqlCommand(@"
+                    SELECT id_clipro
+                    FROM reserva_grupo
+                    WHERE id_reserva_grupo = @id_reserva_grupo
+                    LIMIT 1
+                    FOR UPDATE;", conexion, transaccion))
+                {
+                    comando.Parameters.AddWithValue("@id_reserva_grupo", idReservaGrupo);
+                    object? resultado = comando.ExecuteScalar();
+
+                    if (resultado == null)
+                    {
+                        transaccion.Rollback();
+                        TempData["Mensaje"] = "No se encontró la reserva agrupada.";
+                        return RedirectToAction("Index");
+                    }
+
+                    idCliente = Convert.ToInt32(resultado);
+                }
+
+                var reservas = new List<(int IdReserva, decimal SaldoPendiente)>();
+
+                using (var comando = new MySqlCommand(@"
+                    SELECT id_reserva, saldo_pendiente, estado
+                    FROM reserva
+                    WHERE id_reserva_grupo = @id_reserva_grupo
+                    ORDER BY fecha_entrada, id_reserva
+                    FOR UPDATE;", conexion, transaccion))
+                {
+                    comando.Parameters.AddWithValue("@id_reserva_grupo", idReservaGrupo);
+                    using var lector = comando.ExecuteReader();
+
+                    string[] estadosPermitidos = { "pendiente", "en_curso", "en_checkout", "finalizada" };
+
+                    while (lector.Read())
+                    {
+                        string estado = lector["estado"]?.ToString()?.Trim().ToLower() ?? "";
+                        decimal saldo = Convert.ToDecimal(lector["saldo_pendiente"]);
+
+                        if (estadosPermitidos.Contains(estado) && saldo > 0)
+                        {
+                            reservas.Add((Convert.ToInt32(lector["id_reserva"]), saldo));
+                        }
+                    }
+                }
+
+                decimal saldoTotal = reservas.Sum(reserva => reserva.SaldoPendiente);
+
+                if (saldoTotal <= 0)
+                {
+                    transaccion.Rollback();
+                    TempData["Mensaje"] = "La reserva agrupada no tiene saldo pendiente.";
+                    return RedirectToAction("DetalleGrupo", new { id = idReservaGrupo, idReservaRetorno });
+                }
+
+                if (monto > saldoTotal)
+                {
+                    transaccion.Rollback();
+                    TempData["Mensaje"] = "El abono no puede ser mayor que el saldo pendiente del grupo.";
+                    return RedirectToAction("DetalleGrupo", new { id = idReservaGrupo, idReservaRetorno });
+                }
+
+                using (var comando = new MySqlCommand(@"
+                    SELECT COUNT(*)
+                    FROM forma_pago
+                    WHERE id_formapago = @id_formapago
+                      AND LOWER(nombre_forma) <> 'credito';", conexion, transaccion))
+                {
+                    comando.Parameters.AddWithValue("@id_formapago", idFormaPago);
+
+                    if (Convert.ToInt32(comando.ExecuteScalar()) == 0)
+                    {
+                        transaccion.Rollback();
+                        TempData["Mensaje"] = "La forma de pago seleccionada no es válida.";
+                        return RedirectToAction("DetalleGrupo", new { id = idReservaGrupo, idReservaRetorno });
+                    }
+                }
+
+                int idTipoAbono;
+
+                using (var comando = new MySqlCommand(@"
+                    SELECT id_tipomov
+                    FROM tipo_movimiento
+                    WHERE LOWER(nombre_tipomov) = 'abono'
+                    LIMIT 1;", conexion, transaccion))
+                {
+                    object? resultado = comando.ExecuteScalar();
+
+                    if (resultado == null)
+                    {
+                        throw new InvalidOperationException(
+                            "No existe el tipo de movimiento 'abono'. Aplique primero el cambio SQL indicado.");
+                    }
+
+                    idTipoAbono = Convert.ToInt32(resultado);
+                }
+
+                string observacionCompleta = string.Join(
+                    " | ",
+                    new[] { referencia?.Trim(), observaciones?.Trim() }
+                        .Where(valor => !string.IsNullOrWhiteSpace(valor)));
+
+                if (observacionCompleta.Length > 255)
+                {
+                    transaccion.Rollback();
+                    TempData["Mensaje"] = "La referencia y las observaciones no pueden superar 255 caracteres en total.";
+                    return RedirectToAction("DetalleGrupo", new { id = idReservaGrupo, idReservaRetorno });
+                }
+
+                int idMovimiento;
+
+                using (var comando = new MySqlCommand(@"
+                    INSERT INTO movimiento
+                    (
+                        id_usuario,
+                        id_clipro,
+                        id_tipomov,
+                        id_formapago,
+                        id_reserva,
+                        id_reserva_grupo,
+                        fecha_hora,
+                        estado,
+                        observaciones
+                    )
+                    VALUES
+                    (
+                        @id_usuario,
+                        @id_clipro,
+                        @id_tipomov,
+                        @id_formapago,
+                        NULL,
+                        @id_reserva_grupo,
+                        NOW(),
+                        'activo',
+                        @observaciones
+                    );", conexion, transaccion))
+                {
+                    comando.Parameters.AddWithValue("@id_usuario", ObtenerIdUsuarioSesion());
+                    comando.Parameters.AddWithValue("@id_clipro", idCliente);
+                    comando.Parameters.AddWithValue("@id_tipomov", idTipoAbono);
+                    comando.Parameters.AddWithValue("@id_formapago", idFormaPago);
+                    comando.Parameters.AddWithValue("@id_reserva_grupo", idReservaGrupo);
+                    comando.Parameters.AddWithValue(
+                        "@observaciones",
+                        string.IsNullOrWhiteSpace(observacionCompleta)
+                            ? DBNull.Value
+                            : observacionCompleta);
+                    comando.ExecuteNonQuery();
+                    idMovimiento = Convert.ToInt32(comando.LastInsertedId);
+                }
+
+                using (var comando = new MySqlCommand(@"
+                    INSERT INTO detalle
+                    (
+                        id_movimiento,
+                        id_proser,
+                        cantidad,
+                        precio_unitario,
+                        subtotal,
+                        descripcion
+                    )
+                    VALUES
+                    (
+                        @id_movimiento,
+                        NULL,
+                        1,
+                        @monto,
+                        @monto,
+                        @descripcion
+                    );", conexion, transaccion))
+                {
+                    comando.Parameters.AddWithValue("@id_movimiento", idMovimiento);
+                    comando.Parameters.AddWithValue("@monto", monto);
+                    comando.Parameters.AddWithValue("@descripcion", $"Abono a reserva agrupada #{idReservaGrupo}");
+                    comando.ExecuteNonQuery();
+                }
+
+                decimal montoRestante = monto;
+
+                foreach (var reserva in reservas)
+                {
+                    if (montoRestante <= 0)
+                    {
+                        break;
+                    }
+
+                    decimal montoAplicado = Math.Min(reserva.SaldoPendiente, montoRestante);
+
+                    using (var comando = new MySqlCommand(@"
+                        UPDATE reserva
+                        SET saldo_pendiente = saldo_pendiente - @monto
+                        WHERE id_reserva = @id_reserva;", conexion, transaccion))
+                    {
+                        comando.Parameters.AddWithValue("@monto", montoAplicado);
+                        comando.Parameters.AddWithValue("@id_reserva", reserva.IdReserva);
+                        comando.ExecuteNonQuery();
+                    }
+
+                    using (var comando = new MySqlCommand(@"
+                        INSERT INTO movimiento_reserva_aplicacion
+                            (id_movimiento, id_reserva, monto)
+                        VALUES
+                            (@id_movimiento, @id_reserva, @monto);", conexion, transaccion))
+                    {
+                        comando.Parameters.AddWithValue("@id_movimiento", idMovimiento);
+                        comando.Parameters.AddWithValue("@id_reserva", reserva.IdReserva);
+                        comando.Parameters.AddWithValue("@monto", montoAplicado);
+                        comando.ExecuteNonQuery();
+                    }
+
+                    montoRestante -= montoAplicado;
+                }
+
+                transaccion.Commit();
+                TempData["Exito"] = "Abono registrado correctamente en la cuenta agrupada.";
+
+                return volverCheckout && idReservaRetorno.HasValue
+                    ? RedirectToAction("Checkout", "Reservas", new { id = idReservaRetorno.Value })
+                    : RedirectToAction("DetalleGrupo", new { id = idReservaGrupo, idReservaRetorno });
+            }
+            catch (Exception ex)
+            {
+                TempData["Mensaje"] = "No se pudo registrar el abono agrupado: " + ex.Message;
+                return RedirectToAction("DetalleGrupo", new { id = idReservaGrupo, idReservaRetorno });
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult AnularAbono(
             int idMovimiento,
             int idReserva,
@@ -922,6 +1398,115 @@ namespace MiHotel.Controllers
             {
                 TempData["Mensaje"] = "No se pudo anular el abono: " + ex.Message;
                 return RedirectToAction("Detalle", new { id = idReserva });
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult AnularAbonoGrupo(
+            int idMovimiento,
+            int idReservaGrupo,
+            int? idReservaRetorno = null,
+            bool volverCheckout = false)
+        {
+            IActionResult? acceso = ValidarCobro();
+
+            if (acceso != null)
+            {
+                return acceso;
+            }
+
+            try
+            {
+                using var conexion = _conexionBD.ObtenerConexion();
+                conexion.Open();
+                using var transaccion = conexion.BeginTransaction();
+
+                using (var comando = new MySqlCommand(@"
+                    SELECT m.id_movimiento
+                    FROM movimiento m
+                    INNER JOIN tipo_movimiento tm ON m.id_tipomov = tm.id_tipomov
+                    WHERE m.id_movimiento = @id_movimiento
+                      AND m.id_reserva_grupo = @id_reserva_grupo
+                      AND m.estado = 'activo'
+                      AND LOWER(tm.nombre_tipomov) = 'abono'
+                    LIMIT 1
+                    FOR UPDATE;", conexion, transaccion))
+                {
+                    comando.Parameters.AddWithValue("@id_movimiento", idMovimiento);
+                    comando.Parameters.AddWithValue("@id_reserva_grupo", idReservaGrupo);
+
+                    if (comando.ExecuteScalar() == null)
+                    {
+                        transaccion.Rollback();
+                        TempData["Mensaje"] = "El abono no existe o ya fue anulado.";
+                        return RedirectToAction("DetalleGrupo", new { id = idReservaGrupo, idReservaRetorno });
+                    }
+                }
+
+                var aplicaciones = new List<(int IdReserva, decimal Monto)>();
+
+                using (var comando = new MySqlCommand(@"
+                    SELECT a.id_reserva, a.monto
+                    FROM movimiento_reserva_aplicacion a
+                    INNER JOIN reserva r ON a.id_reserva = r.id_reserva
+                    WHERE a.id_movimiento = @id_movimiento
+                    ORDER BY r.fecha_entrada, r.id_reserva
+                    FOR UPDATE;", conexion, transaccion))
+                {
+                    comando.Parameters.AddWithValue("@id_movimiento", idMovimiento);
+                    using var lector = comando.ExecuteReader();
+
+                    while (lector.Read())
+                    {
+                        aplicaciones.Add((
+                            Convert.ToInt32(lector["id_reserva"]),
+                            Convert.ToDecimal(lector["monto"])));
+                    }
+                }
+
+                if (aplicaciones.Count == 0)
+                {
+                    throw new InvalidOperationException(
+                        "No se encontró la distribución del abono entre las estadías agrupadas.");
+                }
+
+                using (var comando = new MySqlCommand(@"
+                    UPDATE movimiento
+                    SET estado = 'anulado'
+                    WHERE id_movimiento = @id_movimiento
+                      AND estado = 'activo';", conexion, transaccion))
+                {
+                    comando.Parameters.AddWithValue("@id_movimiento", idMovimiento);
+
+                    if (comando.ExecuteNonQuery() == 0)
+                    {
+                        throw new InvalidOperationException("El abono ya no se encuentra activo.");
+                    }
+                }
+
+                foreach (var aplicacion in aplicaciones)
+                {
+                    using var comando = new MySqlCommand(@"
+                        UPDATE reserva
+                        SET saldo_pendiente = saldo_pendiente + @monto
+                        WHERE id_reserva = @id_reserva;", conexion, transaccion);
+                    comando.Parameters.AddWithValue("@monto", aplicacion.Monto);
+                    comando.Parameters.AddWithValue("@id_reserva", aplicacion.IdReserva);
+                    comando.ExecuteNonQuery();
+                }
+
+                transaccion.Commit();
+                TempData["Exito"] = "El abono agrupado fue anulado y el saldo se actualizó.";
+
+                return volverCheckout && idReservaRetorno.HasValue
+                    ? RedirectToAction("Checkout", "Reservas", new { id = idReservaRetorno.Value })
+                    : RedirectToAction("DetalleGrupo", new { id = idReservaGrupo, idReservaRetorno });
+            }
+            catch (Exception ex)
+            {
+                TempData["Mensaje"] = "No se pudo anular el abono agrupado: " + ex.Message;
+                return RedirectToAction("DetalleGrupo", new { id = idReservaGrupo, idReservaRetorno });
             }
         }
     }

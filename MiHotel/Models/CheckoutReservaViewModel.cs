@@ -3,6 +3,8 @@ namespace MiHotel.Models
     public class CheckoutReservaViewModel
     {
         public int IdReserva { get; set; }
+        public int? IdReservaGrupo { get; set; }
+        public bool EsReservaAgrupada => IdReservaGrupo.HasValue;
         public string Cliente { get; set; } = "";
         public string? EmpresaProcedencia { get; set; }
         public string Habitacion { get; set; } = "";

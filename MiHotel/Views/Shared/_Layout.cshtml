@@ -17,7 +17,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - @empresaNombre</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap-icons/bootstrap-icons.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/MiHotel.styles.css" asp-append-version="true" />
 
@@ -223,10 +223,12 @@
                             <strong>@nombreUsuario</strong> - @nombreRol
                         </span>
 
-                        <a asp-controller="Acceso" asp-action="CerrarSesion" class="btn-header btn-cerrar">
-                            <i class="bi bi-box-arrow-right"></i>
-                            Cerrar sesión
-                        </a>
+                        <form asp-controller="Acceso" asp-action="CerrarSesion" method="post" class="m-0">
+                            <button type="submit" class="btn-header btn-cerrar">
+                                <i class="bi bi-box-arrow-right"></i>
+                                Cerrar sesión
+                            </button>
+                        </form>
                     </div>
                 </div>
 
@@ -248,10 +250,12 @@
                             <strong>@nombreUsuario</strong> - @nombreRol
                         </span>
 
-                        <a asp-controller="Acceso" asp-action="CerrarSesion" class="btn-header btn-cerrar">
-                            <i class="bi bi-box-arrow-right"></i>
-                            Cerrar sesión
-                        </a>
+                        <form asp-controller="Acceso" asp-action="CerrarSesion" method="post" class="m-0">
+                            <button type="submit" class="btn-header btn-cerrar">
+                                <i class="bi bi-box-arrow-right"></i>
+                                Cerrar sesión
+                            </button>
+                        </form>
                     </div>
                 </div>
             }

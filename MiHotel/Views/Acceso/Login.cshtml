@@ -66,23 +66,11 @@
             height: auto;
         }
 
-        .enlace-registro {
+        .aviso-local {
+            color: #5f5553;
+            font-size: 14px;
             text-align: center;
-            margin-top: 18px;
-        }
-
-            .enlace-registro a {
-                color: #464482;
-                font-weight: 600;
-                text-decoration: none;
-            }
-
-                .enlace-registro a:hover {
-                    text-decoration: underline;
-                }
-
-        .contenedor-recordarme {
-            margin-bottom: 15px;
+            margin: -8px 0 20px;
         }
     </style>
 </head>
@@ -90,7 +78,8 @@
     <div class="contenedor-login">
         <img src="~/images/@logoEmpresa" alt="@nombreEmpresa" class="logo-login" />
 
-        <h2 class="titulo-login">Iniciar Sesión</h2>
+        <h2 class="titulo-login">Acceso del personal</h2>
+        <p class="aviso-local">Sistema local de uso exclusivo del hotel</p>
 
         @if (ViewBag.Mensaje != null)
         {
@@ -112,24 +101,10 @@
                 <span asp-validation-for="Clave" class="text-danger"></span>
             </div>
 
-            <div class="form-check contenedor-recordarme">
-                <input asp-for="Recordarme" class="form-check-input" />
-                <label asp-for="Recordarme" class="form-check-label">Recordarme</label>
-            </div>
-
             <div class="d-grid">
                 <button type="submit" class="btn btn-login">Ingresar</button>
             </div>
         </form>
-
-        <div class="text-center mt-3">
-            <a asp-controller="Acceso" asp-action="OlvideClave">¿Olvidó su contraseña?</a>
-        </div>
-
-        <div class="enlace-registro">
-            <span>¿No tienes cuenta? </span>
-            <a asp-controller="Acceso" asp-action="Registro">Crear cuenta</a>
-        </div>
     </div>
 
     <partial name="_ValidationScriptsPartial" />

@@ -1,0 +1,100 @@
+
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login - Hotel Casa Antigua</title>
+    <link rel="stylesheet" href="/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <style>
+        body {
+            background-color: #693D2F;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .contenedor-login {
+            background-color: #DEDEDE;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            padding: 30px;
+            width: 100%;
+            max-width: 420px;
+        }
+
+        .titulo-login {
+            color: #824B44;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .btn-login {
+            background-color: #824B44;
+            border-color: #824B44;
+            color: white;
+        }
+
+            .btn-login:hover {
+                background-color: #6d3d37;
+                border-color: #6d3d37;
+                color: white;
+            }
+
+        .mensaje-error {
+            color: red;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .logo-login {
+            display: block;
+            margin: 0 auto 15px auto;
+            max-width: 140px;
+            width: 100%;
+            height: auto;
+        }
+
+        .aviso-local {
+            color: #5f5553;
+            font-size: 14px;
+            text-align: center;
+            margin: -8px 0 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="contenedor-login">
+        <img src="/images/logo.png" alt="Hotel Casa Antigua" class="logo-login" />
+
+        <h2 class="titulo-login">Acceso del personal</h2>
+        <p class="aviso-local">Sistema local de uso exclusivo del hotel</p>
+
+
+        <form method="post" action="/">
+            <div class="mb-3">
+                <label class="form-label" for="Correo">Correo</label>
+                <input class="form-control" type="email" data-val="true" data-val-email="Debe ingresar un correo v&#xE1;lido." data-val-required="El correo es obligatorio." id="Correo" name="Correo" value="" />
+                <span class="text-danger field-validation-valid" data-valmsg-for="Correo" data-valmsg-replace="true"></span>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label" for="Clave">Clave</label>
+                <input class="form-control" type="password" data-val="true" data-val-required="La contrase&#xF1;a es obligatoria." id="Clave" name="Clave" />
+                <span class="text-danger field-validation-valid" data-valmsg-for="Clave" data-valmsg-replace="true"></span>
+            </div>
+
+            <div class="d-grid">
+                <button type="submit" class="btn btn-login">Ingresar</button>
+            </div>
+        <input name="__RequestVerificationToken" type="hidden" value="CfDJ8AAAAAAAAAAAAAAAAAAAAAAf_wLAg4AdBbwV05Mqm38zq2EGoJJF8Fc7IT3PQoAPxqlCFyq8LqYJXwtqBVxF769h79RV5fOMbut4IfO9LTMcFQ" /></form>
+    </div>
+
+    <script src="/lib/jquery-validation/dist/jquery.validate.min.js"></script>
+<script src="/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>
+
+</body>
+</html>

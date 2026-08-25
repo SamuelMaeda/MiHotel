@@ -166,6 +166,17 @@
     .form-accion {
         display: inline;
     }
+
+    .etiqueta-grupo {
+        display: inline-block;
+        margin-top: 4px;
+        padding: 2px 7px;
+        border-radius: 999px;
+        background-color: #e6d3d0;
+        color: #824b44;
+        font-size: 0.78rem;
+        font-weight: 600;
+    }
 </style>
 
 <div class="tarjeta-contenido">
@@ -210,7 +221,7 @@
         <input type="hidden" name="direccion" value="@direccion" />
 
         <label class="form-label">Buscar reserva</label>
-        <input type="text" id="busqueda" name="busqueda" value="@busqueda" class="form-control" placeholder="Buscar por cliente, empresa, habitación u observaciones" />
+        <input type="text" id="busqueda" name="busqueda" value="@busqueda" class="form-control" placeholder="Buscar por cliente, empresa, habitación, grupo u observaciones" />
     </form>
 
     <div class="mb-3">
@@ -276,7 +287,13 @@
                             && Convert.ToDateTime(fila["fecha_entrada"]).Date == DateTime.Today;
 
                         <tr>
-                            <td>@fila["nombre"]</td>
+                            <td>
+                                <div>@fila["nombre"]</div>
+                                @if (fila["id_reserva_grupo"] != DBNull.Value)
+                                {
+                                    <span class="etiqueta-grupo">Grupo #@fila["id_reserva_grupo"]</span>
+                                }
+                            </td>
                             <td>@(fila["empresa_procedencia"] == DBNull.Value ? "-" : fila["empresa_procedencia"])</td>
                             <td>@fila["habitacion"]</td>
                             <td>@Convert.ToDateTime(fila["fecha_entrada"]).ToString("dd/MM/yyyy")</td>

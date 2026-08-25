@@ -461,13 +461,23 @@ por estadía y las cuentas independientes.
                         tipoCuenta == "estadia"
                         && fila["id_reserva"] != DBNull.Value;
 
+                        bool esGrupo =
+                        tipoCuenta == "grupo"
+                        && fila["id_reserva_grupo"] != DBNull.Value;
+
                         <tr>
 
                             <td>
 
                                 @fila["cliente"]
 
-                                @if (!esEstadia)
+                                @if (esGrupo)
+                                {
+                                    <div class="tipo-cuenta">
+                                        Reserva agrupada #@fila["id_reserva_grupo"]
+                                    </div>
+                                }
+                                else if (!esEstadia)
                                 {
                                     <div class="tipo-cuenta">
                                         Cuenta sin estadía
@@ -533,7 +543,19 @@ por estadía y las cuentas independientes.
 
                                 <div class="acciones-contenedor">
 
-                                    @if (esEstadia)
+                                    @if (esGrupo)
+                                    {
+                                        <a asp-controller="CuentasPorCobrar"
+                                           asp-action="DetalleGrupo"
+                                           asp-route-id="@fila["id_reserva_grupo"]"
+                                           class="btn-icono btn-gestionar"
+                                           title="Gestionar cuenta agrupada y abonos">
+
+                                            <i class="bi bi-folder2-open"></i>
+
+                                        </a>
+                                    }
+                                    else if (esEstadia)
                                     {
                                         <a asp-controller="CuentasPorCobrar"
                                            asp-action="Detalle"

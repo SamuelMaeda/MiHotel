@@ -27,6 +27,10 @@ namespace MiHotel.Models
 
         public string? Observaciones { get; set; }
 
+        public bool UsarFechasSeparadas { get; set; }
+
+        public List<DateTime> FechasSeparadas { get; set; } = new();
+
         // ===============================
         // SOPORTE PARA PRECIO HISTORICO
         // ===============================
