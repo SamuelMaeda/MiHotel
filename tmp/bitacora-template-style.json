@@ -1,0 +1,171 @@
+{
+  "input": "C:\\Users\\Samuel\\Desktop\\Hotel Casa Antigua\\Prompts\\PROMPT formato Bitacora.docx",
+  "fonts_by_char_count": {
+    "Calibri": 3570,
+    "Times New Roman": 1874
+  },
+  "direct_run_formatting_runs": 117,
+  "direct_paragraph_formatting_paragraphs": 48,
+  "heading_like_paragraphs_not_heading_style": [
+    {
+      "para_index": 1,
+      "text": "BIT\u00c1CORA DE DESARROLLO  ",
+      "style": "Normal"
+    },
+    {
+      "para_index": 2,
+      "text": "Proyecto: Sistema de Gesti\u00f3n Hotelera \u2013 Hotel Casa Antigua  ",
+      "style": "Normal"
+    },
+    {
+      "para_index": 3,
+      "text": "Sistema: MiHotel  ",
+      "style": "Normal"
+    },
+    {
+      "para_index": 4,
+      "text": "Tecnolog\u00edas: ASP.NET Core MVC \u2013 MySQL \u2013 Visual Studio 2022  ",
+      "style": "Normal"
+    },
+    {
+      "para_index": 5,
+      "text": "Fecha: [Fecha de trabajo]",
+      "style": "Normal"
+    },
+    {
+      "para_index": 7,
+      "text": "**1. [T\u00edtulo del primer punto]**  ",
+      "style": "Normal"
+    },
+    {
+      "para_index": 10,
+      "text": "**2. [T\u00edtulo del segundo punto]**  ",
+      "style": "Normal"
+    },
+    {
+      "para_index": 13,
+      "text": "**3. [T\u00edtulo del tercer punto]**  ",
+      "style": "Normal"
+    },
+    {
+      "para_index": 14,
+      "text": "[Describir ajustes, correcciones, validaciones o mejoras realizadas.]",
+      "style": "Normal"
+    },
+    {
+      "para_index": 16,
+      "text": "**4. [T\u00edtulo del cuarto punto]**  ",
+      "style": "Normal"
+    },
+    {
+      "para_index": 17,
+      "text": "[Opcional: errores encontrados, decisiones tomadas o cambios de enfoque.]",
+      "style": "Normal"
+    },
+    {
+      "para_index": 19,
+      "text": "**5. [T\u00edtulo del quinto punto]**  ",
+      "style": "Normal"
+    },
+    {
+      "para_index": 22,
+      "text": "**6. Estado actual del sistema**  ",
+      "style": "Normal"
+    },
+    {
+      "para_index": 25,
+      "text": "**7. Conclusi\u00f3n**  ",
+      "style": "Normal"
+    },
+    {
+      "para_index": 29,
+      "text": " Siempre",
+      "style": "Normal"
+    },
+    {
+      "para_index": 31,
+      "text": "Usar negrita solo en subt\u00edtulos ",
+      "style": "Normal"
+    },
+    {
+      "para_index": 34,
+      "text": " Evitar",
+      "style": "Normal"
+    },
+    {
+      "para_index": 39,
+      "text": "2. Cantidad de puntos recomendada",
+      "style": "Normal"
+    },
+    {
+      "para_index": 43,
+      "text": "3. Ejemplos de t\u00edtulos (para que no repitas siempre lo mismo)",
+      "style": "Normal"
+    },
+    {
+      "para_index": 54,
+      "text": "4. Tip profesional (muy importante)",
+      "style": "Normal"
+    }
+  ],
+  "examples": {
+    "direct_run_formatting": [
+      {
+        "para_index": 1,
+        "run_text": "BIT\u00c1CORA DE DESARROLLO  ",
+        "style": "Normal"
+      },
+      {
+        "para_index": 2,
+        "run_text": "Proyecto: Sistema de Gesti\u00f3n Hotelera \u2013 Hotel Casa Antigua  ",
+        "style": "Normal"
+      },
+      {
+        "para_index": 3,
+        "run_text": "Sistema: ",
+        "style": "Normal"
+      },
+      {
+        "para_index": 3,
+        "run_text": "MiHotel",
+        "style": "Normal"
+      },
+      {
+        "para_index": 3,
+        "run_text": "  ",
+        "style": "Normal"
+      }
+    ],
+    "direct_paragraph_formatting": [
+      {
+        "para_index": 28,
+        "text": "Cuando uses este formato:",
+        "style": "Normal"
+      },
+      {
+        "para_index": 29,
+        "text": " Siempre",
+        "style": "Normal"
+      },
+      {
+        "para_index": 30,
+        "text": "Mantener numeraci\u00f3n continua ",
+        "style": "Normal"
+      },
+      {
+        "para_index": 31,
+        "text": "Usar negrita solo en subt\u00edtulos ",
+        "style": "Normal"
+      },
+      {
+        "para_index": 32,
+        "text": "Redacci\u00f3n en p\u00e1rrafos (no listas) ",
+        "style": "Normal"
+      }
+    ]
+  },
+  "notes": [
+    "Direct formatting is not always wrong, but it often causes inconsistent output when templates change.",
+    "Heading-like paragraphs not using Heading styles can break TOC and accessibility."
+  ]
+}

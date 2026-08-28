@@ -3,6 +3,9 @@
 @{
     ViewData["Title"] = "Check-out de la estadía";
     bool cuentaPagada = Model.SaldoPendiente <= 0;
+    bool cuentaAgrupadaPagada = Model.SaldoPendienteGrupo <= 0;
+    bool esCierreIntermedio = Model.EsReservaAgrupada && !Model.EsUltimaEstadiaGrupo;
+    bool puedeFinalizarDirectamente = esCierreIntermedio || (Model.EsReservaAgrupada ? cuentaAgrupadaPagada : cuentaPagada);
 }
 
 <style>
@@ -70,6 +73,16 @@
     .btn-finalizar { background-color: #198754; }
     .btn-regresar { background-color: #824B44; }
 
+    .decision-factura {
+        margin-top: 22px;
+        padding: 18px;
+        border: 1px solid #d8c5c2;
+        border-radius: 10px;
+        background-color: #fff9f8;
+    }
+
+    .opciones-factura { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 12px; }
+
 </style>
 
 <div class="tarjeta-contenido">
@@ -90,6 +103,22 @@
         <span class="badge rounded-pill text-bg-warning px-3 py-2">En check-out</span>
     </div>
 
+    <section class="decision-factura" aria-labelledby="tituloDecisionFactura">
+        <h5 id="tituloDecisionFactura" class="mb-1">Decisión de facturación</h5>
+        <p class="text-muted mb-0">Debe indicar expresamente si el huésped solicitó factura para esta estadía.</p>
+        <div class="opciones-factura">
+            <div class="form-check">
+                <input class="form-check-input decision-factura-opcion" type="radio" name="decisionFacturaVisual" id="requiereFacturaSi" value="true" />
+                <label class="form-check-label" for="requiereFacturaSi">Sí, requiere factura</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input decision-factura-opcion" type="radio" name="decisionFacturaVisual" id="requiereFacturaNo" value="false" />
+                <label class="form-check-label" for="requiereFacturaNo">No requiere factura</label>
+            </div>
+        </div>
+        <div id="avisoDecisionFactura" class="form-text">Ninguna opción se selecciona automáticamente.</div>
+    </section>
+
     @if (TempData["Exito"] != null)
     {
         <div class="alert alert-success">@TempData["Exito"]</div>
@@ -109,10 +138,24 @@
         <div class="dato-resumen"><span>Salida</span><strong>@Model.FechaSalida.ToString("dd/MM/yyyy")</strong></div>
         <div class="dato-resumen"><span>Total de hospedaje</span><strong>Q @Model.TotalReserva.ToString("N2")</strong></div>
         <div class="dato-resumen">
-            <span>Saldo pendiente</span>
+            <span>Saldo de esta estadía</span>
             <strong class="@(cuentaPagada ? "saldo-pagado" : "saldo-pendiente")">Q @Model.SaldoPendiente.ToString("N2")</strong>
         </div>
+        @if (Model.EsReservaAgrupada)
+        {
+            <div class="dato-resumen">
+                <span>Saldo total de la reserva agrupada</span>
+                <strong class="@(cuentaAgrupadaPagada ? "saldo-pagado" : "saldo-pendiente")">Q @Model.SaldoPendienteGrupo.ToString("N2")</strong>
+            </div>
+        }
     </div>
+
+    @if (esCierreIntermedio && Model.SaldoPendienteGrupo > 0)
+    {
+        <div class="alert alert-info">
+            Esta es una estadía intermedia. Puede finalizarla sin liquidar ahora; el saldo continuará en la cuenta agrupada.
+        </div>
+    }
 
     @if (!string.IsNullOrWhiteSpace(Model.Observaciones))
     {
@@ -125,8 +168,7 @@
             <thead class="table-dark">
                 <tr>
                     <th>Fecha</th>
-                    <th>Tipo</th>
-                    <th>Descripción</th>
+                    <th>Movimiento</th>
                     <th>Forma de pago</th>
                     <th>Monto</th>
                     <th>Estado</th>
@@ -135,7 +177,7 @@
             <tbody>
                 @if (Model.Movimientos.Count == 0)
                 {
-                    <tr><td colspan="6" class="text-center py-3">No hay movimientos registrados.</td></tr>
+                    <tr><td colspan="5" class="text-center py-3">No hay movimientos registrados.</td></tr>
                 }
                 else
                 {
@@ -143,9 +185,8 @@
                     {
                         <tr>
                             <td>@movimiento.FechaHora.ToString("dd/MM/yyyy HH:mm")</td>
-                            <td>@movimiento.Tipo.Replace("_", " ")</td>
-                            <td>@movimiento.Descripcion</td>
-                            <td>@movimiento.FormaPago</td>
+                            <td>@movimiento.MovimientoLegible</td>
+                            <td>@movimiento.FormaPagoLegible</td>
                             <td>Q @movimiento.Monto.ToString("N2")</td>
                             <td>@(movimiento.Estado.Trim().ToLower() == "activo" ? "Activo" : "Anulado")</td>
                         </tr>
@@ -157,7 +198,10 @@
 
     <div class="acciones-checkout">
         <a asp-controller="CuentasPorCobrar" asp-action="Detalle" asp-route-id="@Model.IdReserva" class="btn-checkout btn-pagar">
-            <i class="bi bi-cash-coin"></i> @(cuentaPagada ? "Consultar o corregir abonos" : "Registrar o corregir abonos")
+            <i class="bi bi-cash-coin"></i>
+            @(Model.EsReservaAgrupada
+                ? "Pagar esta estadía o la cuenta agrupada"
+                : cuentaPagada ? "Consultar o corregir abonos" : "Registrar o corregir abonos")
         </a>
 
         <form asp-controller="Reservas" asp-action="RegresarEnCurso" asp-route-id="@Model.IdReserva" method="post">
@@ -167,19 +211,21 @@
             </button>
         </form>
 
-        @if (cuentaPagada)
+        @if (puedeFinalizarDirectamente)
         {
             <form asp-controller="Reservas" asp-action="FinalizarEstadia" asp-route-id="@Model.IdReserva" method="post">
                 @Html.AntiForgeryToken()
-                <button type="submit" class="btn-checkout btn-finalizar" onclick="return confirm('¿Desea finalizar la estadía y liberar la habitación?');">
-                    <i class="bi bi-check-circle"></i> Finalizar estadía
+                <input type="hidden" class="valor-requiere-factura" name="requiereFactura" />
+                <button type="submit" class="btn-checkout btn-finalizar boton-finalizar-estadia" disabled onclick="return confirm('¿Desea registrar la salida y liberar la habitación?');">
+                    <i class="bi bi-check-circle"></i> <span class="texto-finalizar">Finalizar estadía</span>
                 </button>
             </form>
         }
         else
         {
             <button type="button"
-                    class="btn-checkout btn-finalizar"
+                    class="btn-checkout btn-finalizar boton-finalizar-estadia"
+                    disabled
                     data-bs-toggle="modal"
                     data-bs-target="#modalFinalizarConDeuda">
                 <i class="bi bi-check-circle"></i> Finalizar estadía
@@ -188,7 +234,7 @@
     </div>
 </div>
 
-@if (!cuentaPagada)
+@if (!puedeFinalizarDirectamente)
 {
     <div class="modal fade" id="modalFinalizarConDeuda" tabindex="-1" aria-labelledby="tituloFinalizarConDeuda" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -203,10 +249,11 @@
                     <form asp-controller="Reservas" asp-action="FinalizarEstadia" asp-route-id="@Model.IdReserva" method="post">
                         @Html.AntiForgeryToken()
                         <input type="hidden" name="autorizarSaldoPendiente" value="true" />
+                        <input type="hidden" class="valor-requiere-factura" name="requiereFactura" />
 
                         <div class="modal-body">
                             <div class="alert alert-warning">
-                                El saldo pendiente es de <strong>Q @Model.SaldoPendiente.ToString("N2")</strong>.
+                                El saldo pendiente es de <strong>Q @(Model.EsReservaAgrupada ? Model.SaldoPendienteGrupo.ToString("N2") : Model.SaldoPendiente.ToString("N2"))</strong>.
                                 Si continúa, la habitación será liberada y la deuda permanecerá en Cuentas por Cobrar.
                             </div>
 
@@ -222,8 +269,8 @@
 
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Continuar cobrando</button>
-                            <button type="submit" class="btn btn-success" onclick="return confirm('¿Confirma que desea finalizar esta estadía con deuda pendiente?');">
-                                Autorizar y finalizar con deuda
+                            <button type="submit" class="btn btn-success boton-finalizar-estadia" disabled onclick="return confirm('¿Confirma que desea finalizar esta estadía con deuda pendiente?');">
+                                <span class="texto-finalizar">Autorizar y finalizar con deuda</span>
                             </button>
                         </div>
                     </form>
@@ -232,7 +279,7 @@
                 {
                     <div class="modal-body">
                         <div class="alert alert-warning mb-0">
-                            La cuenta tiene un saldo pendiente de <strong>Q @Model.SaldoPendiente.ToString("N2")</strong>.
+                            La cuenta tiene un saldo pendiente de <strong>Q @(Model.EsReservaAgrupada ? Model.SaldoPendienteGrupo.ToString("N2") : Model.SaldoPendiente.ToString("N2"))</strong>.
                             Registre el pago para finalizar la estadía. Si el huésped debe retirarse con deuda, solicite autorización administrativa.
                         </div>
                     </div>
@@ -243,4 +290,35 @@
             </div>
         </div>
     </div>
+}
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const opciones = document.querySelectorAll(".decision-factura-opcion");
+            const valores = document.querySelectorAll(".valor-requiere-factura");
+            const botones = document.querySelectorAll(".boton-finalizar-estadia");
+            const textos = document.querySelectorAll(".texto-finalizar");
+            const aviso = document.getElementById("avisoDecisionFactura");
+
+            function actualizarDecision(valor) {
+                valores.forEach(campo => campo.value = valor);
+                botones.forEach(boton => boton.disabled = false);
+                textos.forEach(texto => {
+                    texto.textContent = valor === "true"
+                        ? "Registrar salida y enviar a facturación"
+                        : "Finalizar estadía";
+                });
+                if (aviso) {
+                    aviso.textContent = valor === "true"
+                        ? "La estadía aparecerá en Facturas pendientes; la habitación se liberará normalmente."
+                        : "La estadía no generará trabajo pendiente de facturación.";
+                }
+            }
+
+            opciones.forEach(opcion => opcion.addEventListener("change", function () {
+                actualizarDecision(this.value);
+            }));
+        });
+    </script>
 }

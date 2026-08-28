@@ -12,16 +12,19 @@ namespace MiHotel.Controllers
     {
         private readonly ConexionBD _conexionBD;
         private readonly DisponibilidadService _disponibilidadService;
+        private readonly FacturacionService _facturacionService;
         private readonly IDataProtector _protectorFlujoReservaCliente;
         private const int RegistrosPorPagina = 20;
 
         public ReservasController(
             ConexionBD conexionBD,
             DisponibilidadService disponibilidadService,
+            FacturacionService facturacionService,
             IDataProtectionProvider dataProtectionProvider)
         {
             _conexionBD = conexionBD;
             _disponibilidadService = disponibilidadService;
+            _facturacionService = facturacionService;
             _protectorFlujoReservaCliente = dataProtectionProvider.CreateProtector("MiHotel.Reservas.CrearCliente");
         }
 
@@ -401,6 +404,7 @@ namespace MiHotel.Controllers
                     r.id_reserva_grupo,
                     r.id_clipro,
                     c.nombre AS cliente,
+                    c.nit AS nit_cliente,
                     ec.nombre AS empresa_procedencia,
                     p.codigo AS habitacion,
                     r.fecha_entrada,
@@ -444,6 +448,7 @@ namespace MiHotel.Controllers
                     ? null
                     : Convert.ToInt32(lector["id_reserva_grupo"]),
                 Cliente = lector["cliente"]?.ToString() ?? "",
+                NitCliente = lector["nit_cliente"] == DBNull.Value ? null : lector["nit_cliente"].ToString(),
                 EmpresaProcedencia = lector["empresa_procedencia"] == DBNull.Value
                     ? null
                     : lector["empresa_procedencia"]?.ToString(),
@@ -507,6 +512,152 @@ namespace MiHotel.Controllers
             }
 
             return reservas;
+        }
+
+        private sealed class DestinoFacturaReserva
+        {
+            public int IdReserva { get; init; }
+            public int? IdReservaGrupo { get; init; }
+        }
+
+        private DestinoFacturaReserva? ObtenerDestinoFactura(
+            MySqlConnection conexion,
+            int idReserva,
+            MySqlTransaction? transaccion = null,
+            bool bloquear = false)
+        {
+            string consulta = $@"
+                SELECT id_reserva, id_reserva_grupo
+                FROM reserva
+                WHERE id_reserva = @id_reserva
+                LIMIT 1{(bloquear ? " FOR UPDATE" : "")};";
+
+            int? idReservaGrupo;
+
+            using (var comando = new MySqlCommand(consulta, conexion, transaccion))
+            {
+                comando.Parameters.AddWithValue("@id_reserva", idReserva);
+                using var lector = comando.ExecuteReader();
+
+                if (!lector.Read())
+                {
+                    return null;
+                }
+
+                idReservaGrupo = lector["id_reserva_grupo"] == DBNull.Value
+                    ? null
+                    : Convert.ToInt32(lector["id_reserva_grupo"]);
+            }
+
+            if (bloquear && idReservaGrupo.HasValue)
+            {
+                using var comandoGrupo = new MySqlCommand(@"
+                    SELECT id_reserva_grupo
+                    FROM reserva_grupo
+                    WHERE id_reserva_grupo = @id_reserva_grupo
+                    FOR UPDATE;", conexion, transaccion);
+                comandoGrupo.Parameters.AddWithValue("@id_reserva_grupo", idReservaGrupo.Value);
+
+                if (comandoGrupo.ExecuteScalar() == null)
+                {
+                    return null;
+                }
+            }
+
+            return new DestinoFacturaReserva
+            {
+                IdReserva = idReserva,
+                IdReservaGrupo = idReservaGrupo
+            };
+        }
+
+        private void CargarDatosFacturacion(MySqlConnection conexion, ReservaDetalleViewModel modelo)
+        {
+            modelo.EsAdministrador = EsAdministradorSesion();
+
+            using (var comando = new MySqlCommand(@"
+                SELECT requiere_factura, estado_facturacion, estado_administrativo
+                FROM reserva_facturacion
+                WHERE id_reserva = @id_reserva
+                LIMIT 1;", conexion))
+            {
+                comando.Parameters.AddWithValue("@id_reserva", modelo.IdReserva);
+                using var lector = comando.ExecuteReader();
+                if (lector.Read())
+                {
+                    modelo.RequiereFactura = lector["requiere_factura"] == DBNull.Value
+                        ? null
+                        : Convert.ToBoolean(lector["requiere_factura"]);
+                    modelo.EstadoFacturacion = lector["estado_facturacion"]?.ToString() ?? "sin_definir";
+                    modelo.EstadoAdministrativo = lector["estado_administrativo"]?.ToString() ?? "pendiente_revision";
+                }
+            }
+
+            using var comandoDocumentos = new MySqlCommand(@"
+                SELECT df.id_documento_fiscal, df.tipo_documento, df.nit_receptor,
+                       df.serie, df.numero_dte, df.nombre_original, df.tamano,
+                       df.estado, df.fecha_registro, df.motivo_estado,
+                       u.nombre_usuario
+                FROM documento_fiscal_reserva dfr
+                INNER JOIN documento_fiscal df
+                    ON df.id_documento_fiscal = dfr.id_documento_fiscal
+                INNER JOIN usuario u
+                    ON u.id_usuario = df.id_usuario_registro
+                WHERE dfr.id_reserva = @id_reserva
+                ORDER BY df.fecha_registro DESC, df.id_documento_fiscal DESC;", conexion);
+            comandoDocumentos.Parameters.AddWithValue("@id_reserva", modelo.IdReserva);
+            using var lectorDocumentos = comandoDocumentos.ExecuteReader();
+
+            while (lectorDocumentos.Read())
+            {
+                modelo.DocumentosFiscales.Add(new DocumentoFiscalViewModel
+                {
+                    IdDocumentoFiscal = Convert.ToInt64(lectorDocumentos["id_documento_fiscal"]),
+                    TipoDocumento = lectorDocumentos["tipo_documento"]?.ToString() ?? "factura",
+                    NitReceptor = lectorDocumentos["nit_receptor"] == DBNull.Value ? null : lectorDocumentos["nit_receptor"].ToString(),
+                    Serie = lectorDocumentos["serie"] == DBNull.Value ? null : lectorDocumentos["serie"].ToString(),
+                    NumeroDte = lectorDocumentos["numero_dte"] == DBNull.Value ? null : lectorDocumentos["numero_dte"].ToString(),
+                    NombreOriginal = lectorDocumentos["nombre_original"]?.ToString() ?? "factura.pdf",
+                    Tamano = Convert.ToInt64(lectorDocumentos["tamano"]),
+                    Estado = lectorDocumentos["estado"]?.ToString() ?? "vigente",
+                    FechaRegistro = Convert.ToDateTime(lectorDocumentos["fecha_registro"]),
+                    MotivoEstado = lectorDocumentos["motivo_estado"] == DBNull.Value ? null : lectorDocumentos["motivo_estado"].ToString(),
+                    UsuarioRegistro = lectorDocumentos["nombre_usuario"]?.ToString() ?? ""
+                });
+            }
+
+            lectorDocumentos.Close();
+
+            if (modelo.EsAdministrador)
+            {
+                using var comandoHistorial = new MySqlCommand(@"
+                    SELECT h.id_historial, h.accion, h.estado_anterior, h.estado_nuevo,
+                           h.detalle, h.fecha_hora, u.nombre_usuario
+                    FROM reserva_facturacion_historial h
+                    INNER JOIN usuario u ON u.id_usuario = h.id_usuario
+                    WHERE h.id_reserva = @id_reserva
+                    ORDER BY h.fecha_hora DESC, h.id_historial DESC;", conexion);
+                comandoHistorial.Parameters.AddWithValue("@id_reserva", modelo.IdReserva);
+                using var lectorHistorial = comandoHistorial.ExecuteReader();
+
+                while (lectorHistorial.Read())
+                {
+                    modelo.HistorialFacturacion.Add(new FacturacionHistorialViewModel
+                    {
+                        IdHistorial = Convert.ToInt64(lectorHistorial["id_historial"]),
+                        Accion = lectorHistorial["accion"]?.ToString() ?? "",
+                        EstadoAnterior = lectorHistorial["estado_anterior"] == DBNull.Value
+                            ? null
+                            : lectorHistorial["estado_anterior"].ToString(),
+                        EstadoNuevo = lectorHistorial["estado_nuevo"]?.ToString() ?? "",
+                        Detalle = lectorHistorial["detalle"] == DBNull.Value
+                            ? null
+                            : lectorHistorial["detalle"].ToString(),
+                        Usuario = lectorHistorial["nombre_usuario"]?.ToString() ?? "",
+                        FechaHora = Convert.ToDateTime(lectorHistorial["fecha_hora"])
+                    });
+                }
+            }
         }
 
         private int ObtenerIdUsuarioValidoParaMovimiento(MySqlConnection conexion)
@@ -1090,7 +1241,7 @@ namespace MiHotel.Controllers
                 }
 
                 string vistaNormalizada = vista.Trim().ToLower();
-                string[] estadosPermitidos = { "todas", "pendiente", "en_curso", "en_checkout", "cancelada", "finalizada" };
+                string[] estadosPermitidos = { "todas", "pendiente", "en_curso", "en_checkout", "finalizada", "pendientes_factura", "cancelada" };
 
                 if (!estadosPermitidos.Contains(vistaNormalizada))
                 {
@@ -1105,7 +1256,12 @@ namespace MiHotel.Controllers
                     pagina = 1;
                 }
 
-                string condicionEstado = vistaNormalizada == "todas" ? "" : "AND r.estado = @estado";
+                string condicionEstado = vistaNormalizada switch
+                {
+                    "todas" => "",
+                    "pendientes_factura" => "AND rf.estado_facturacion IN ('pendiente', 'anulada')",
+                    _ => "AND r.estado = @estado"
+                };
                 string condicionBusqueda = "";
 
                 if (!string.IsNullOrWhiteSpace(busqueda))
@@ -1127,13 +1283,14 @@ namespace MiHotel.Controllers
                     LEFT JOIN cliente_detalle cd ON c.id_clipro = cd.id_clipro
                     LEFT JOIN empresa_cliente ec ON cd.id_empresa_cliente = ec.id_empresa_cliente
                     INNER JOIN proser p ON r.id_habitacion = p.id_proser
+                    LEFT JOIN reserva_facturacion rf ON rf.id_reserva = r.id_reserva
                     WHERE 1 = 1
                     {condicionEstado}
                     {condicionBusqueda};";
 
                 using var comandoConteo = new MySqlCommand(consultaConteo, conexion);
 
-                if (vistaNormalizada != "todas")
+                if (vistaNormalizada is not ("todas" or "pendientes_factura"))
                 {
                     comandoConteo.Parameters.AddWithValue("@estado", vistaNormalizada);
                 }
@@ -1172,12 +1329,23 @@ namespace MiHotel.Controllers
                         r.total_reserva,
                         r.saldo_pendiente,
                         r.estado,
-                        r.observaciones
+                        r.observaciones,
+                        COALESCE(rf.estado_facturacion, 'sin_definir') AS estado_facturacion,
+                        EXISTS(
+                            SELECT 1
+                            FROM documento_fiscal_reserva dfr
+                            INNER JOIN documento_fiscal df
+                                ON df.id_documento_fiscal = dfr.id_documento_fiscal
+                            WHERE dfr.id_reserva = r.id_reserva
+                              AND df.tipo_documento = 'factura'
+                              AND df.estado = 'vigente'
+                        ) AS tiene_factura
                     FROM reserva r
                     INNER JOIN clipro c ON r.id_clipro = c.id_clipro
                     LEFT JOIN cliente_detalle cd ON c.id_clipro = cd.id_clipro
                     LEFT JOIN empresa_cliente ec ON cd.id_empresa_cliente = ec.id_empresa_cliente
                     INNER JOIN proser p ON r.id_habitacion = p.id_proser
+                    LEFT JOIN reserva_facturacion rf ON rf.id_reserva = r.id_reserva
                     WHERE 1 = 1
                     {condicionEstado}
                     {condicionBusqueda}
@@ -1186,7 +1354,7 @@ namespace MiHotel.Controllers
 
                 using var comando = new MySqlCommand(consulta, conexion);
 
-                if (vistaNormalizada != "todas")
+                if (vistaNormalizada is not ("todas" or "pendientes_factura"))
                 {
                     comando.Parameters.AddWithValue("@estado", vistaNormalizada);
                 }
@@ -1465,6 +1633,8 @@ namespace MiHotel.Controllers
                     modelo.ReservasDelGrupo = ObtenerReservasDelGrupo(conexion, modelo.IdReservaGrupo.Value);
                 }
 
+                CargarDatosFacturacion(conexion, modelo);
+
                 try
                 {
                     using var conexionPagos = _conexionBD.ObtenerConexion();
@@ -1483,6 +1653,250 @@ namespace MiHotel.Controllers
                 TempData["Mensaje"] = "Error al cargar el detalle de la reserva: " + ex.Message;
                 return RedirectToAction("Index");
             }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        [NonAction]
+        public IActionResult SubirFactura(int id, IFormFile? facturaPdf)
+        {
+            IActionResult? acceso = ValidarAccesoSoloAdministrativo();
+            if (acceso != null)
+            {
+                return acceso;
+            }
+
+            if (facturaPdf == null || facturaPdf.Length == 0)
+            {
+                TempData["Mensaje"] = "Seleccione una factura en formato PDF.";
+                return RedirectToAction("Detalle", new { id });
+            }
+
+            const long tamanoMaximo = 10L * 1024L * 1024L;
+
+            if (facturaPdf.Length > tamanoMaximo)
+            {
+                TempData["Mensaje"] = "La factura no puede superar los 10 MB.";
+                return RedirectToAction("Detalle", new { id });
+            }
+
+            string nombreOriginal = Path.GetFileName(facturaPdf.FileName).Trim();
+
+            if (!string.Equals(Path.GetExtension(nombreOriginal), ".pdf", StringComparison.OrdinalIgnoreCase))
+            {
+                TempData["Mensaje"] = "El archivo seleccionado debe tener formato PDF.";
+                return RedirectToAction("Detalle", new { id });
+            }
+
+            if (string.IsNullOrWhiteSpace(nombreOriginal))
+            {
+                nombreOriginal = $"Factura-reserva-{id}.pdf";
+            }
+
+            if (nombreOriginal.Length > 255)
+            {
+                nombreOriginal = nombreOriginal[..251] + ".pdf";
+            }
+
+            byte[] contenido;
+
+            using (var memoria = new MemoryStream())
+            {
+                facturaPdf.CopyTo(memoria);
+                contenido = memoria.ToArray();
+            }
+
+            if (contenido.Length < 5 ||
+                contenido[0] != (byte)'%' ||
+                contenido[1] != (byte)'P' ||
+                contenido[2] != (byte)'D' ||
+                contenido[3] != (byte)'F' ||
+                contenido[4] != (byte)'-')
+            {
+                TempData["Mensaje"] = "El archivo seleccionado no contiene un PDF válido.";
+                return RedirectToAction("Detalle", new { id });
+            }
+
+            try
+            {
+                using var conexion = _conexionBD.ObtenerConexion();
+                conexion.Open();
+                using var transaccion = conexion.BeginTransaction();
+
+                DestinoFacturaReserva? destino = ObtenerDestinoFactura(
+                    conexion,
+                    id,
+                    transaccion,
+                    bloquear: true);
+
+                if (destino == null)
+                {
+                    transaccion.Rollback();
+                    TempData["Mensaje"] = "No se encontró la reservación.";
+                    return RedirectToAction("Index");
+                }
+
+                const string consulta = @"
+                    INSERT INTO reserva_factura
+                        (id_reserva, id_reserva_grupo, contenido, tipo_mime,
+                         nombre_original, tamano, fecha_subida, id_usuario)
+                    VALUES
+                        (@id_reserva, @id_reserva_grupo, @contenido, 'application/pdf',
+                         @nombre_original, @tamano, CURRENT_TIMESTAMP, @id_usuario)
+                    ON DUPLICATE KEY UPDATE
+                        contenido = VALUES(contenido),
+                        tipo_mime = VALUES(tipo_mime),
+                        nombre_original = VALUES(nombre_original),
+                        tamano = VALUES(tamano),
+                        fecha_subida = CURRENT_TIMESTAMP,
+                        id_usuario = VALUES(id_usuario);";
+
+                using (var comando = new MySqlCommand(consulta, conexion, transaccion))
+                {
+                    comando.Parameters.AddWithValue(
+                        "@id_reserva",
+                        destino.IdReservaGrupo.HasValue ? DBNull.Value : destino.IdReserva);
+                    comando.Parameters.AddWithValue(
+                        "@id_reserva_grupo",
+                        destino.IdReservaGrupo.HasValue ? destino.IdReservaGrupo.Value : DBNull.Value);
+                    comando.Parameters.Add("@contenido", MySqlDbType.LongBlob).Value = contenido;
+                    comando.Parameters.AddWithValue("@nombre_original", nombreOriginal);
+                    comando.Parameters.AddWithValue("@tamano", contenido.LongLength);
+                    comando.Parameters.AddWithValue("@id_usuario", ObtenerIdUsuarioSesion());
+                    comando.ExecuteNonQuery();
+                }
+
+                transaccion.Commit();
+                TempData["Exito"] = destino.IdReservaGrupo.HasValue
+                    ? "Factura guardada para todas las estadías de la reserva agrupada."
+                    : "Factura guardada correctamente.";
+            }
+            catch (Exception ex)
+            {
+                TempData["Mensaje"] = "No fue posible guardar la factura: " + ex.Message;
+            }
+
+            return RedirectToAction("Detalle", new { id });
+        }
+
+        [HttpGet]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        [NonAction]
+        public IActionResult FacturaPdf(int id, bool descargar = false)
+        {
+            IActionResult? acceso = ValidarAccesoSoloAdministrativo();
+            if (acceso != null)
+            {
+                return acceso;
+            }
+
+            try
+            {
+                using var conexion = _conexionBD.ObtenerConexion();
+                conexion.Open();
+
+                DestinoFacturaReserva? destino = ObtenerDestinoFactura(conexion, id);
+
+                if (destino == null)
+                {
+                    TempData["Mensaje"] = "No se encontró la reservación.";
+                    return RedirectToAction("Index");
+                }
+
+                const string consulta = @"
+                    SELECT contenido, nombre_original
+                    FROM reserva_factura
+                    WHERE
+                        (@id_reserva_grupo IS NOT NULL AND id_reserva_grupo = @id_reserva_grupo)
+                        OR
+                        (@id_reserva_grupo IS NULL AND id_reserva = @id_reserva)
+                    LIMIT 1;";
+
+                using var comando = new MySqlCommand(consulta, conexion);
+                comando.Parameters.AddWithValue("@id_reserva", destino.IdReserva);
+                comando.Parameters.AddWithValue(
+                    "@id_reserva_grupo",
+                    destino.IdReservaGrupo.HasValue ? destino.IdReservaGrupo.Value : DBNull.Value);
+                using var lector = comando.ExecuteReader();
+
+                if (!lector.Read())
+                {
+                    TempData["Mensaje"] = "Esta reservación todavía no tiene una factura adjunta.";
+                    return RedirectToAction("Detalle", new { id });
+                }
+
+                byte[] contenido = (byte[])lector["contenido"];
+                string nombre = lector["nombre_original"]?.ToString() ?? $"Factura-reserva-{id}.pdf";
+
+                return descargar
+                    ? File(contenido, "application/pdf", nombre)
+                    : File(contenido, "application/pdf");
+            }
+            catch (Exception ex)
+            {
+                TempData["Mensaje"] = "No fue posible abrir la factura: " + ex.Message;
+                return RedirectToAction("Detalle", new { id });
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        [NonAction]
+        public IActionResult EliminarFactura(int id)
+        {
+            IActionResult? acceso = ValidarAccesoSoloAdministrativo();
+            if (acceso != null)
+            {
+                return acceso;
+            }
+
+            try
+            {
+                using var conexion = _conexionBD.ObtenerConexion();
+                conexion.Open();
+                using var transaccion = conexion.BeginTransaction();
+
+                DestinoFacturaReserva? destino = ObtenerDestinoFactura(
+                    conexion,
+                    id,
+                    transaccion,
+                    bloquear: true);
+
+                if (destino == null)
+                {
+                    transaccion.Rollback();
+                    TempData["Mensaje"] = "No se encontró la reservación.";
+                    return RedirectToAction("Index");
+                }
+
+                const string consulta = @"
+                    DELETE FROM reserva_factura
+                    WHERE
+                        (@id_reserva_grupo IS NOT NULL AND id_reserva_grupo = @id_reserva_grupo)
+                        OR
+                        (@id_reserva_grupo IS NULL AND id_reserva = @id_reserva);";
+
+                using var comando = new MySqlCommand(consulta, conexion, transaccion);
+                comando.Parameters.AddWithValue("@id_reserva", destino.IdReserva);
+                comando.Parameters.AddWithValue(
+                    "@id_reserva_grupo",
+                    destino.IdReservaGrupo.HasValue ? destino.IdReservaGrupo.Value : DBNull.Value);
+
+                int eliminados = comando.ExecuteNonQuery();
+                transaccion.Commit();
+
+                TempData[eliminados > 0 ? "Exito" : "Mensaje"] = eliminados > 0
+                    ? "Factura eliminada correctamente."
+                    : "Esta reservación no tenía una factura adjunta.";
+            }
+            catch (Exception ex)
+            {
+                TempData["Mensaje"] = "No fue posible eliminar la factura: " + ex.Message;
+            }
+
+            return RedirectToAction("Detalle", new { id });
         }
 
         // ============================================================
@@ -1782,6 +2196,41 @@ namespace MiHotel.Controllers
 
                 using var transaccion = conexion.BeginTransaction();
 
+                using (var comandoBloqueo = new MySqlCommand(@"
+                    SELECT id_proser
+                    FROM proser
+                    WHERE id_proser = @id_habitacion
+                    FOR UPDATE;", conexion, transaccion))
+                {
+                    comandoBloqueo.Parameters.AddWithValue("@id_habitacion", modelo.IdHabitacion);
+
+                    if (comandoBloqueo.ExecuteScalar() == null)
+                    {
+                        transaccion.Rollback();
+                        ModelState.AddModelError("", "La habitación seleccionada ya no existe.");
+                        return View(modelo);
+                    }
+                }
+
+                if (modelo.UsarFechasSeparadas)
+                {
+                    foreach (DateTime fecha in fechasSeparadas)
+                    {
+                        if (!HabitacionSigueDisponibleParaCrear(modelo.IdHabitacion, fecha, fecha.AddDays(1)))
+                        {
+                            transaccion.Rollback();
+                            ModelState.AddModelError("", $"La habitación dejó de estar disponible para el {fecha:dd/MM/yyyy}. No se guardó ninguna fecha del grupo.");
+                            return View(modelo);
+                        }
+                    }
+                }
+                else if (!HabitacionSigueDisponibleParaCrear(modelo.IdHabitacion, modelo.FechaEntrada, modelo.FechaSalida))
+                {
+                    transaccion.Rollback();
+                    ModelState.AddModelError("", "La habitación dejó de estar disponible para esas fechas.");
+                    return View(modelo);
+                }
+
                 if (modelo.UsarFechasSeparadas)
                 {
                     int idReservaGrupo;
@@ -1908,7 +2357,8 @@ namespace MiHotel.Controllers
                         total_reserva
                     FROM reserva
                     WHERE id_reserva = @id
-                    LIMIT 1;";
+                    LIMIT 1
+                    FOR UPDATE;";
 
                 using var comando = new MySqlCommand(consulta, conexion);
                 comando.Parameters.AddWithValue("@id", id);
@@ -2222,13 +2672,42 @@ namespace MiHotel.Controllers
                     r.fecha_hora_checkin,
                     r.total_reserva,
                     r.saldo_pendiente,
+                    CASE
+                        WHEN r.id_reserva_grupo IS NULL THEN r.saldo_pendiente
+                        ELSE (
+                            SELECT COALESCE(SUM(rg.saldo_pendiente), 0)
+                            FROM reserva rg
+                            WHERE rg.id_reserva_grupo = r.id_reserva_grupo
+                              AND rg.estado <> 'cancelada'
+                        )
+                    END AS saldo_pendiente_grupo,
+                    CASE
+                        WHEN r.id_reserva_grupo IS NULL THEN 1
+                        WHEN NOT EXISTS (
+                            SELECT 1
+                            FROM reserva siguiente
+                            WHERE siguiente.id_reserva_grupo = r.id_reserva_grupo
+                              AND siguiente.estado <> 'cancelada'
+                              AND (
+                                  siguiente.fecha_entrada > r.fecha_entrada
+                                  OR (
+                                      siguiente.fecha_entrada = r.fecha_entrada
+                                      AND siguiente.id_reserva > r.id_reserva
+                                  )
+                              )
+                        ) THEN 1
+                        ELSE 0
+                    END AS es_ultima_estadia_grupo,
                     r.estado,
-                    r.observaciones
+                    r.observaciones,
+                    rf.requiere_factura,
+                    COALESCE(rf.estado_facturacion, 'sin_definir') AS estado_facturacion
                 FROM reserva r
                 INNER JOIN clipro c ON r.id_clipro = c.id_clipro
                 LEFT JOIN cliente_detalle cd ON c.id_clipro = cd.id_clipro
                 LEFT JOIN empresa_cliente ec ON cd.id_empresa_cliente = ec.id_empresa_cliente
                 INNER JOIN proser h ON r.id_habitacion = h.id_proser
+                LEFT JOIN reserva_facturacion rf ON rf.id_reserva = r.id_reserva
                 WHERE r.id_reserva = @id_reserva
                 LIMIT 1;";
 
@@ -2263,9 +2742,15 @@ namespace MiHotel.Controllers
                         : Convert.ToDateTime(lector["fecha_hora_checkin"]),
                     TotalReserva = Convert.ToDecimal(lector["total_reserva"]),
                     SaldoPendiente = Convert.ToDecimal(lector["saldo_pendiente"]),
+                    SaldoPendienteGrupo = Convert.ToDecimal(lector["saldo_pendiente_grupo"]),
+                    EsUltimaEstadiaGrupo = Convert.ToInt32(lector["es_ultima_estadia_grupo"]) == 1,
                     Estado = lector["estado"]?.ToString()?.Trim().ToLower() ?? "",
                     Observaciones = lector["observaciones"]?.ToString() ?? "",
-                    EsAdministrador = EsAdministradorSesion()
+                    EsAdministrador = EsAdministradorSesion(),
+                    RequiereFacturaRegistrada = lector["requiere_factura"] == DBNull.Value
+                        ? null
+                        : Convert.ToBoolean(lector["requiere_factura"]),
+                    EstadoFacturacion = lector["estado_facturacion"]?.ToString() ?? "sin_definir"
                 };
             }
 
@@ -2301,7 +2786,14 @@ namespace MiHotel.Controllers
                 WHERE m.id_reserva = @id_reserva
                    OR (
                         @id_reserva_grupo IS NOT NULL
-                        AND m.id_reserva_grupo = @id_reserva_grupo
+                        AND (
+                            m.id_reserva_grupo = @id_reserva_grupo
+                            OR m.id_reserva IN (
+                                SELECT rh.id_reserva
+                                FROM reserva rh
+                                WHERE rh.id_reserva_grupo = @id_reserva_grupo
+                            )
+                        )
                    )
                 GROUP BY
                     m.id_movimiento,
@@ -2442,7 +2934,8 @@ namespace MiHotel.Controllers
                     SELECT id_reserva, id_habitacion, fecha_entrada, estado
                     FROM reserva
                     WHERE id_reserva = @id
-                    LIMIT 1;";
+                    LIMIT 1
+                    FOR UPDATE;";
 
                 int idHabitacion;
                 DateTime fechaEntrada;
@@ -2565,7 +3058,8 @@ namespace MiHotel.Controllers
         public IActionResult FinalizarEstadia(
             int id,
             bool autorizarSaldoPendiente = false,
-            string? observacionSalida = null)
+            string? observacionSalida = null,
+            bool? requiereFactura = null)
         {
             IActionResult? acceso = ValidarAccesoSoloAdministrativo();
             if (acceso != null)
@@ -2579,15 +3073,104 @@ namespace MiHotel.Controllers
                 conexion.Open();
                 using var transaccion = conexion.BeginTransaction();
 
-                string consulta = @"
-                    SELECT id_habitacion, saldo_pendiente, estado
+                int? idGrupoParaBloqueo;
+
+                using (var comandoGrupo = new MySqlCommand(@"
+                    SELECT id_reserva_grupo
                     FROM reserva
                     WHERE id_reserva = @id
+                    LIMIT 1;", conexion, transaccion))
+                {
+                    comandoGrupo.Parameters.AddWithValue("@id", id);
+                    object? resultadoGrupo = comandoGrupo.ExecuteScalar();
+
+                    if (resultadoGrupo == null)
+                    {
+                        transaccion.Rollback();
+                        TempData["Mensaje"] = "No se encontró la reservación.";
+                        return RedirectToAction("Index");
+                    }
+
+                    idGrupoParaBloqueo = resultadoGrupo == DBNull.Value
+                        ? null
+                        : Convert.ToInt32(resultadoGrupo);
+                }
+
+                if (idGrupoParaBloqueo.HasValue)
+                {
+                    using (var comandoGrupo = new MySqlCommand(@"
+                        SELECT id_reserva_grupo
+                        FROM reserva_grupo
+                        WHERE id_reserva_grupo = @id_reserva_grupo
+                        FOR UPDATE;", conexion, transaccion))
+                    {
+                        comandoGrupo.Parameters.AddWithValue("@id_reserva_grupo", idGrupoParaBloqueo.Value);
+
+                        if (comandoGrupo.ExecuteScalar() == null)
+                        {
+                            transaccion.Rollback();
+                            TempData["Mensaje"] = "No se encontró la reserva agrupada.";
+                            return RedirectToAction("Index");
+                        }
+                    }
+
+                    using var comandoReservasGrupo = new MySqlCommand(@"
+                        SELECT id_reserva
+                        FROM reserva
+                        WHERE id_reserva_grupo = @id_reserva_grupo
+                        ORDER BY fecha_entrada, id_reserva
+                        FOR UPDATE;", conexion, transaccion);
+                    comandoReservasGrupo.Parameters.AddWithValue("@id_reserva_grupo", idGrupoParaBloqueo.Value);
+                    using var lectorReservasGrupo = comandoReservasGrupo.ExecuteReader();
+
+                    while (lectorReservasGrupo.Read())
+                    {
+                        // Consumir todas las filas mantiene bloqueadas las estadías del grupo.
+                    }
+                }
+
+                string consulta = @"
+                    SELECT
+                        r.id_habitacion,
+                        r.id_reserva_grupo,
+                        r.saldo_pendiente,
+                        r.estado,
+                        CASE
+                            WHEN r.id_reserva_grupo IS NULL THEN r.saldo_pendiente
+                            ELSE (
+                                SELECT COALESCE(SUM(rg.saldo_pendiente), 0)
+                                FROM reserva rg
+                                WHERE rg.id_reserva_grupo = r.id_reserva_grupo
+                                  AND rg.estado <> 'cancelada'
+                            )
+                        END AS saldo_pendiente_grupo,
+                        CASE
+                            WHEN r.id_reserva_grupo IS NULL THEN 1
+                            WHEN NOT EXISTS (
+                                SELECT 1
+                                FROM reserva siguiente
+                                WHERE siguiente.id_reserva_grupo = r.id_reserva_grupo
+                                  AND siguiente.estado <> 'cancelada'
+                                  AND (
+                                      siguiente.fecha_entrada > r.fecha_entrada
+                                      OR (
+                                          siguiente.fecha_entrada = r.fecha_entrada
+                                          AND siguiente.id_reserva > r.id_reserva
+                                      )
+                                  )
+                            ) THEN 1
+                            ELSE 0
+                        END AS es_ultima_estadia_grupo
+                    FROM reserva r
+                    WHERE r.id_reserva = @id
                     LIMIT 1
                     FOR UPDATE;";
 
                 int idHabitacion;
                 decimal saldoPendiente;
+                decimal saldoPendienteGrupo;
+                int? idReservaGrupo;
+                bool esUltimaEstadiaGrupo;
                 string estado;
 
                 using (var comando = new MySqlCommand(consulta, conexion, transaccion))
@@ -2604,7 +3187,12 @@ namespace MiHotel.Controllers
                     }
 
                     idHabitacion = Convert.ToInt32(lector["id_habitacion"]);
+                    idReservaGrupo = lector["id_reserva_grupo"] == DBNull.Value
+                        ? null
+                        : Convert.ToInt32(lector["id_reserva_grupo"]);
                     saldoPendiente = Convert.ToDecimal(lector["saldo_pendiente"]);
+                    saldoPendienteGrupo = Convert.ToDecimal(lector["saldo_pendiente_grupo"]);
+                    esUltimaEstadiaGrupo = Convert.ToInt32(lector["es_ultima_estadia_grupo"]) == 1;
                     estado = lector["estado"]?.ToString()?.Trim().ToLower() ?? "";
                 }
 
@@ -2615,12 +3203,45 @@ namespace MiHotel.Controllers
                     return RedirectToAction("Index");
                 }
 
-                if (saldoPendiente > 0)
+                if (!requiereFactura.HasValue)
+                {
+                    transaccion.Rollback();
+                    TempData["Mensaje"] = "Debe indicar expresamente si el huésped solicitó factura.";
+                    return RedirectToAction("Checkout", new { id });
+                }
+
+                bool esEstadiaIntermediaAgrupada = idReservaGrupo.HasValue && !esUltimaEstadiaGrupo;
+                decimal saldoQueDebeValidarse = idReservaGrupo.HasValue
+                    ? saldoPendienteGrupo
+                    : saldoPendiente;
+
+                if (idReservaGrupo.HasValue && esUltimaEstadiaGrupo)
+                {
+                    using var comandoPendientes = new MySqlCommand(@"
+                        SELECT COUNT(*)
+                        FROM reserva
+                        WHERE id_reserva_grupo = @id_reserva_grupo
+                          AND id_reserva <> @id_reserva
+                          AND estado NOT IN ('finalizada', 'cancelada');", conexion, transaccion);
+                    comandoPendientes.Parameters.AddWithValue("@id_reserva_grupo", idReservaGrupo.Value);
+                    comandoPendientes.Parameters.AddWithValue("@id_reserva", id);
+
+                    if (Convert.ToInt32(comandoPendientes.ExecuteScalar()) > 0)
+                    {
+                        transaccion.Rollback();
+                        TempData["Mensaje"] = "Antes de cerrar la última estadía deben finalizarse o cancelarse las fechas anteriores del grupo.";
+                        return RedirectToAction("Checkout", new { id });
+                    }
+                }
+
+                if (!esEstadiaIntermediaAgrupada && saldoQueDebeValidarse > 0)
                 {
                     if (!EsAdministradorSesion() || !autorizarSaldoPendiente)
                     {
                         transaccion.Rollback();
-                        TempData["Mensaje"] = "La cuenta todavía tiene saldo pendiente. Solo administración puede autorizar esta salida.";
+                        TempData["Mensaje"] = idReservaGrupo.HasValue
+                            ? "La cuenta agrupada todavía tiene saldo pendiente. Solo administración puede autorizar el cierre final con deuda."
+                            : "La cuenta todavía tiene saldo pendiente. Solo administración puede autorizar esta salida.";
                         return RedirectToAction("Checkout", new { id });
                     }
 
@@ -2676,11 +3297,28 @@ namespace MiHotel.Controllers
                     comando.ExecuteNonQuery();
                 }
 
+                _facturacionService.RegistrarDecision(
+                    conexion,
+                    transaccion,
+                    id,
+                    requiereFactura.Value,
+                    ObtenerIdUsuarioSesion(),
+                    "checkout",
+                    requiereFactura.Value
+                        ? "Solicitud registrada al finalizar la estadía."
+                        : "El huésped indicó que no requiere factura.");
+
                 transaccion.Commit();
 
-                TempData["Exito"] = saldoPendiente > 0
-                    ? "Estadía finalizada. La habitación fue liberada y la deuda permanece en Cuentas por Cobrar."
-                    : "Estadía finalizada y habitación liberada correctamente.";
+                string mensajeFactura = requiereFactura.Value
+                    ? " La solicitud fue enviada a Facturas pendientes."
+                    : " Se registró que no requiere factura.";
+
+                TempData["Exito"] = (esEstadiaIntermediaAgrupada && saldoPendienteGrupo > 0
+                    ? "Estadía finalizada. La habitación fue liberada y el saldo continúa en la cuenta agrupada."
+                    : saldoQueDebeValidarse > 0
+                        ? "Estadía finalizada. La habitación fue liberada y la deuda permanece en Cuentas por Cobrar."
+                        : "Estadía finalizada y habitación liberada correctamente.") + mensajeFactura;
             }
             catch (Exception ex)
             {
@@ -2690,10 +3328,405 @@ namespace MiHotel.Controllers
             return RedirectToAction("Index");
         }
 
+        private int ObtenerOCrearTipoReembolso(
+            MySqlConnection conexion,
+            MySqlTransaction transaccion)
+        {
+            using (var comando = new MySqlCommand(@"
+                SELECT id_tipomov
+                FROM tipo_movimiento
+                WHERE LOWER(nombre_tipomov) = 'reembolso'
+                LIMIT 1;", conexion, transaccion))
+            {
+                object? resultado = comando.ExecuteScalar();
+                if (resultado != null)
+                {
+                    return Convert.ToInt32(resultado);
+                }
+            }
+
+            using (var comando = new MySqlCommand(@"
+                INSERT INTO tipo_movimiento (nombre_tipomov)
+                VALUES ('reembolso');", conexion, transaccion))
+            {
+                comando.ExecuteNonQuery();
+                return Convert.ToInt32(comando.LastInsertedId);
+            }
+        }
+
+        private void RegistrarReembolsoCancelacion(
+            MySqlConnection conexion,
+            MySqlTransaction transaccion,
+            int idTipoReembolso,
+            int idCliente,
+            int idFormaPago,
+            int idReserva,
+            int? idReservaGrupo,
+            int idMovimientoOriginal,
+            decimal monto)
+        {
+            int idMovimientoReembolso;
+
+            using (var comando = new MySqlCommand(@"
+                INSERT INTO movimiento
+                (
+                    id_usuario,
+                    id_clipro,
+                    id_tipomov,
+                    id_formapago,
+                    id_reserva,
+                    id_reserva_grupo,
+                    fecha_hora,
+                    estado,
+                    observaciones
+                )
+                VALUES
+                (
+                    @id_usuario,
+                    @id_clipro,
+                    @id_tipomov,
+                    @id_formapago,
+                    @id_reserva,
+                    @id_reserva_grupo,
+                    NOW(),
+                    'activo',
+                    @observaciones
+                );", conexion, transaccion))
+            {
+                comando.Parameters.AddWithValue("@id_usuario", ObtenerIdUsuarioSesion());
+                comando.Parameters.AddWithValue("@id_clipro", idCliente);
+                comando.Parameters.AddWithValue("@id_tipomov", idTipoReembolso);
+                comando.Parameters.AddWithValue("@id_formapago", idFormaPago);
+                comando.Parameters.AddWithValue("@id_reserva", idReserva);
+                comando.Parameters.AddWithValue(
+                    "@id_reserva_grupo",
+                    idReservaGrupo.HasValue ? idReservaGrupo.Value : DBNull.Value);
+                comando.Parameters.AddWithValue(
+                    "@observaciones",
+                    $"Reembolso por cancelación de la estadía #{idReserva}. Pago original #{idMovimientoOriginal}.");
+                comando.ExecuteNonQuery();
+                idMovimientoReembolso = Convert.ToInt32(comando.LastInsertedId);
+            }
+
+            using var comandoDetalle = new MySqlCommand(@"
+                INSERT INTO detalle
+                (
+                    id_movimiento,
+                    id_proser,
+                    cantidad,
+                    precio_unitario,
+                    subtotal,
+                    descripcion
+                )
+                VALUES
+                (
+                    @id_movimiento,
+                    NULL,
+                    1,
+                    @monto,
+                    @monto,
+                    @descripcion
+                );", conexion, transaccion);
+            comandoDetalle.Parameters.AddWithValue("@id_movimiento", idMovimientoReembolso);
+            comandoDetalle.Parameters.AddWithValue("@monto", monto);
+            comandoDetalle.Parameters.AddWithValue(
+                "@descripcion",
+                $"Reembolso registrado por cancelación de la estadía #{idReserva}");
+            comandoDetalle.ExecuteNonQuery();
+        }
+
+        private bool CancelarReservaPendienteAgrupada(
+            MySqlConnection conexion,
+            MySqlTransaction transaccion,
+            int idReserva,
+            bool registrarReembolso,
+            out string mensaje,
+            out decimal montoReembolso)
+        {
+            montoReembolso = 0;
+            int? idReservaGrupo;
+
+            using (var comando = new MySqlCommand(@"
+                SELECT id_reserva_grupo
+                FROM reserva
+                WHERE id_reserva = @id_reserva
+                LIMIT 1;", conexion, transaccion))
+            {
+                comando.Parameters.AddWithValue("@id_reserva", idReserva);
+                object? resultado = comando.ExecuteScalar();
+
+                if (resultado == null)
+                {
+                    mensaje = "No se encontró la reservación.";
+                    return false;
+                }
+
+                idReservaGrupo = resultado == DBNull.Value ? null : Convert.ToInt32(resultado);
+            }
+
+            if (!idReservaGrupo.HasValue)
+            {
+                var abonos = new List<(int IdMovimiento, int IdCliente, int IdFormaPago, decimal Monto)>();
+
+                using (var comando = new MySqlCommand(@"
+                    SELECT
+                        m.id_movimiento,
+                        m.id_clipro,
+                        m.id_formapago,
+                        COALESCE(SUM(d.subtotal), 0) AS monto
+                    FROM movimiento m
+                    INNER JOIN tipo_movimiento tm ON m.id_tipomov = tm.id_tipomov
+                    LEFT JOIN detalle d ON m.id_movimiento = d.id_movimiento
+                    WHERE m.id_reserva = @id_reserva
+                      AND m.estado = 'activo'
+                      AND LOWER(tm.nombre_tipomov) = 'abono'
+                    GROUP BY m.id_movimiento, m.id_clipro, m.id_formapago
+                    FOR UPDATE;", conexion, transaccion))
+                {
+                    comando.Parameters.AddWithValue("@id_reserva", idReserva);
+                    using var lector = comando.ExecuteReader();
+                    while (lector.Read())
+                    {
+                        abonos.Add((
+                            Convert.ToInt32(lector["id_movimiento"]),
+                            Convert.ToInt32(lector["id_clipro"]),
+                            Convert.ToInt32(lector["id_formapago"]),
+                            Convert.ToDecimal(lector["monto"])));
+                    }
+                }
+
+                montoReembolso = abonos.Sum(abono => abono.Monto);
+                if (montoReembolso > 0 && !registrarReembolso)
+                {
+                    mensaje = $"La estadía tiene Q {montoReembolso:N2} pagados. Para cancelarla debe confirmar el registro del reembolso.";
+                    return false;
+                }
+
+                if (montoReembolso > 0)
+                {
+                    int idTipoReembolsoIndividual = ObtenerOCrearTipoReembolso(conexion, transaccion);
+                    foreach (var abono in abonos.Where(abono => abono.Monto > 0))
+                    {
+                        RegistrarReembolsoCancelacion(
+                            conexion,
+                            transaccion,
+                            idTipoReembolsoIndividual,
+                            abono.IdCliente,
+                            abono.IdFormaPago,
+                            idReserva,
+                            null,
+                            abono.IdMovimiento,
+                            abono.Monto);
+                    }
+                }
+
+                using var comandoCancelar = new MySqlCommand(@"
+                    UPDATE reserva
+                    SET estado = 'cancelada',
+                        saldo_pendiente = 0
+                    WHERE id_reserva = @id_reserva
+                      AND estado = 'pendiente';", conexion, transaccion);
+                comandoCancelar.Parameters.AddWithValue("@id_reserva", idReserva);
+
+                if (comandoCancelar.ExecuteNonQuery() == 0)
+                {
+                    mensaje = "Solo se pueden cancelar reservaciones pendientes de ingreso.";
+                    return false;
+                }
+
+                mensaje = montoReembolso > 0
+                    ? $"Reserva cancelada y reembolso de Q {montoReembolso:N2} registrado correctamente."
+                    : "Reserva cancelada correctamente.";
+                return true;
+            }
+
+            using (var comando = new MySqlCommand(@"
+                SELECT id_reserva_grupo
+                FROM reserva_grupo
+                WHERE id_reserva_grupo = @id_reserva_grupo
+                FOR UPDATE;", conexion, transaccion))
+            {
+                comando.Parameters.AddWithValue("@id_reserva_grupo", idReservaGrupo.Value);
+                comando.ExecuteScalar();
+            }
+
+            var reservasGrupo = new List<(int IdReserva, decimal Saldo, string Estado)>();
+
+            using (var comando = new MySqlCommand(@"
+                SELECT id_reserva, saldo_pendiente, estado
+                FROM reserva
+                WHERE id_reserva_grupo = @id_reserva_grupo
+                ORDER BY fecha_entrada, id_reserva
+                FOR UPDATE;", conexion, transaccion))
+            {
+                comando.Parameters.AddWithValue("@id_reserva_grupo", idReservaGrupo.Value);
+                using var lector = comando.ExecuteReader();
+
+                while (lector.Read())
+                {
+                    reservasGrupo.Add((
+                        Convert.ToInt32(lector["id_reserva"]),
+                        Convert.ToDecimal(lector["saldo_pendiente"]),
+                        lector["estado"]?.ToString()?.Trim().ToLower() ?? ""));
+                }
+            }
+
+            var reservaCancelada = reservasGrupo.FirstOrDefault(reserva => reserva.IdReserva == idReserva);
+
+            if (reservaCancelada.IdReserva == 0 || reservaCancelada.Estado != "pendiente")
+            {
+                mensaje = "Solo se pueden cancelar reservaciones pendientes de ingreso.";
+                return false;
+            }
+
+            var aplicaciones = new List<(int IdMovimiento, int IdCliente, int IdFormaPago, decimal Monto)>();
+
+            using (var comando = new MySqlCommand(@"
+                SELECT a.id_movimiento, m.id_clipro, m.id_formapago, a.monto
+                FROM movimiento_reserva_aplicacion a
+                INNER JOIN movimiento m ON a.id_movimiento = m.id_movimiento
+                WHERE a.id_reserva = @id_reserva
+                  AND m.estado = 'activo'
+                ORDER BY a.id_movimiento
+                FOR UPDATE;", conexion, transaccion))
+            {
+                comando.Parameters.AddWithValue("@id_reserva", idReserva);
+                using var lector = comando.ExecuteReader();
+
+                while (lector.Read())
+                {
+                    aplicaciones.Add((
+                        Convert.ToInt32(lector["id_movimiento"]),
+                        Convert.ToInt32(lector["id_clipro"]),
+                        Convert.ToInt32(lector["id_formapago"]),
+                        Convert.ToDecimal(lector["monto"])));
+                }
+            }
+
+            decimal totalAplicado = aplicaciones.Sum(aplicacion => aplicacion.Monto);
+            var destinos = reservasGrupo
+                .Where(reserva =>
+                    reserva.IdReserva != idReserva &&
+                    reserva.Estado != "cancelada" &&
+                    reserva.Saldo > 0)
+                .Select(reserva => (reserva.IdReserva, reserva.Saldo))
+                .ToList();
+            decimal capacidadDisponible = destinos.Sum(destino => destino.Saldo);
+            montoReembolso = Math.Max(0, totalAplicado - capacidadDisponible);
+
+            if (montoReembolso > 0 && !registrarReembolso)
+            {
+                mensaje = $"La estadía tiene Q {montoReembolso:N2} pagados que no pueden trasladarse a otra fecha. Para cancelarla debe confirmar el registro del reembolso.";
+                return false;
+            }
+
+            int indiceDestino = 0;
+            int? idTipoReembolso = montoReembolso > 0
+                ? ObtenerOCrearTipoReembolso(conexion, transaccion)
+                : null;
+
+            foreach (var aplicacion in aplicaciones)
+            {
+                using (var comandoEliminar = new MySqlCommand(@"
+                    DELETE FROM movimiento_reserva_aplicacion
+                    WHERE id_movimiento = @id_movimiento
+                      AND id_reserva = @id_reserva;", conexion, transaccion))
+                {
+                    comandoEliminar.Parameters.AddWithValue("@id_movimiento", aplicacion.IdMovimiento);
+                    comandoEliminar.Parameters.AddWithValue("@id_reserva", idReserva);
+                    comandoEliminar.ExecuteNonQuery();
+                }
+
+                decimal restante = aplicacion.Monto;
+
+                while (restante > 0 && indiceDestino < destinos.Count)
+                {
+                    var destino = destinos[indiceDestino];
+
+                    if (destino.Saldo <= 0)
+                    {
+                        indiceDestino++;
+                        continue;
+                    }
+
+                    decimal trasladado = Math.Min(restante, destino.Saldo);
+
+                    using (var comandoActualizar = new MySqlCommand(@"
+                        UPDATE reserva
+                        SET saldo_pendiente = saldo_pendiente - @monto
+                        WHERE id_reserva = @id_reserva;", conexion, transaccion))
+                    {
+                        comandoActualizar.Parameters.AddWithValue("@monto", trasladado);
+                        comandoActualizar.Parameters.AddWithValue("@id_reserva", destino.IdReserva);
+                        comandoActualizar.ExecuteNonQuery();
+                    }
+
+                    using (var comandoAplicacion = new MySqlCommand(@"
+                        INSERT INTO movimiento_reserva_aplicacion
+                            (id_movimiento, id_reserva, monto)
+                        VALUES
+                            (@id_movimiento, @id_reserva, @monto)
+                        ON DUPLICATE KEY UPDATE monto = monto + VALUES(monto);", conexion, transaccion))
+                    {
+                        comandoAplicacion.Parameters.AddWithValue("@id_movimiento", aplicacion.IdMovimiento);
+                        comandoAplicacion.Parameters.AddWithValue("@id_reserva", destino.IdReserva);
+                        comandoAplicacion.Parameters.AddWithValue("@monto", trasladado);
+                        comandoAplicacion.ExecuteNonQuery();
+                    }
+
+                    restante -= trasladado;
+                    destino.Saldo -= trasladado;
+                    destinos[indiceDestino] = destino;
+
+                    if (destino.Saldo <= 0)
+                    {
+                        indiceDestino++;
+                    }
+                }
+
+                if (restante > 0)
+                {
+                    RegistrarReembolsoCancelacion(
+                        conexion,
+                        transaccion,
+                        idTipoReembolso!.Value,
+                        aplicacion.IdCliente,
+                        aplicacion.IdFormaPago,
+                        idReserva,
+                        idReservaGrupo,
+                        aplicacion.IdMovimiento,
+                        restante);
+                }
+            }
+
+            using (var comando = new MySqlCommand(@"
+                UPDATE reserva
+                SET estado = 'cancelada',
+                    saldo_pendiente = 0
+                WHERE id_reserva = @id_reserva
+                  AND estado = 'pendiente';", conexion, transaccion))
+            {
+                comando.Parameters.AddWithValue("@id_reserva", idReserva);
+
+                if (comando.ExecuteNonQuery() == 0)
+                {
+                    mensaje = "La reservación cambió de estado antes de completar la cancelación.";
+                    return false;
+                }
+            }
+
+            mensaje = montoReembolso > 0
+                ? $"Reserva cancelada y reembolso de Q {montoReembolso:N2} registrado correctamente."
+                : totalAplicado > 0
+                    ? "Reserva cancelada y pago trasladado a las siguientes estadías pendientes."
+                    : "Reserva cancelada correctamente.";
+            return true;
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
-        public IActionResult Cancelar(int id)
+        public IActionResult Cancelar(int id, bool registrarReembolso = false)
         {
             IActionResult? acceso = ValidarAccesoSoloAdministrativo();
             if (acceso != null)
@@ -2705,25 +3738,30 @@ namespace MiHotel.Controllers
             {
                 using var conexion = _conexionBD.ObtenerConexion();
                 conexion.Open();
+                using var transaccion = conexion.BeginTransaction();
 
-                string consulta = @"
-                    UPDATE reserva
-                    SET estado = 'cancelada'
-                    WHERE id_reserva = @id
-                      AND estado = 'pendiente';";
-
-                using var comando = new MySqlCommand(consulta, conexion);
-                comando.Parameters.AddWithValue("@id", id);
-
-                int filas = comando.ExecuteNonQuery();
-
-                if (filas == 0)
+                if (!CancelarReservaPendienteAgrupada(
+                    conexion,
+                    transaccion,
+                    id,
+                    registrarReembolso,
+                    out string mensaje,
+                    out decimal montoReembolso))
                 {
-                    TempData["Mensaje"] = "No se pudo cancelar la reserva.";
+                    transaccion.Rollback();
+                    TempData["Mensaje"] = mensaje;
+
+                    if (montoReembolso > 0 && !registrarReembolso)
+                    {
+                        TempData["ReservaReembolsoPendiente"] = id;
+                        TempData["MontoReembolsoPendiente"] = montoReembolso.ToString(
+                            System.Globalization.CultureInfo.InvariantCulture);
+                    }
                 }
                 else
                 {
-                    TempData["Exito"] = "Reserva cancelada correctamente.";
+                    transaccion.Commit();
+                    TempData["Exito"] = mensaje;
                 }
             }
             catch (Exception ex)

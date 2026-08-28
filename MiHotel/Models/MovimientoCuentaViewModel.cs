@@ -11,5 +11,42 @@ namespace MiHotel.Models
         public string Estado { get; set; } = "";
         public string Observaciones { get; set; } = "";
         public bool EsAbono { get; set; }
+
+        public bool EsCuentaPorCobrar =>
+            Tipo.Trim().Replace("_", " ").Equals("cuenta por cobrar", StringComparison.OrdinalIgnoreCase);
+
+        public bool EsReembolso =>
+            Tipo.Trim().Equals("reembolso", StringComparison.OrdinalIgnoreCase);
+
+        public string MovimientoLegible
+        {
+            get
+            {
+                if (EsCuentaPorCobrar)
+                {
+                    return "Reserva creada";
+                }
+
+                if (EsAbono)
+                {
+                    return Estado.Trim().Equals("activo", StringComparison.OrdinalIgnoreCase)
+                        ? "Pago registrado"
+                        : "Pago anulado";
+                }
+
+                if (EsReembolso)
+                {
+                    return "Reembolso registrado";
+                }
+
+                return string.IsNullOrWhiteSpace(Descripcion)
+                    ? Tipo.Replace("_", " ")
+                    : Descripcion;
+            }
+        }
+
+        public string FormaPagoLegible => EsCuentaPorCobrar || string.IsNullOrWhiteSpace(FormaPago)
+            ? "—"
+            : FormaPago;
     }
 }

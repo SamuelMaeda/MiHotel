@@ -539,6 +539,37 @@ namespace MiHotel.Controllers
                     TieneDpiFrente = Convert.ToBoolean(lector["frente"]),
                     Estado = lector["estado"]?.ToString() ?? "activo"
                 };
+
+                lector.Close();
+
+                using (var reservas = new MySqlCommand(@"
+                    SELECT r.id_reserva, r.id_reserva_grupo, r.fecha_entrada, r.fecha_salida,
+                           p.codigo AS habitacion, r.estado,
+                           COALESCE(rf.estado_facturacion, 'sin_definir') AS estado_facturacion
+                    FROM reserva r
+                    INNER JOIN proser p ON p.id_proser = r.id_habitacion
+                    LEFT JOIN reserva_facturacion rf ON rf.id_reserva = r.id_reserva
+                    WHERE r.id_clipro = @id
+                    ORDER BY r.fecha_entrada DESC, r.id_reserva DESC;", conexion))
+                {
+                    reservas.Parameters.AddWithValue("@id", id);
+                    using var lectorReservas = reservas.ExecuteReader();
+                    while (lectorReservas.Read())
+                    {
+                        modelo.Reservas.Add(new ReservaResumenFiscalViewModel
+                        {
+                            IdReserva = Convert.ToInt32(lectorReservas["id_reserva"]),
+                            IdReservaGrupo = lectorReservas["id_reserva_grupo"] == DBNull.Value
+                                ? null
+                                : Convert.ToInt32(lectorReservas["id_reserva_grupo"]),
+                            FechaEntrada = Convert.ToDateTime(lectorReservas["fecha_entrada"]),
+                            FechaSalida = Convert.ToDateTime(lectorReservas["fecha_salida"]),
+                            Habitacion = lectorReservas["habitacion"]?.ToString() ?? "",
+                            Estado = lectorReservas["estado"]?.ToString() ?? "",
+                            EstadoFacturacion = lectorReservas["estado_facturacion"]?.ToString() ?? "sin_definir"
+                        });
+                    }
+                }
                 return View(modelo);
             }
             catch (Exception ex)

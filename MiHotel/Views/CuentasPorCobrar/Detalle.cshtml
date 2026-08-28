@@ -65,7 +65,6 @@
     .btn-accion:hover { color: white; }
     .btn-guardar { background-color: #464482; }
     .btn-volver { background-color: #824B44; }
-    .btn-anular { background-color: #842029; }
 </style>
 
 <div class="tarjeta-contenido">
@@ -112,7 +111,10 @@
         <div class="dato-cuenta"><span>Primera entrada</span><strong>@Model.FechaEntrada.ToString("dd/MM/yyyy")</strong></div>
         <div class="dato-cuenta"><span>Última salida</span><strong>@Model.FechaSalida.ToString("dd/MM/yyyy")</strong></div>
         <div class="dato-cuenta"><span>Estado</span><strong>@(Model.EsCuentaAgrupada ? "Varias estadías" : Model.EstadoReserva.Replace("_", " "))</strong></div>
-        <div class="dato-cuenta"><span>Saldo pendiente</span><strong class="saldo-cuenta">Q @Model.SaldoPendiente.ToString("N2")</strong></div>
+        <div class="dato-cuenta">
+            <span>@(Model.EsCuentaAgrupada ? "Saldo total de la reserva agrupada" : "Saldo pendiente")</span>
+            <strong class="saldo-cuenta">Q @Model.SaldoPendiente.ToString("N2")</strong>
+        </div>
     </div>
 
     @if (Model.EsCuentaAgrupada)
@@ -166,9 +168,38 @@
                 }
                 <input type="hidden" name="volverCheckout" value="@volverCheckout.ToString().ToLower()" />
 
+                @if (Model.EsCuentaAgrupada)
+                {
+                    <div class="col-12">
+                        <label for="idReservaObjetivo" class="form-label">Aplicar el pago a</label>
+                        <select id="idReservaObjetivo" name="idReservaObjetivo" class="form-select">
+                            <option value="" data-saldo="@Model.SaldoPendiente.ToString(System.Globalization.CultureInfo.InvariantCulture)">
+                                Todas las estadías del grupo — saldo total Q @Model.SaldoPendiente.ToString("N2")
+                            </option>
+                            @foreach (var estadia in Model.EstadiasAgrupadas.Where(estadia =>
+                                estadia.Estado.Trim().ToLower() != "cancelada" && estadia.SaldoPendiente > 0))
+                            {
+                                <option value="@estadia.IdReserva"
+                                        data-saldo="@estadia.SaldoPendiente.ToString(System.Globalization.CultureInfo.InvariantCulture)">
+                                    Solo estadía #@estadia.IdReserva del @estadia.FechaEntrada.ToString("dd/MM/yyyy") — saldo Q @estadia.SaldoPendiente.ToString("N2")
+                                </option>
+                            }
+                        </select>
+                        <small class="text-muted">
+                            Puede pagar una fecha específica o reducir conjuntamente el saldo de todas las estadías.
+                        </small>
+                    </div>
+                }
+
                 <div class="col-md-4">
                     <label for="monto" class="form-label">Monto</label>
                     <input id="monto" name="monto" type="number" min="0.01" max="@Model.SaldoPendiente.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="0.01" class="form-control" required />
+                    @if (Model.EsCuentaAgrupada)
+                    {
+                        <button id="usarSaldoCompleto" type="button" class="btn btn-sm btn-outline-secondary mt-2">
+                            Usar el saldo completo seleccionado
+                        </button>
+                    }
                 </div>
                 <div class="col-md-4">
                     <label for="idFormaPago" class="form-label">Forma de pago</label>
@@ -179,6 +210,14 @@
                             <option value="@forma["id_formapago"]">@forma["nombre_forma"]</option>
                         }
                     </select>
+                </div>
+                <div class="col-12">
+                    <div class="form-check border rounded p-3 ps-5 bg-light">
+                        <input class="form-check-input" type="checkbox" name="solicitarFacturaAlLiquidar" value="true" id="solicitarFacturaAlLiquidar" />
+                        <label class="form-check-label fw-semibold" for="solicitarFacturaAlLiquidar">
+                            ¿El huésped necesita factura?
+                        </label>
+                    </div>
                 </div>
                 <div class="col-md-4">
                     <label for="referencia" class="form-label">Referencia opcional</label>
@@ -205,59 +244,68 @@
             <thead class="table-dark">
                 <tr>
                     <th>Fecha</th>
-                    <th>Tipo</th>
-                    <th>Descripción</th>
+                    <th>Movimiento</th>
                     <th>Forma de pago</th>
                     <th>Monto</th>
                     <th>Estado</th>
-                    <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
                 @if (Model.Movimientos.Count == 0)
                 {
-                    <tr><td colspan="7" class="text-center py-3">No hay movimientos registrados.</td></tr>
+                    <tr><td colspan="5" class="text-center py-3">No hay movimientos registrados.</td></tr>
                 }
                 else
                 {
                     foreach (var movimiento in Model.Movimientos)
                     {
-                        bool abonoActivo = movimiento.EsAbono && movimiento.Estado.Trim().ToLower() == "activo";
                         <tr>
                             <td>@movimiento.FechaHora.ToString("dd/MM/yyyy HH:mm")</td>
-                            <td>@movimiento.Tipo.Replace("_", " ")</td>
-                            <td>@movimiento.Descripcion</td>
-                            <td>@movimiento.FormaPago</td>
+                            <td>@movimiento.MovimientoLegible</td>
+                            <td>@movimiento.FormaPagoLegible</td>
                             <td>Q @movimiento.Monto.ToString("N2")</td>
                             <td>@(movimiento.Estado.Trim().ToLower() == "activo" ? "Activo" : "Anulado")</td>
-                            <td>
-                                @if (puedeCobrar && abonoActivo)
-                                {
-                                    <form asp-controller="CuentasPorCobrar" asp-action="@(Model.EsCuentaAgrupada ? "AnularAbonoGrupo" : "AnularAbono")" method="post" onsubmit="return confirm('¿Desea anular este abono y devolver el importe al saldo pendiente?');">
-                                        @Html.AntiForgeryToken()
-                                        <input type="hidden" name="idMovimiento" value="@movimiento.IdMovimiento" />
-                                        @if (Model.EsCuentaAgrupada)
-                                        {
-                                            <input type="hidden" name="idReservaGrupo" value="@Model.IdReservaGrupo" />
-                                            <input type="hidden" name="idReservaRetorno" value="@Model.IdReservaRetorno" />
-                                        }
-                                        else
-                                        {
-                                            <input type="hidden" name="idReserva" value="@Model.IdReserva" />
-                                        }
-                                        <input type="hidden" name="volverCheckout" value="@volverCheckout.ToString().ToLower()" />
-                                        <button type="submit" class="btn-accion btn-anular"><i class="bi bi-x-circle"></i> Anular</button>
-                                    </form>
-                                }
-                                else
-                                {
-                                    <span class="text-muted">-</span>
-                                }
-                            </td>
                         </tr>
                     }
                 }
             </tbody>
         </table>
     </div>
+
 </div>
+
+@if (Model.EsCuentaAgrupada)
+{
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const destino = document.getElementById("idReservaObjetivo");
+            const monto = document.getElementById("monto");
+            const usarSaldoCompleto = document.getElementById("usarSaldoCompleto");
+
+            if (!destino || !monto) {
+                return;
+            }
+
+            function actualizarMontoMaximo() {
+                const opcion = destino.options[destino.selectedIndex];
+                const saldo = opcion ? opcion.dataset.saldo : null;
+
+                if (saldo) {
+                    monto.max = saldo;
+                }
+            }
+
+            destino.addEventListener("change", actualizarMontoMaximo);
+            usarSaldoCompleto?.addEventListener("click", function () {
+                const opcion = destino.options[destino.selectedIndex];
+                const saldo = opcion ? opcion.dataset.saldo : null;
+
+                if (saldo) {
+                    monto.value = saldo;
+                    monto.focus();
+                }
+            });
+            actualizarMontoMaximo();
+        });
+    </script>
+}

@@ -7,6 +7,7 @@
 using Microsoft.AspNetCore.Mvc;
 using MiHotel.Data;
 using MiHotel.Models;
+using MiHotel.Services;
 using MySql.Data.MySqlClient;
 using System.Data;
 
@@ -15,12 +16,14 @@ namespace MiHotel.Controllers
     public class CuentasPorCobrarController : Controller
     {
         private readonly ConexionBD _conexionBD;
+        private readonly FacturacionService _facturacionService;
 
         private const int RegistrosPorPagina = 20;
 
-        public CuentasPorCobrarController(ConexionBD conexionBD)
+        public CuentasPorCobrarController(ConexionBD conexionBD, FacturacionService facturacionService)
         {
             _conexionBD = conexionBD;
+            _facturacionService = facturacionService;
         }
 
         // ================================================
@@ -142,9 +145,13 @@ namespace MiHotel.Controllers
             return ordenarPor switch
             {
                 "cliente" => "cuenta.cliente",
+                "empresa" => "cuenta.empresa_procedencia",
                 "habitacion" => "cuenta.habitacion",
                 "fecha_entrada" => "cuenta.fecha_entrada",
                 "fecha_salida" => "cuenta.fecha_salida",
+                "hora_checkin" => "cuenta.fecha_hora_checkin",
+                "hora_checkout" => "cuenta.fecha_hora_checkout",
+                "total" => "cuenta.total_reserva",
                 "saldo" => "cuenta.saldo",
                 _ => "cuenta.fecha_entrada"
             };
@@ -163,7 +170,6 @@ namespace MiHotel.Controllers
             string busqueda = "",
             string ordenarPor = "fecha_entrada",
             string direccion = "desc",
-            string vista = "estadias",
             int pagina = 1)
         {
             IActionResult? acceso = ValidarAcceso();
@@ -183,11 +189,6 @@ namespace MiHotel.Controllers
                     ? "asc"
                     : "desc";
 
-            string vistaNormalizada =
-                vista?.Trim().ToLower() == "estadias"
-                    ? "estadias"
-                    : "estadias";
-
             if (pagina < 1)
             {
                 pagina = 1;
@@ -198,7 +199,6 @@ namespace MiHotel.Controllers
             ViewBag.Busqueda = busqueda;
             ViewBag.OrdenarPor = ordenarPor;
             ViewBag.Direccion = direccionNormalizada;
-            ViewBag.Vista = vistaNormalizada;
             ViewBag.PaginaActual = pagina;
             ViewBag.TotalPaginas = 1;
             ViewBag.TotalRegistros = 0;
@@ -209,65 +209,25 @@ namespace MiHotel.Controllers
 
                 conexion.Open();
 
-                /*
-                 * La primera parte agrupa todos los movimientos CxC
-                 * relacionados con una reservación mediante id_reserva.
-                 *
-                 * La segunda parte conserva como cuentas independientes
-                 * los movimientos que no poseen una reservación.
-                 */
-
                 string consultaBase = @"
-                    SELECT
-                        'grupo' AS tipo_cuenta,
-                        NULL AS id_reserva,
-                        rg.id_reserva_grupo,
-                        (
-                            SELECT MIN(mg.id_movimiento)
-                            FROM movimiento mg
-                            WHERE mg.id_reserva_grupo = rg.id_reserva_grupo
-                        ) AS id_movimiento_referencia,
-                        rg.id_clipro,
-                        c.nombre AS cliente,
-                        GROUP_CONCAT(DISTINCT h.nombre_proser ORDER BY h.nombre_proser SEPARATOR ', ') AS habitacion,
-                        MIN(r.fecha_entrada) AS fecha_entrada,
-                        MAX(r.fecha_salida) AS fecha_salida,
-                        rg.fecha_creacion AS fecha_cuenta,
-                        SUM(CASE WHEN r.estado <> 'cancelada' THEN r.saldo_pendiente ELSE 0 END) AS saldo,
-                        (
-                            SELECT COUNT(*)
-                            FROM movimiento mg2
-                            WHERE mg2.id_reserva_grupo = rg.id_reserva_grupo
-                        ) AS cantidad_movimientos
-                    FROM reserva_grupo rg
-                    INNER JOIN reserva r ON r.id_reserva_grupo = rg.id_reserva_grupo
-                    INNER JOIN clipro c ON rg.id_clipro = c.id_clipro
-                    LEFT JOIN proser h ON r.id_habitacion = h.id_proser
-                    GROUP BY
-                        rg.id_reserva_grupo,
-                        rg.id_clipro,
-                        c.nombre,
-                        rg.fecha_creacion
-                    HAVING SUM(CASE WHEN r.estado <> 'cancelada' THEN r.saldo_pendiente ELSE 0 END) > 0
-
-                    UNION ALL
-
                     SELECT
                         'estadia' AS tipo_cuenta,
                         r.id_reserva,
-                        NULL AS id_reserva_grupo,
-                        (
-                            SELECT MIN(m1.id_movimiento)
-                            FROM movimiento m1
-                            WHERE m1.id_reserva = r.id_reserva
-                        ) AS id_movimiento_referencia,
+                        r.id_reserva_grupo,
+                        r.id_reserva AS id_movimiento_referencia,
                         r.id_clipro,
                         c.nombre AS cliente,
-                        h.nombre_proser AS habitacion,
+                        ec.nombre AS empresa_procedencia,
+                        h.codigo AS habitacion,
                         r.fecha_entrada,
                         r.fecha_salida,
+                        r.fecha_hora_checkin,
+                        r.fecha_hora_checkout,
+                        r.total_reserva,
                         r.fecha_reserva AS fecha_cuenta,
                         r.saldo_pendiente AS saldo,
+                        r.estado,
+                        r.observaciones,
                         (
                             SELECT COUNT(*)
                             FROM movimiento m2
@@ -275,40 +235,12 @@ namespace MiHotel.Controllers
                         ) AS cantidad_movimientos
                     FROM reserva r
                     INNER JOIN clipro c ON r.id_clipro = c.id_clipro
-                    LEFT JOIN proser h ON r.id_habitacion = h.id_proser
-                    WHERE r.id_reserva_grupo IS NULL
-                      AND r.saldo_pendiente > 0
+                    LEFT JOIN cliente_detalle cd ON c.id_clipro = cd.id_clipro
+                    LEFT JOIN empresa_cliente ec ON cd.id_empresa_cliente = ec.id_empresa_cliente
+                    INNER JOIN proser h ON r.id_habitacion = h.id_proser
+                    WHERE r.saldo_pendiente > 0
                       AND r.estado <> 'cancelada'
-
-                    UNION ALL
-
-                    SELECT
-                        'independiente' AS tipo_cuenta,
-                        NULL AS id_reserva,
-                        NULL AS id_reserva_grupo,
-                        m.id_movimiento AS id_movimiento_referencia,
-                        m.id_clipro,
-                        c.nombre AS cliente,
-                        NULL AS habitacion,
-                        NULL AS fecha_entrada,
-                        NULL AS fecha_salida,
-                        m.fecha_hora AS fecha_cuenta,
-                        SUM(d.subtotal) AS saldo,
-                        1 AS cantidad_movimientos
-                    FROM movimiento m
-                    INNER JOIN tipo_movimiento tm ON m.id_tipomov = tm.id_tipomov
-                    INNER JOIN clipro c ON m.id_clipro = c.id_clipro
-                    INNER JOIN detalle d ON m.id_movimiento = d.id_movimiento
-                    WHERE LOWER(tm.nombre_tipomov) = 'cuenta_por_cobrar'
-                      AND m.estado = 'activo'
-                      AND m.id_reserva IS NULL
-                      AND m.id_reserva_grupo IS NULL
-                      AND d.subtotal > 0
-                    GROUP BY
-                        m.id_movimiento,
-                        m.id_clipro,
-                        c.nombre,
-                        m.fecha_hora";
+                    ";
 
                 string condicionBusqueda = "";
 
@@ -317,6 +249,7 @@ namespace MiHotel.Controllers
                     condicionBusqueda = @"
                         AND (
                             cuenta.cliente LIKE @busqueda
+                            OR cuenta.empresa_procedencia LIKE @busqueda
                             OR cuenta.habitacion LIKE @busqueda
                             OR CAST(
                                 cuenta.id_reserva AS CHAR
@@ -327,6 +260,7 @@ namespace MiHotel.Controllers
                             OR CAST(
                                 cuenta.id_movimiento_referencia AS CHAR
                             ) LIKE @busqueda
+                            OR cuenta.observaciones LIKE @busqueda
                         )";
                 }
 
@@ -385,11 +319,17 @@ namespace MiHotel.Controllers
                         cuenta.id_movimiento_referencia,
                         cuenta.id_clipro,
                         cuenta.cliente,
+                        cuenta.empresa_procedencia,
                         cuenta.habitacion,
                         cuenta.fecha_entrada,
                         cuenta.fecha_salida,
+                        cuenta.fecha_hora_checkin,
+                        cuenta.fecha_hora_checkout,
+                        cuenta.total_reserva,
                         cuenta.fecha_cuenta,
                         cuenta.saldo,
+                        cuenta.estado,
+                        cuenta.observaciones,
                         cuenta.cantidad_movimientos
                     FROM (
                         {consultaBase}
@@ -689,6 +629,11 @@ namespace MiHotel.Controllers
                 LEFT JOIN detalle d ON m.id_movimiento = d.id_movimiento
                 LEFT JOIN proser p ON d.id_proser = p.id_proser
                 WHERE m.id_reserva_grupo = @id_reserva_grupo
+                   OR m.id_reserva IN (
+                        SELECT rh.id_reserva
+                        FROM reserva rh
+                        WHERE rh.id_reserva_grupo = @id_reserva_grupo
+                   )
                 GROUP BY
                     m.id_movimiento,
                     tm.nombre_tipomov,
@@ -824,6 +769,7 @@ namespace MiHotel.Controllers
             int idFormaPago,
             string? referencia,
             string? observaciones,
+            bool solicitarFacturaAlLiquidar = false,
             bool volverCheckout = false)
         {
             IActionResult? acceso = ValidarCobro();
@@ -887,6 +833,13 @@ namespace MiHotel.Controllers
                 {
                     transaccion.Rollback();
                     TempData["Mensaje"] = "El abono no puede ser mayor que el saldo pendiente.";
+                    return RedirectToAction("Detalle", new { id = idReserva });
+                }
+
+                if (solicitarFacturaAlLiquidar && monto != saldoPendiente)
+                {
+                    transaccion.Rollback();
+                    TempData["Mensaje"] = "Para solicitar la factura desde este pago debe liquidar el saldo completo.";
                     return RedirectToAction("Detalle", new { id = idReserva });
                 }
 
@@ -1023,8 +976,22 @@ namespace MiHotel.Controllers
                     comando.ExecuteNonQuery();
                 }
 
+                if (solicitarFacturaAlLiquidar)
+                {
+                    _facturacionService.RegistrarDecision(
+                        conexion,
+                        transaccion,
+                        idReserva,
+                        true,
+                        ObtenerIdUsuarioSesion(),
+                        "pago_final",
+                        "Factura solicitada al liquidar la cuenta después de la estadía.");
+                }
+
                 transaccion.Commit();
-                TempData["Exito"] = "Abono registrado correctamente.";
+                TempData["Exito"] = solicitarFacturaAlLiquidar
+                    ? "Pago registrado y reservación enviada a Facturas pendientes."
+                    : "Abono registrado correctamente.";
 
                 return volverCheckout
                     ? RedirectToAction("Checkout", "Reservas", new { id = idReserva })
@@ -1045,7 +1012,9 @@ namespace MiHotel.Controllers
             int idFormaPago,
             string? referencia,
             string? observaciones,
+            int? idReservaObjetivo = null,
             int? idReservaRetorno = null,
+            bool solicitarFacturaAlLiquidar = false,
             bool volverCheckout = false)
         {
             IActionResult? acceso = ValidarCobro();
@@ -1117,6 +1086,22 @@ namespace MiHotel.Controllers
 
                 decimal saldoTotal = reservas.Sum(reserva => reserva.SaldoPendiente);
 
+                if (idReservaObjetivo.HasValue)
+                {
+                    var reservaObjetivo = reservas.FirstOrDefault(
+                        reserva => reserva.IdReserva == idReservaObjetivo.Value);
+
+                    if (reservaObjetivo.IdReserva == 0)
+                    {
+                        transaccion.Rollback();
+                        TempData["Mensaje"] = "La estadía seleccionada no pertenece al grupo o ya no tiene saldo pendiente.";
+                        return RedirectToAction("DetalleGrupo", new { id = idReservaGrupo, idReservaRetorno });
+                    }
+
+                    reservas = new List<(int IdReserva, decimal SaldoPendiente)> { reservaObjetivo };
+                    saldoTotal = reservaObjetivo.SaldoPendiente;
+                }
+
                 if (saldoTotal <= 0)
                 {
                     transaccion.Rollback();
@@ -1127,7 +1112,16 @@ namespace MiHotel.Controllers
                 if (monto > saldoTotal)
                 {
                     transaccion.Rollback();
-                    TempData["Mensaje"] = "El abono no puede ser mayor que el saldo pendiente del grupo.";
+                    TempData["Mensaje"] = idReservaObjetivo.HasValue
+                        ? "El abono no puede ser mayor que el saldo pendiente de la estadía seleccionada."
+                        : "El abono no puede ser mayor que el saldo pendiente del grupo.";
+                    return RedirectToAction("DetalleGrupo", new { id = idReservaGrupo, idReservaRetorno });
+                }
+
+                if (solicitarFacturaAlLiquidar && monto != saldoTotal)
+                {
+                    transaccion.Rollback();
+                    TempData["Mensaje"] = "Para solicitar la factura desde este pago debe liquidar el saldo completo seleccionado.";
                     return RedirectToAction("DetalleGrupo", new { id = idReservaGrupo, idReservaRetorno });
                 }
 
@@ -1242,7 +1236,11 @@ namespace MiHotel.Controllers
                 {
                     comando.Parameters.AddWithValue("@id_movimiento", idMovimiento);
                     comando.Parameters.AddWithValue("@monto", monto);
-                    comando.Parameters.AddWithValue("@descripcion", $"Abono a reserva agrupada #{idReservaGrupo}");
+                    comando.Parameters.AddWithValue(
+                        "@descripcion",
+                        idReservaObjetivo.HasValue
+                            ? $"Abono a estadía #{idReservaObjetivo.Value} del grupo #{idReservaGrupo}"
+                            : $"Abono a reserva agrupada #{idReservaGrupo}");
                     comando.ExecuteNonQuery();
                 }
 
@@ -1282,8 +1280,31 @@ namespace MiHotel.Controllers
                     montoRestante -= montoAplicado;
                 }
 
+                if (solicitarFacturaAlLiquidar)
+                {
+                    int idReservaSolicitud = idReservaObjetivo
+                        ?? (idReservaRetorno.HasValue && reservas.Any(r => r.IdReserva == idReservaRetorno.Value)
+                            ? idReservaRetorno.Value
+                            : reservas[0].IdReserva);
+
+                    _facturacionService.RegistrarDecision(
+                        conexion,
+                        transaccion,
+                        idReservaSolicitud,
+                        true,
+                        ObtenerIdUsuarioSesion(),
+                        "pago_final",
+                        idReservaObjetivo.HasValue
+                            ? "Factura solicitada al liquidar una estadía de la reserva agrupada."
+                            : "Factura solicitada al liquidar la cuenta agrupada después de la estadía.");
+                }
+
                 transaccion.Commit();
-                TempData["Exito"] = "Abono registrado correctamente en la cuenta agrupada.";
+                TempData["Exito"] = solicitarFacturaAlLiquidar
+                    ? "Pago registrado y solicitud enviada a Facturas pendientes."
+                    : idReservaObjetivo.HasValue
+                        ? "Abono registrado correctamente para la estadía seleccionada."
+                        : "Abono registrado correctamente en la cuenta agrupada.";
 
                 return volverCheckout && idReservaRetorno.HasValue
                     ? RedirectToAction("Checkout", "Reservas", new { id = idReservaRetorno.Value })
@@ -1421,6 +1442,38 @@ namespace MiHotel.Controllers
                 using var conexion = _conexionBD.ObtenerConexion();
                 conexion.Open();
                 using var transaccion = conexion.BeginTransaction();
+
+                using (var comando = new MySqlCommand(@"
+                    SELECT id_reserva_grupo
+                    FROM reserva_grupo
+                    WHERE id_reserva_grupo = @id_reserva_grupo
+                    FOR UPDATE;", conexion, transaccion))
+                {
+                    comando.Parameters.AddWithValue("@id_reserva_grupo", idReservaGrupo);
+
+                    if (comando.ExecuteScalar() == null)
+                    {
+                        transaccion.Rollback();
+                        TempData["Mensaje"] = "No se encontró la reserva agrupada.";
+                        return RedirectToAction("Index");
+                    }
+                }
+
+                using (var comando = new MySqlCommand(@"
+                    SELECT id_reserva
+                    FROM reserva
+                    WHERE id_reserva_grupo = @id_reserva_grupo
+                    ORDER BY fecha_entrada, id_reserva
+                    FOR UPDATE;", conexion, transaccion))
+                {
+                    comando.Parameters.AddWithValue("@id_reserva_grupo", idReservaGrupo);
+                    using var lector = comando.ExecuteReader();
+
+                    while (lector.Read())
+                    {
+                        // Consumir todas las filas mantiene estable la distribución del abono.
+                    }
+                }
 
                 using (var comando = new MySqlCommand(@"
                     SELECT m.id_movimiento

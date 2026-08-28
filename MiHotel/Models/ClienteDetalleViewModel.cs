@@ -17,5 +17,17 @@ namespace MiHotel.Models
         public string NombreClasificacion { get; set; } = "Neutral";
         public bool TieneDpiFrente { get; set; }
         public string Estado { get; set; } = "activo";
+        public List<ReservaResumenFiscalViewModel> Reservas { get; set; } = new();
+    }
+
+    public class ReservaResumenFiscalViewModel
+    {
+        public int IdReserva { get; set; }
+        public int? IdReservaGrupo { get; set; }
+        public DateTime FechaEntrada { get; set; }
+        public DateTime FechaSalida { get; set; }
+        public string Habitacion { get; set; } = "";
+        public string Estado { get; set; } = "";
+        public string EstadoFacturacion { get; set; } = "sin_definir";
     }
 }

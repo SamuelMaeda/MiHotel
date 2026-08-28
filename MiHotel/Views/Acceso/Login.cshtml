@@ -66,20 +66,13 @@
             height: auto;
         }
 
-        .aviso-local {
-            color: #5f5553;
-            font-size: 14px;
-            text-align: center;
-            margin: -8px 0 20px;
-        }
     </style>
 </head>
 <body>
     <div class="contenedor-login">
         <img src="~/images/@logoEmpresa" alt="@nombreEmpresa" class="logo-login" />
 
-        <h2 class="titulo-login">Acceso del personal</h2>
-        <p class="aviso-local">Sistema local de uso exclusivo del hotel</p>
+        <h2 class="titulo-login">Iniciar Sesión</h2>
 
         @if (ViewBag.Mensaje != null)
         {
@@ -88,7 +81,8 @@
             </div>
         }
 
-        <form asp-action="Login" asp-controller="Acceso" method="post">
+        <form action="/Acceso/Login" method="post">
+            @Html.AntiForgeryToken()
             <div class="mb-3">
                 <label asp-for="Correo" class="form-label">Correo</label>
                 <input asp-for="Correo" class="form-control" />
@@ -107,6 +101,7 @@
         </form>
     </div>
 
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <partial name="_ValidationScriptsPartial" />
 </body>
 </html>

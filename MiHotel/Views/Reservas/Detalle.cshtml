@@ -20,6 +20,18 @@
             _ => estado
         };
     }
+
+    string MostrarTamano(long? bytes)
+    {
+        if (!bytes.HasValue)
+        {
+            return "-";
+        }
+
+        return bytes.Value >= 1024 * 1024
+            ? $"{bytes.Value / 1024d / 1024d:N2} MB"
+            : $"{bytes.Value / 1024d:N1} KB";
+    }
 }
 
 <style>
@@ -120,6 +132,95 @@
     .fila-reserva-actual {
         background-color: #f8f1f0 !important;
     }
+
+    .factura-panel {
+        border: 1px solid #e6d3d0;
+        border-radius: 10px;
+        padding: 18px;
+        margin-top: 20px;
+        background-color: #fcf9f9;
+    }
+
+    .factura-datos {
+        background-color: white;
+        border: 1px solid #e2e2e2;
+        border-radius: 8px;
+        padding: 12px 14px;
+    }
+
+    .vista-previa-factura {
+        position: relative;
+        width: min(100%, 420px);
+        height: 250px;
+        background-color: #f4f4f4;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        padding: 5px;
+        overflow: hidden;
+    }
+
+    .vista-previa-factura object {
+        width: 100%;
+        height: 100%;
+        border: 0;
+        border-radius: 6px;
+        background-color: white;
+        pointer-events: none;
+    }
+
+    .ampliar-factura {
+        position: absolute;
+        inset: 5px;
+        z-index: 2;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        color: transparent;
+        cursor: zoom-in;
+        font-weight: 600;
+    }
+
+    .ampliar-factura:hover,
+    .ampliar-factura:focus-visible {
+        background: rgba(54,54,54,.55);
+        color: white;
+        outline: none;
+    }
+
+    .factura-ampliada {
+        display: block;
+        width: 100%;
+        height: 78vh;
+        border: 0;
+        background-color: #f4f4f4;
+    }
+
+    .btn-factura {
+        border: 0;
+        border-radius: 8px;
+        color: white;
+        font-weight: 500;
+        padding: 10px 16px;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .btn-factura-ver {
+        background-color: #464482;
+    }
+
+    .btn-factura-descargar {
+        background-color: #198754;
+    }
+
+    .btn-factura-eliminar {
+        background-color: #824B44;
+    }
+
+    .btn-factura:hover {
+        color: white;
+        filter: brightness(0.92);
+    }
 </style>
 
 <div class="tarjeta-contenido">
@@ -128,6 +229,11 @@
     @if (TempData["Mensaje"] != null)
     {
         <div class="alert alert-danger">@TempData["Mensaje"]</div>
+    }
+
+    @if (TempData["Exito"] != null)
+    {
+        <div class="alert alert-success">@TempData["Exito"]</div>
     }
 
     @if (ViewBag.Mensaje != null)
@@ -283,6 +389,145 @@
         </div>
     }
 
+
+    <section class="factura-panel">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+            <div>
+                <h5 class="mb-1">Facturas de la reservación</h5>
+                <span class="text-muted">Estado: <strong>@Model.EstadoFacturacion.Replace("_", " ")</strong></span>
+            </div>
+            @if (Model.EsAdministrador && Model.EstadoFacturacion is "sin_definir" or "no_solicitada")
+            {
+                <form asp-controller="Facturas" asp-action="Solicitar" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="idReserva" value="@Model.IdReserva" />
+                    <button type="submit" class="btn-factura btn-factura-ver">Enviar a Facturas pendientes</button>
+                </form>
+            }
+        </div>
+
+        @if (Model.DocumentosFiscales.Count == 0)
+        {
+            <div class="alert alert-light border">Todavía no hay facturas adjuntas.</div>
+        }
+        else
+        {
+            @foreach (var documento in Model.DocumentosFiscales)
+            {
+                string modalId = $"modalFactura{documento.IdDocumentoFiscal}";
+                <article class="factura-datos mb-3">
+                    <div class="d-flex justify-content-between flex-wrap gap-2">
+                        <div>
+                            <strong>FACTURA</strong>
+                            <span class="badge @(documento.Estado == "vigente" ? "text-bg-success" : "text-bg-danger") ms-2">@documento.Estado</span>
+                        </div>
+                        <span class="text-muted">@documento.FechaRegistro.ToString("dd/MM/yyyy HH:mm") · @documento.UsuarioRegistro</span>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-md-4"><strong>NIT receptor:</strong> @(documento.NitReceptor ?? "No registrado (documento heredado)")</div>
+                        <div class="col-md-4"><strong>Serie:</strong> @(documento.Serie ?? "-")</div>
+                        <div class="col-md-4"><strong>Número DTE:</strong> @(documento.NumeroDte ?? "-")</div>
+                    </div>
+                    <div class="text-muted mt-2">@documento.NombreOriginal · @MostrarTamano(documento.Tamano)</div>
+                    @if (!string.IsNullOrWhiteSpace(documento.MotivoEstado)) { <div class="alert alert-warning py-2 mt-2 mb-0"><strong>Motivo:</strong> @documento.MotivoEstado</div> }
+                    <div class="vista-previa-factura mt-3">
+                        <object data="@Url.Action("DocumentoPdf", "Facturas", new { id = documento.IdDocumentoFiscal })#page=1&amp;view=FitH&amp;toolbar=0" type="application/pdf" aria-label="Vista previa de la factura"></object>
+                        <button type="button" class="ampliar-factura" data-bs-toggle="modal" data-bs-target="#@modalId" aria-label="Ampliar factura">
+                            <i class="bi bi-zoom-in me-1"></i> Ampliar factura
+                        </button>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 mt-3">
+                        <a asp-controller="Facturas" asp-action="DocumentoPdf" asp-route-id="@documento.IdDocumentoFiscal" target="_blank" rel="noopener" class="btn-factura btn-factura-ver">Ver PDF</a>
+                        <a asp-controller="Facturas" asp-action="DocumentoPdf" asp-route-id="@documento.IdDocumentoFiscal" asp-route-descargar="true" class="btn-factura btn-factura-descargar">Descargar</a>
+                    </div>
+                    @if (Model.EsAdministrador && documento.Estado == "vigente")
+                    {
+                        <form asp-controller="Facturas" asp-action="Anular" method="post" class="row g-2 mt-2" onsubmit="return confirm('¿Confirma la anulación? El documento se conservará en el historial.');">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="idDocumentoFiscal" value="@documento.IdDocumentoFiscal" />
+                            <input type="hidden" name="idReservaRetorno" value="@Model.IdReserva" />
+                            <div class="col-md-9"><input name="motivo" class="form-control" maxlength="255" required placeholder="Motivo obligatorio de anulación" /></div>
+                            <div class="col-md-3 d-grid"><button class="btn-factura btn-factura-eliminar" type="submit">Anular documento</button></div>
+                        </form>
+                    }
+                </article>
+
+                <div class="modal fade" id="@modalId" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-xl modal-dialog-centered"><div class="modal-content">
+                        <div class="modal-header"><h5 class="modal-title">@documento.Serie - @documento.NumeroDte</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                        <div class="modal-body p-2 bg-light"><object class="factura-ampliada" data="@Url.Action("DocumentoPdf", "Facturas", new { id = documento.IdDocumentoFiscal })#page=1&amp;view=FitH" type="application/pdf"></object></div>
+                    </div></div>
+                </div>
+            }
+        }
+
+        @if (Model.EsAdministrador)
+        {
+            <hr />
+            <h5>Registrar nueva factura</h5>
+            <p class="text-muted">El PDF conserva la información completa; estos tres datos sirven únicamente como índice administrativo.</p>
+            <form asp-controller="Facturas" asp-action="Subir" method="post" enctype="multipart/form-data" class="row g-3">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="idReservaOrigen" value="@Model.IdReserva" />
+                <div class="col-md-4"><label class="form-label">NIT o identificación receptor</label><input name="nitReceptor" value="@Model.NitCliente" class="form-control" maxlength="40" required /></div>
+                <div class="col-md-4"><label class="form-label">Serie</label><input name="serie" class="form-control" maxlength="50" required /></div>
+                <div class="col-md-4"><label class="form-label">Número de DTE</label><input name="numeroDte" class="form-control" maxlength="50" required /></div>
+                <div class="col-12"><label class="form-label">Factura en PDF</label><input name="facturaPdf" type="file" accept=".pdf,application/pdf" class="form-control" required /><div class="form-text">Máximo 10 MB. La lectura automática no se usa en esta primera versión.</div></div>
+
+                @if (Model.IdReservaGrupo.HasValue && Model.ReservasDelGrupo.Count > 0)
+                {
+                    <div class="col-12"><label class="form-label fw-semibold">Alcance dentro del grupo #@Model.IdReservaGrupo</label>
+                        <div class="form-check"><input class="form-check-input alcance-documento" type="radio" name="alcance" id="alcanceGrupo" value="grupo" checked /><label class="form-check-label" for="alcanceGrupo">Toda la reserva agrupada</label></div>
+                        <div class="form-check"><input class="form-check-input alcance-documento" type="radio" name="alcance" id="alcanceEspecifica" value="especifica" /><label class="form-check-label" for="alcanceEspecifica">Una estadía específica</label></div>
+                        <div id="opcionesEstadiaEspecifica" class="d-none ps-4 mt-2">
+                            <label for="idReservaEspecifica" class="form-label">Seleccione la estadía</label>
+                            <select id="idReservaEspecifica" name="idReservaEspecifica" class="form-select">
+                                @foreach (var estadia in Model.ReservasDelGrupo.Where(r => r.Estado != "cancelada")) { <option value="@estadia.IdReserva">#@estadia.IdReserva — @estadia.FechaEntrada.ToString("dd/MM/yyyy") — Habitación @estadia.Habitacion</option> }
+                            </select>
+                        </div>
+                        <div class="form-check mt-2"><input class="form-check-input alcance-documento" type="radio" name="alcance" id="alcanceVarias" value="varias" /><label class="form-check-label" for="alcanceVarias">Varias estadías seleccionadas</label></div>
+                        <div id="opcionesVariasEstadias" class="row d-none ps-4 mt-1">
+                            @foreach (var estadia in Model.ReservasDelGrupo.Where(r => r.Estado != "cancelada"))
+                            { <div class="col-md-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="idsReservasSeleccionadas" value="@estadia.IdReserva" id="estadiaFactura@estadia.IdReserva" /><label class="form-check-label" for="estadiaFactura@estadia.IdReserva">#@estadia.IdReserva — @estadia.FechaEntrada.ToString("dd/MM/yyyy") — Habitación @estadia.Habitacion</label></div></div> }
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <input type="hidden" name="alcance" value="especifica" />
+                    <input type="hidden" name="idReservaEspecifica" value="@Model.IdReserva" />
+                }
+                <div class="col-12"><button type="submit" class="btn-factura btn-factura-ver">Guardar factura</button></div>
+            </form>
+
+            <hr />
+            <h5>Historial de auditoría</h5>
+            @if (Model.HistorialFacturacion.Count == 0)
+            {
+                <p class="text-muted mb-0">Todavía no hay movimientos de facturación registrados.</p>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered align-middle mb-0">
+                        <thead><tr><th>Fecha</th><th>Hora</th><th>Usuario</th><th>Detalle</th></tr></thead>
+                        <tbody>
+                        @foreach (var movimiento in Model.HistorialFacturacion)
+                        {
+                            <tr>
+                                <td>@movimiento.FechaHora.ToString("dd/MM/yyyy")</td>
+                                <td>@movimiento.FechaHora.ToString("HH:mm")</td>
+                                <td>@movimiento.Usuario</td>
+                                <td>@(movimiento.Detalle ?? "-")</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        }
+    </section>
+
     <div class="acciones-formulario">
         <a asp-controller="CuentasPorCobrar" asp-action="Detalle" asp-route-id="@Model.IdReserva" class="btn-cuenta">
             Ver cuenta y abonos
@@ -292,3 +537,22 @@
         </a>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const opcionesAlcance = document.querySelectorAll(".alcance-documento");
+            const opcionEspecifica = document.getElementById("opcionesEstadiaEspecifica");
+            const opcionVarias = document.getElementById("opcionesVariasEstadias");
+
+            function actualizarOpcionesAlcance() {
+                const seleccionada = document.querySelector(".alcance-documento:checked")?.value;
+                opcionEspecifica?.classList.toggle("d-none", seleccionada !== "especifica");
+                opcionVarias?.classList.toggle("d-none", seleccionada !== "varias");
+            }
+
+            opcionesAlcance.forEach(opcion => opcion.addEventListener("change", actualizarOpcionesAlcance));
+            actualizarOpcionesAlcance();
+        });
+    </script>
+}

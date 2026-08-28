@@ -1,0 +1,170 @@
+{
+  "input": "C:\\Users\\Samuel\\Desktop\\MiHotel\\BIT\u00c1CORA desarrollo local, reservas y facturaci\u00f3n 25-27 agosto 2026.docx",
+  "fonts_by_char_count": {
+    "Calibri": 18074
+  },
+  "direct_run_formatting_runs": 69,
+  "direct_paragraph_formatting_paragraphs": 69,
+  "heading_like_paragraphs_not_heading_style": [
+    {
+      "para_index": 1,
+      "text": "BIT\u00c1CORA DE DESARROLLO",
+      "style": "Normal"
+    },
+    {
+      "para_index": 2,
+      "text": "Proyecto: Sistema de Gesti\u00f3n Hotelera - Hotel Casa Antigua",
+      "style": "Normal"
+    },
+    {
+      "para_index": 3,
+      "text": "Sistema: MiHotel",
+      "style": "Normal"
+    },
+    {
+      "para_index": 4,
+      "text": "Tecnolog\u00edas: ASP.NET Core MVC - MySQL - Visual Studio 2022",
+      "style": "Normal"
+    },
+    {
+      "para_index": 5,
+      "text": "Periodo documentado: 25/08/2026 al 27/08/2026",
+      "style": "Normal"
+    },
+    {
+      "para_index": 7,
+      "text": "1. An\u00e1lisis del cambio de sistema web a operaci\u00f3n local",
+      "style": "Normal"
+    },
+    {
+      "para_index": 13,
+      "text": "3. Correcci\u00f3n del acceso administrativo al sistema",
+      "style": "Normal"
+    },
+    {
+      "para_index": 16,
+      "text": "4. Restauraci\u00f3n visual del formulario de inicio de sesi\u00f3n",
+      "style": "Normal"
+    },
+    {
+      "para_index": 19,
+      "text": "5. Definici\u00f3n operativa del cierre de estad\u00edas y la facturaci\u00f3n manual",
+      "style": "Normal"
+    },
+    {
+      "para_index": 22,
+      "text": "6. Estado actual del sistema",
+      "style": "Normal"
+    },
+    {
+      "para_index": 25,
+      "text": "7. Conclusi\u00f3n",
+      "style": "Normal"
+    },
+    {
+      "para_index": 28,
+      "text": "1. Implementaci\u00f3n de reservaciones agrupadas por fechas separadas",
+      "style": "Normal"
+    },
+    {
+      "para_index": 34,
+      "text": "3. Distribuci\u00f3n de pagos y conexi\u00f3n con Cuentas por Cobrar",
+      "style": "Normal"
+    },
+    {
+      "para_index": 37,
+      "text": "4. Desarrollo del registro manual de facturas adjuntas",
+      "style": "Normal"
+    },
+    {
+      "para_index": 40,
+      "text": "5. Creaci\u00f3n del seguimiento de facturas pendientes y alcance por estad\u00edas",
+      "style": "Normal"
+    },
+    {
+      "para_index": 43,
+      "text": "6. Mejoras de visualizaci\u00f3n y auditor\u00eda fiscal",
+      "style": "Normal"
+    },
+    {
+      "para_index": 46,
+      "text": "7. Conclusi\u00f3n",
+      "style": "Normal"
+    },
+    {
+      "para_index": 49,
+      "text": "1. Simplificaci\u00f3n de la decisi\u00f3n de facturaci\u00f3n en los procesos de cobro",
+      "style": "Normal"
+    },
+    {
+      "para_index": 52,
+      "text": "2. Reestructuraci\u00f3n de Cuentas por Cobrar sobre una fuente \u00fanica",
+      "style": "Normal"
+    },
+    {
+      "para_index": 55,
+      "text": "3. Mejora de legibilidad del historial financiero",
+      "style": "Normal"
+    }
+  ],
+  "examples": {
+    "direct_paragraph_formatting": [
+      {
+        "para_index": 1,
+        "text": "BIT\u00c1CORA DE DESARROLLO",
+        "style": "Normal"
+      },
+      {
+        "para_index": 2,
+        "text": "Proyecto: Sistema de Gesti\u00f3n Hotelera - Hotel Casa Antigua",
+        "style": "Normal"
+      },
+      {
+        "para_index": 3,
+        "text": "Sistema: MiHotel",
+        "style": "Normal"
+      },
+      {
+        "para_index": 4,
+        "text": "Tecnolog\u00edas: ASP.NET Core MVC - MySQL - Visual Studio 2022",
+        "style": "Normal"
+      },
+      {
+        "para_index": 5,
+        "text": "Periodo documentado: 25/08/2026 al 27/08/2026",
+        "style": "Normal"
+      }
+    ],
+    "direct_run_formatting": [
+      {
+        "para_index": 1,
+        "run_text": "BIT\u00c1CORA DE DESARROLLO",
+        "style": "Normal"
+      },
+      {
+        "para_index": 2,
+        "run_text": "Proyecto: Sistema de Gesti\u00f3n Hotelera - Hotel Casa Antigua",
+        "style": "Normal"
+      },
+      {
+        "para_index": 3,
+        "run_text": "Sistema: MiHotel",
+        "style": "Normal"
+      },
+      {
+        "para_index": 4,
+        "run_text": "Tecnolog\u00edas: ASP.NET Core MVC - MySQL - Visual Studio 2022",
+        "style": "Normal"
+      },
+      {
+        "para_index": 5,
+        "run_text": "Periodo documentado: 25/08/2026 al 27/08/2026",
+        "style": "Normal"
+      }
+    ]
+  },
+  "notes": [
+    "Direct formatting is not always wrong, but it often causes inconsistent output when templates change.",
+    "Heading-like paragraphs not using Heading styles can break TOC and accessibility."
+  ]
+}

@@ -11,6 +11,17 @@
     int totalPaginas = ViewBag.TotalPaginas ?? 1;
     int totalRegistros = ViewBag.TotalRegistros ?? 0;
     int reservasPendientesVencidas = ViewBag.ReservasPendientesVencidas ?? 0;
+    bool mostrarHoras = vista is "finalizada" or "pendientes_factura";
+    int? reservaReembolsoPendiente = TempData["ReservaReembolsoPendiente"] == null
+        ? null
+        : Convert.ToInt32(TempData["ReservaReembolsoPendiente"]);
+    decimal montoReembolsoPendiente = decimal.TryParse(
+        TempData["MontoReembolsoPendiente"]?.ToString(),
+        System.Globalization.NumberStyles.Number,
+        System.Globalization.CultureInfo.InvariantCulture,
+        out decimal montoReembolso)
+            ? montoReembolso
+            : 0;
 
     string SiguienteDireccion(string columna)
     {
@@ -177,6 +188,24 @@
         font-size: 0.78rem;
         font-weight: 600;
     }
+
+    .indicador-factura {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 27px;
+        height: 27px;
+        margin-left: 6px;
+        border-radius: 50%;
+        background-color: #d9f2df;
+        color: #17652b;
+        vertical-align: middle;
+    }
+
+    .indicador-factura-pendiente {
+        background-color: #fff0c9;
+        color: #885b00;
+    }
 </style>
 
 <div class="tarjeta-contenido">
@@ -190,8 +219,9 @@
         <a asp-controller="Reservas" asp-action="Index" asp-route-vista="pendiente" asp-route-busqueda="@busqueda" asp-route-ordenarPor="@ordenarPor" asp-route-direccion="@direccion" class="tab-vista @(vista == "pendiente" ? "activa" : "")">Pendientes de ingreso</a>
         <a asp-controller="Reservas" asp-action="Index" asp-route-vista="en_curso" asp-route-busqueda="@busqueda" asp-route-ordenarPor="@ordenarPor" asp-route-direccion="@direccion" class="tab-vista @(vista == "en_curso" ? "activa" : "")">En curso</a>
         <a asp-controller="Reservas" asp-action="Index" asp-route-vista="en_checkout" asp-route-busqueda="@busqueda" asp-route-ordenarPor="@ordenarPor" asp-route-direccion="@direccion" class="tab-vista @(vista == "en_checkout" ? "activa" : "")">En check-out</a>
-        <a asp-controller="Reservas" asp-action="Index" asp-route-vista="cancelada" asp-route-busqueda="@busqueda" asp-route-ordenarPor="@ordenarPor" asp-route-direccion="@direccion" class="tab-vista @(vista == "cancelada" ? "activa" : "")">Canceladas</a>
         <a asp-controller="Reservas" asp-action="Index" asp-route-vista="finalizada" asp-route-busqueda="@busqueda" asp-route-ordenarPor="@ordenarPor" asp-route-direccion="@direccion" class="tab-vista @(vista == "finalizada" ? "activa" : "")">Finalizadas</a>
+        <a asp-controller="Reservas" asp-action="Index" asp-route-vista="pendientes_factura" asp-route-busqueda="@busqueda" asp-route-ordenarPor="@ordenarPor" asp-route-direccion="@direccion" class="tab-vista @(vista == "pendientes_factura" ? "activa" : "")">Pendientes de factura</a>
+        <a asp-controller="Reservas" asp-action="Index" asp-route-vista="cancelada" asp-route-busqueda="@busqueda" asp-route-ordenarPor="@ordenarPor" asp-route-direccion="@direccion" class="tab-vista @(vista == "cancelada" ? "activa" : "")">Canceladas</a>
     </div>
 
     @if (TempData["Exito"] != null)
@@ -202,6 +232,25 @@
     @if (TempData["Mensaje"] != null)
     {
         <div class="alert alert-danger">@TempData["Mensaje"]</div>
+    }
+
+    @if (reservaReembolsoPendiente.HasValue && montoReembolsoPendiente > 0)
+    {
+        <div class="alert alert-warning">
+            <strong>Esta cancelación requiere devolver dinero al huésped.</strong>
+            <div class="mt-1 mb-3">
+                Se registrará un reembolso de <strong>Q @montoReembolsoPendiente.ToString("N2")</strong>
+                antes de cancelar la reservación #@reservaReembolsoPendiente.Value.
+            </div>
+            <form asp-controller="Reservas" asp-action="Cancelar" asp-route-id="@reservaReembolsoPendiente.Value" method="post"
+                  onsubmit="return confirm('¿Confirma que el dinero fue devuelto al huésped y desea registrar el reembolso? Esta acción no se puede deshacer desde esta pantalla.');">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="registrarReembolso" value="true" />
+                <button type="submit" class="btn btn-danger">
+                    <i class="bi bi-cash-stack me-1"></i> Registrar reembolso y cancelar
+                </button>
+            </form>
+        </div>
     }
 
     @if (reservasPendientesVencidas > 0)
@@ -249,7 +298,7 @@
                         </a>
                     </th>
                     <th>Salida</th>
-                    @if (vista == "finalizada")
+                    @if (mostrarHoras)
                     {
                         <th>
                             <a asp-controller="Reservas" asp-action="Index" asp-route-busqueda="@busqueda" asp-route-ordenarPor="hora_checkin" asp-route-direccion="@SiguienteDireccion("hora_checkin")" asp-route-vista="@vista" class="encabezado-orden">
@@ -273,7 +322,7 @@
                 @if (Model.Rows.Count == 0)
                 {
                     <tr>
-                        <td colspan="@(vista == "finalizada" ? 11 : 9)" class="text-center">No se encontraron reservas.</td>
+                        <td colspan="@(mostrarHoras ? 11 : 9)" class="text-center">No se encontraron reservas.</td>
                     </tr>
                 }
                 else
@@ -281,10 +330,14 @@
                     foreach (System.Data.DataRow fila in Model.Rows)
                     {
                         string estado = fila["estado"]?.ToString()?.Trim().ToLower() ?? "";
+                        string estadoFacturacion = fila["estado_facturacion"]?.ToString()?.Trim().ToLower() ?? "sin_definir";
+                        bool tieneFactura = Convert.ToBoolean(fila["tiene_factura"]);
                         bool fechaIngresoVencida = estado == "pendiente"
                             && Convert.ToDateTime(fila["fecha_entrada"]).Date < DateTime.Today;
                         bool fechaIngresoHoy = estado == "pendiente"
                             && Convert.ToDateTime(fila["fecha_entrada"]).Date == DateTime.Today;
+                        bool fechaIngresoFutura = estado == "pendiente"
+                            && Convert.ToDateTime(fila["fecha_entrada"]).Date > DateTime.Today;
 
                         <tr>
                             <td>
@@ -298,7 +351,7 @@
                             <td>@fila["habitacion"]</td>
                             <td>@Convert.ToDateTime(fila["fecha_entrada"]).ToString("dd/MM/yyyy")</td>
                             <td>@Convert.ToDateTime(fila["fecha_salida"]).ToString("dd/MM/yyyy")</td>
-                            @if (vista == "finalizada")
+                            @if (mostrarHoras)
                             {
                                 <td>@(fila["fecha_hora_checkin"] == DBNull.Value ? "-" : Convert.ToDateTime(fila["fecha_hora_checkin"]).ToString("HH:mm"))</td>
                                 <td>@(fila["fecha_hora_checkout"] == DBNull.Value ? "-" : Convert.ToDateTime(fila["fecha_hora_checkout"]).ToString("HH:mm"))</td>
@@ -312,6 +365,12 @@
                                     <span class="estado-pendiente">
                                         @(fechaIngresoVencida ? "Pendiente de ingreso — fecha vencida" : "Pendiente de ingreso")
                                     </span>
+                                    @if (fechaIngresoFutura)
+                                    {
+                                        <small class="d-block text-muted mt-1">
+                                            Check-in disponible el @Convert.ToDateTime(fila["fecha_entrada"]).ToString("dd/MM/yyyy")
+                                        </small>
+                                    }
                                 }
                                 else if (estado == "en_curso")
                                 {
@@ -329,6 +388,18 @@
                                 {
                                     <span class="estado-finalizada">Finalizada</span>
                                 }
+                                @if (tieneFactura)
+                                {
+                                    <span class="indicador-factura" title="Factura adjunta" aria-label="Factura adjunta">
+                                        <i class="bi bi-receipt-cutoff"></i>
+                                    </span>
+                                }
+                                else if (estadoFacturacion is "pendiente" or "anulada")
+                                {
+                                    <span class="indicador-factura indicador-factura-pendiente" title="Factura pendiente de adjuntar" aria-label="Factura pendiente de adjuntar">
+                                        <i class="bi bi-hourglass-split"></i>
+                                    </span>
+                                }
                             </td>
 
                             <td>
@@ -336,6 +407,20 @@
                                     <a asp-controller="Reservas" asp-action="Detalle" asp-route-id="@fila["id_reserva"]" class="btn-icono btn-detalle" title="Ver detalle">
                                         <i class="bi bi-eye-fill"></i>
                                     </a>
+
+                                    @if (vista == "pendientes_factura" && (estadoFacturacion is "pendiente" or "anulada"))
+                                    {
+                                        <form asp-controller="Facturas" asp-action="CancelarSolicitud" method="post" class="form-accion"
+                                              onsubmit="return confirm('¿Confirma que el huésped ya no necesita factura? La reservación saldrá de Facturas pendientes.');">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="idReserva" value="@fila["id_reserva"]" />
+                                            <input type="hidden" name="retorno" value="reservas" />
+                                            <input type="hidden" name="busqueda" value="@busqueda" />
+                                            <button type="submit" class="btn-icono btn-cancelar" title="Cancelar solicitud de factura">
+                                                <i class="bi bi-receipt-x"></i>
+                                            </button>
+                                        </form>
+                                    }
 
 
                                     @if (estado == "pendiente")

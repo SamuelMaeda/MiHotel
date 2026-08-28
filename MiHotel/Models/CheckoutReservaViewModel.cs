@@ -13,9 +13,13 @@ namespace MiHotel.Models
         public DateTime? FechaHoraCheckIn { get; set; }
         public decimal TotalReserva { get; set; }
         public decimal SaldoPendiente { get; set; }
+        public decimal SaldoPendienteGrupo { get; set; }
+        public bool EsUltimaEstadiaGrupo { get; set; }
         public string Estado { get; set; } = "";
         public string Observaciones { get; set; } = "";
         public bool EsAdministrador { get; set; }
+        public bool? RequiereFacturaRegistrada { get; set; }
+        public string EstadoFacturacion { get; set; } = "sin_definir";
         public List<MovimientoCuentaViewModel> Movimientos { get; set; } = new();
     }
 }

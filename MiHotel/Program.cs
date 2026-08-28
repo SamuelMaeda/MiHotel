@@ -6,9 +6,16 @@ using MiHotel.Data;
 using MiHotel.Models.Configuracion;
 using MiHotel.Services;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using System.Net;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Una instalación local no debe depender de permisos para escribir en el
+// registro de eventos de Windows. La consola permite diagnosticar el sistema
+// incluso cuando se ejecuta con una cuenta estándar del hotel.
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
 
 // ===============================
 // RUTA DEL ARCHIVO DE CONFIGURACION
@@ -102,10 +109,18 @@ builder.Services.Configure<ConfigSistema>(
 // SERVICIOS DEL SISTEMA
 // ===============================
 
+// No existen cookies persistentes ni enlaces públicos que deban sobrevivir al
+// reinicio. Se registra antes de MVC para que todos los componentes usen el
+// mismo proveedor temporal y cierren las sesiones anteriores limpiamente.
+builder.Services
+    .AddDataProtection()
+    .UseEphemeralDataProtectionProvider();
+
 builder.Services.AddControllersWithViews();
 
 builder.Services.AddScoped<ConexionBD>();
 builder.Services.AddScoped<DisponibilidadService>();
+builder.Services.AddScoped<FacturacionService>();
 
 builder.Services.AddSession(options =>
 {
@@ -116,10 +131,9 @@ builder.Services.AddSession(options =>
     options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
 });
 
-// No existen cookies persistentes ni enlaces públicos que deban sobrevivir al
-// reinicio. Cada ejecución genera sus propias llaves y cierra sesiones previas.
-builder.Services.AddSingleton<IDataProtectionProvider>(
-    new EphemeralDataProtectionProvider());
+builder.Services.Replace(
+    ServiceDescriptor.Singleton<IDataProtectionProvider>(
+        new EphemeralDataProtectionProvider()));
 
 var app = builder.Build();
 
@@ -161,9 +175,10 @@ app.Use(async (context, next) =>
 {
     PathString ruta = context.Request.Path;
     bool esLogin = ruta.StartsWithSegments("/Acceso/Login");
+    bool esRutaInicial = ruta == "/";
     bool esError = ruta.StartsWithSegments("/Home/Error");
 
-    if (!esLogin && !esError)
+    if (!esLogin && !esRutaInicial && !esError)
     {
         string? idUsuario = context.Session.GetString("IdUsuario");
         string rol = context.Session.GetString("NombreRol")?.Trim().ToLower() ?? "";

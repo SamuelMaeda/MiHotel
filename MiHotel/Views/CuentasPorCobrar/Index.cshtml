@@ -1,46 +1,31 @@
-﻿@*
-========================================
-VISTA PRINCIPAL DE CUENTAS POR COBRAR
-Muestra las cuentas pendientes agrupadas
-por estadía y las cuentas independientes.
-========================================
-*@
-
 @model System.Data.DataTable
 
 @{
     ViewData["Title"] = "Cuentas por Cobrar";
-
     string busqueda = ViewBag.Busqueda ?? "";
     string ordenarPor = ViewBag.OrdenarPor ?? "fecha_entrada";
     string direccion = ViewBag.Direccion ?? "desc";
-    string vista = ViewBag.Vista ?? "estadias";
-
     int paginaActual = ViewBag.PaginaActual ?? 1;
     int totalPaginas = ViewBag.TotalPaginas ?? 1;
     int totalRegistros = ViewBag.TotalRegistros ?? 0;
 
-    string SiguienteDireccion(string columna)
-    {
-        if (ordenarPor == columna && direccion == "asc")
-        {
-            return "desc";
-        }
-
-        return "asc";
-    }
+    string SiguienteDireccion(string columna) =>
+        ordenarPor == columna && direccion == "asc" ? "desc" : "asc";
 
     string IconoOrden(string columna)
     {
-        if (ordenarPor != columna)
-        {
-            return "bi-arrow-down-up";
-        }
-
-        return direccion == "asc"
-            ? "bi-sort-alpha-down"
-            : "bi-sort-alpha-up";
+        if (ordenarPor != columna) return "bi-arrow-down-up";
+        return direccion == "asc" ? "bi-sort-alpha-down" : "bi-sort-alpha-up";
     }
+
+    string EtiquetaEstado(string estado) => estado switch
+    {
+        "pendiente" => "Pendiente de ingreso",
+        "en_curso" => "En curso",
+        "en_checkout" => "En check-out",
+        "finalizada" => "Finalizada",
+        _ => estado.Replace("_", " ")
+    };
 }
 
 <style>
@@ -51,74 +36,6 @@ por estadía y las cuentas independientes.
         box-shadow: 0 4px 10px rgba(0,0,0,0.10);
     }
 
-    .encabezado-principal {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 12px;
-        margin-bottom: 20px;
-    }
-
-    .btn-superior {
-        background-color: #464482;
-        color: white;
-        padding: 10px 16px;
-        border-radius: 8px;
-        border: none;
-        text-decoration: none;
-        font-weight: 500;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-        .btn-superior:hover {
-            color: white;
-        }
-
-        .btn-superior:disabled {
-            background-color: #8a89ad;
-            color: white;
-            cursor: not-allowed;
-            opacity: 0.75;
-        }
-
-    .tabs-vista {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 20px;
-        flex-wrap: wrap;
-    }
-
-    .tab-vista {
-        text-decoration: none;
-        padding: 10px 14px;
-        border-radius: 8px;
-        background-color: #E6D3D0;
-        color: #363636;
-        font-weight: 500;
-        border: none;
-        display: inline-flex;
-        align-items: center;
-    }
-
-        .tab-vista:hover {
-            color: #363636;
-        }
-
-        .tab-vista.activa {
-            background-color: #824B44;
-            color: white;
-        }
-
-        .tab-vista.deshabilitada {
-            background-color: #e9ecef;
-            color: #6c757d;
-            cursor: not-allowed;
-            opacity: 0.85;
-        }
-
     .encabezado-orden {
         color: inherit;
         text-decoration: none;
@@ -128,15 +45,7 @@ por estadía y las cuentas independientes.
         font-weight: 600;
     }
 
-        .encabezado-orden:hover {
-            color: inherit;
-        }
-
-    .acciones-contenedor {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-    }
+    .acciones-contenedor { display: flex; gap: 8px; flex-wrap: wrap; }
 
     .btn-icono {
         width: 38px;
@@ -149,39 +58,27 @@ por estadía y las cuentas independientes.
         color: white;
         text-decoration: none;
         font-size: 16px;
-    }
-
-        .btn-icono:hover {
-            color: white;
-        }
-
-        .btn-icono:disabled {
-            cursor: not-allowed;
-            opacity: 0.65;
-        }
-
-    .btn-gestionar {
         background-color: #464482;
     }
 
-    .estado-pendiente {
-        color: #856404;
-        font-weight: bold;
+    .btn-icono:hover { color: white; }
+    .estado-pendiente { color: #856404; font-weight: bold; }
+    .estado-finalizada { color: #0c5460; font-weight: bold; }
+    .estado-en_curso { color: #0c5460; font-weight: bold; }
+    .estado-en_checkout { color: #b45309; font-weight: bold; }
+
+    .etiqueta-grupo {
+        display: inline-block;
+        margin-top: 4px;
+        padding: 2px 7px;
+        border-radius: 999px;
+        background-color: #e6d3d0;
+        color: #824b44;
+        font-size: 0.78rem;
+        font-weight: 600;
     }
 
-    .tipo-cuenta {
-        color: #6c757d;
-        font-size: 13px;
-        margin-top: 3px;
-    }
-
-    .paginacion {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-        margin-top: 20px;
-    }
-
+    .paginacion { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 20px; }
     .pagina-link {
         padding: 8px 12px;
         border-radius: 8px;
@@ -191,503 +88,117 @@ por estadía y las cuentas independientes.
         min-width: 40px;
         text-align: center;
     }
-
-        .pagina-link:hover {
-            color: #363636;
-        }
-
-        .pagina-link.activa {
-            background-color: #464482;
-            color: white;
-            font-weight: bold;
-        }
-
-        .pagina-link.deshabilitada {
-            background-color: #e9ecef;
-            color: #6c757d;
-            cursor: not-allowed;
-            pointer-events: none;
-        }
+    .pagina-link.activa { background-color: #464482; color: white; font-weight: bold; }
 </style>
 
 <div class="tarjeta-contenido">
-
-    <div class="encabezado-principal">
-
-        <h3 class="m-0">
-            Cuentas por Cobrar
-        </h3>
-
-        <button type="button"
-                class="btn-superior"
-                disabled
-                title="El historial financiero se implementará en una fase posterior">
-
-            <i class="bi bi-clock-history"></i>
-
-            Historial
-
-        </button>
-
-    </div>
-
-    <div class="tabs-vista">
-
-        <a asp-controller="CuentasPorCobrar"
-           asp-action="Index"
-           asp-route-vista="estadias"
-           asp-route-busqueda="@busqueda"
-           asp-route-ordenarPor="@ordenarPor"
-           asp-route-direccion="@direccion"
-           class="tab-vista activa">
-
-            Ver por estadías
-
-        </a>
-
-        <span class="tab-vista deshabilitada"
-              title="La vista consolidada por cliente se implementará en la siguiente fase">
-
-            Ver por cliente
-
-        </span>
-
-    </div>
+    <h3 class="mb-4">Cuentas por Cobrar</h3>
 
     @if (TempData["Exito"] != null)
     {
-        <div class="alert alert-success">
-
-            @TempData["Exito"]
-
-        </div>
+        <div class="alert alert-success">@TempData["Exito"]</div>
     }
-
     @if (TempData["Mensaje"] != null)
     {
-        <div class="alert alert-danger">
-
-            @TempData["Mensaje"]
-
-        </div>
+        <div class="alert alert-danger">@TempData["Mensaje"]</div>
     }
-
     @if (ViewBag.Mensaje != null)
     {
-        <div class="alert alert-danger">
-
-            @ViewBag.Mensaje
-
-        </div>
+        <div class="alert alert-danger">@ViewBag.Mensaje</div>
     }
 
-    <form id="formBusqueda"
-          asp-controller="CuentasPorCobrar"
-          asp-action="Index"
-          method="get"
-          class="mb-4">
-
-        <input type="hidden"
-               name="vista"
-               value="@vista" />
-
-        <input type="hidden"
-               name="ordenarPor"
-               value="@ordenarPor" />
-
-        <input type="hidden"
-               name="direccion"
-               value="@direccion" />
-
-        <label for="busqueda"
-               class="form-label">
-
-            Buscar cuenta
-
-        </label>
-
-        <input type="text"
-               id="busqueda"
-               name="busqueda"
-               value="@busqueda"
-               class="form-control"
-               placeholder="Buscar por cliente, habitación o referencia"
-               autocomplete="off" />
-
+    <form id="formBusqueda" asp-controller="CuentasPorCobrar" asp-action="Index" method="get" class="mb-4">
+        <input type="hidden" name="ordenarPor" value="@ordenarPor" />
+        <input type="hidden" name="direccion" value="@direccion" />
+        <label for="busqueda" class="form-label">Buscar cuenta</label>
+        <input type="text" id="busqueda" name="busqueda" value="@busqueda" class="form-control"
+               placeholder="Buscar por cliente, empresa, habitación, grupo u observaciones" autocomplete="off" />
     </form>
 
-    <div class="mb-3">
-
-        <strong>Total de registros:</strong>
-
-        @totalRegistros
-
-    </div>
+    <div class="mb-3"><strong>Total de registros:</strong> @totalRegistros</div>
 
     <div class="table-responsive">
-
         <table class="table table-bordered table-striped align-middle">
-
             <thead class="table-dark">
-
                 <tr>
-
-                    <th>
-
-                        <a asp-controller="CuentasPorCobrar"
-                           asp-action="Index"
-                           asp-route-vista="@vista"
-                           asp-route-busqueda="@busqueda"
-                           asp-route-ordenarPor="cliente"
-                           asp-route-direccion="@SiguienteDireccion("cliente")"
-                           class="encabezado-orden">
-
-                            Cliente
-
-                            <i class="bi @IconoOrden("cliente")"></i>
-
-                        </a>
-
-                    </th>
-
-                    <th>
-
-                        <a asp-controller="CuentasPorCobrar"
-                           asp-action="Index"
-                           asp-route-vista="@vista"
-                           asp-route-busqueda="@busqueda"
-                           asp-route-ordenarPor="habitacion"
-                           asp-route-direccion="@SiguienteDireccion("habitacion")"
-                           class="encabezado-orden">
-
-                            Habitación
-
-                            <i class="bi @IconoOrden("habitacion")"></i>
-
-                        </a>
-
-                    </th>
-
-                    <th>
-
-                        <a asp-controller="CuentasPorCobrar"
-                           asp-action="Index"
-                           asp-route-vista="@vista"
-                           asp-route-busqueda="@busqueda"
-                           asp-route-ordenarPor="fecha_entrada"
-                           asp-route-direccion="@SiguienteDireccion("fecha_entrada")"
-                           class="encabezado-orden">
-
-                            Entrada
-
-                            <i class="bi @IconoOrden("fecha_entrada")"></i>
-
-                        </a>
-
-                    </th>
-
-                    <th>
-
-                        <a asp-controller="CuentasPorCobrar"
-                           asp-action="Index"
-                           asp-route-vista="@vista"
-                           asp-route-busqueda="@busqueda"
-                           asp-route-ordenarPor="fecha_salida"
-                           asp-route-direccion="@SiguienteDireccion("fecha_salida")"
-                           class="encabezado-orden">
-
-                            Salida
-
-                            <i class="bi @IconoOrden("fecha_salida")"></i>
-
-                        </a>
-
-                    </th>
-
-                    <th>
-
-                        <a asp-controller="CuentasPorCobrar"
-                           asp-action="Index"
-                           asp-route-vista="@vista"
-                           asp-route-busqueda="@busqueda"
-                           asp-route-ordenarPor="saldo"
-                           asp-route-direccion="@SiguienteDireccion("saldo")"
-                           class="encabezado-orden">
-
-                            Saldo pendiente
-
-                            <i class="bi @IconoOrden("saldo")"></i>
-
-                        </a>
-
-                    </th>
-
-                    <th>
-                        Estado
-                    </th>
-
-                    <th>
-                        Acciones
-                    </th>
-
+                    <th><a asp-action="Index" asp-route-busqueda="@busqueda" asp-route-ordenarPor="cliente" asp-route-direccion="@SiguienteDireccion("cliente")" class="encabezado-orden">Cliente <i class="bi @IconoOrden("cliente")"></i></a></th>
+                    <th><a asp-action="Index" asp-route-busqueda="@busqueda" asp-route-ordenarPor="empresa" asp-route-direccion="@SiguienteDireccion("empresa")" class="encabezado-orden">Empresa <i class="bi @IconoOrden("empresa")"></i></a></th>
+                    <th><a asp-action="Index" asp-route-busqueda="@busqueda" asp-route-ordenarPor="habitacion" asp-route-direccion="@SiguienteDireccion("habitacion")" class="encabezado-orden">Habitación <i class="bi @IconoOrden("habitacion")"></i></a></th>
+                    <th><a asp-action="Index" asp-route-busqueda="@busqueda" asp-route-ordenarPor="fecha_entrada" asp-route-direccion="@SiguienteDireccion("fecha_entrada")" class="encabezado-orden">Entrada <i class="bi @IconoOrden("fecha_entrada")"></i></a></th>
+                    <th><a asp-action="Index" asp-route-busqueda="@busqueda" asp-route-ordenarPor="fecha_salida" asp-route-direccion="@SiguienteDireccion("fecha_salida")" class="encabezado-orden">Salida <i class="bi @IconoOrden("fecha_salida")"></i></a></th>
+                    <th><a asp-action="Index" asp-route-busqueda="@busqueda" asp-route-ordenarPor="hora_checkin" asp-route-direccion="@SiguienteDireccion("hora_checkin")" class="encabezado-orden">Hora de check-in <i class="bi @IconoOrden("hora_checkin")"></i></a></th>
+                    <th><a asp-action="Index" asp-route-busqueda="@busqueda" asp-route-ordenarPor="hora_checkout" asp-route-direccion="@SiguienteDireccion("hora_checkout")" class="encabezado-orden">Hora de check-out <i class="bi @IconoOrden("hora_checkout")"></i></a></th>
+                    <th><a asp-action="Index" asp-route-busqueda="@busqueda" asp-route-ordenarPor="total" asp-route-direccion="@SiguienteDireccion("total")" class="encabezado-orden">Total <i class="bi @IconoOrden("total")"></i></a></th>
+                    <th><a asp-action="Index" asp-route-busqueda="@busqueda" asp-route-ordenarPor="saldo" asp-route-direccion="@SiguienteDireccion("saldo")" class="encabezado-orden">Pago Pendiente <i class="bi @IconoOrden("saldo")"></i></a></th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
                 </tr>
-
             </thead>
-
             <tbody>
-
                 @if (Model.Rows.Count == 0)
                 {
-                    <tr>
-
-                        <td colspan="7"
-                            class="text-center py-4">
-
-                            No existen cuentas por cobrar pendientes.
-
-                        </td>
-
-                    </tr>
+                    <tr><td colspan="11" class="text-center py-4">No existen cuentas por cobrar pendientes.</td></tr>
                 }
                 else
                 {
                     foreach (System.Data.DataRow fila in Model.Rows)
                     {
-                        string tipoCuenta =
-                        fila["tipo_cuenta"]?.ToString()?.Trim().ToLower()
-                        ?? "";
-
-                        bool esEstadia =
-                        tipoCuenta == "estadia"
-                        && fila["id_reserva"] != DBNull.Value;
-
-                        bool esGrupo =
-                        tipoCuenta == "grupo"
-                        && fila["id_reserva_grupo"] != DBNull.Value;
-
+                        string estado = fila["estado"]?.ToString()?.Trim().ToLower() ?? "";
                         <tr>
-
                             <td>
-
-                                @fila["cliente"]
-
-                                @if (esGrupo)
+                                <div>@fila["cliente"]</div>
+                                @if (fila["id_reserva_grupo"] != DBNull.Value)
                                 {
-                                    <div class="tipo-cuenta">
-                                        Reserva agrupada #@fila["id_reserva_grupo"]
-                                    </div>
+                                    <span class="etiqueta-grupo">Grupo #@fila["id_reserva_grupo"]</span>
                                 }
-                                else if (!esEstadia)
-                                {
-                                    <div class="tipo-cuenta">
-                                        Cuenta sin estadía
-                                    </div>
-                                }
-
                             </td>
-
+                            <td>@(fila["empresa_procedencia"] == DBNull.Value ? "-" : fila["empresa_procedencia"])</td>
+                            <td>@fila["habitacion"]</td>
+                            <td>@Convert.ToDateTime(fila["fecha_entrada"]).ToString("dd/MM/yyyy")</td>
+                            <td>@Convert.ToDateTime(fila["fecha_salida"]).ToString("dd/MM/yyyy")</td>
+                            <td>@(fila["fecha_hora_checkin"] == DBNull.Value ? "-" : Convert.ToDateTime(fila["fecha_hora_checkin"]).ToString("HH:mm"))</td>
+                            <td>@(fila["fecha_hora_checkout"] == DBNull.Value ? "-" : Convert.ToDateTime(fila["fecha_hora_checkout"]).ToString("HH:mm"))</td>
+                            <td>Q @Convert.ToDecimal(fila["total_reserva"]).ToString("N2")</td>
+                            <td>Q @Convert.ToDecimal(fila["saldo"]).ToString("N2")</td>
+                            <td><span class="estado-@estado">@EtiquetaEstado(estado)</span></td>
                             <td>
-
-                                @if (fila["habitacion"] == DBNull.Value)
-                                {
-                                    @:-
-                                }
-                                else
-                                {
-                                    @fila["habitacion"]
-                                }
-
-                            </td>
-
-                            <td>
-
-                                @if (fila["fecha_entrada"] == DBNull.Value)
-                                {
-                                    @:-
-                                }
-                                else
-                                {
-                                    @(Convert.ToDateTime(fila["fecha_entrada"]).ToString("dd/MM/yyyy"))
-                                }
-
-                            </td>
-
-                            <td>
-
-                                @if (fila["fecha_salida"] == DBNull.Value)
-                                {
-                                    @:-
-                                }
-                                else
-                                {
-                                    @(Convert.ToDateTime(fila["fecha_salida"]).ToString("dd/MM/yyyy"))
-                                }
-
-                            </td>
-
-                            <td>
-
-                                Q @(Convert.ToDecimal(fila["saldo"]).ToString("N2"))
-
-                            </td>
-
-                            <td>
-
-                                <span class="estado-pendiente">
-                                    Pendiente
-                                </span>
-
-                            </td>
-
-                            <td>
-
                                 <div class="acciones-contenedor">
-
-                                    @if (esGrupo)
-                                    {
-                                        <a asp-controller="CuentasPorCobrar"
-                                           asp-action="DetalleGrupo"
-                                           asp-route-id="@fila["id_reserva_grupo"]"
-                                           class="btn-icono btn-gestionar"
-                                           title="Gestionar cuenta agrupada y abonos">
-
-                                            <i class="bi bi-folder2-open"></i>
-
-                                        </a>
-                                    }
-                                    else if (esEstadia)
-                                    {
-                                        <a asp-controller="CuentasPorCobrar"
-                                           asp-action="Detalle"
-                                           asp-route-id="@fila["id_reserva"]"
-                                           class="btn-icono btn-gestionar"
-                                           title="Gestionar cuenta y abonos">
-
-                                            <i class="bi bi-folder2-open"></i>
-
-                                        </a>
-                                    }
-                                    else
-                                    {
-                                        <button type="button"
-                                                class="btn-icono btn-gestionar"
-                                                disabled
-                                                title="Las cuentas independientes existentes se conservan solo para consulta">
-
-                                            <i class="bi bi-folder2-open"></i>
-
-                                        </button>
-                                    }
-
+                                    <a asp-controller="CuentasPorCobrar" asp-action="Detalle" asp-route-id="@fila["id_reserva"]" class="btn-icono" title="Gestionar cuenta y pagos">
+                                        <i class="bi bi-folder2-open"></i>
+                                    </a>
                                 </div>
-
                             </td>
-
                         </tr>
                     }
                 }
-
             </tbody>
-
         </table>
-
     </div>
 
     @if (totalPaginas > 1)
     {
         <div class="paginacion">
-
-            @if (paginaActual > 1)
+            @for (int numeroPagina = 1; numeroPagina <= totalPaginas; numeroPagina++)
             {
-                <a asp-controller="CuentasPorCobrar"
-                   asp-action="Index"
-                   asp-route-vista="@vista"
-                   asp-route-busqueda="@busqueda"
-                   asp-route-ordenarPor="@ordenarPor"
-                   asp-route-direccion="@direccion"
-                   asp-route-pagina="@(paginaActual - 1)"
-                   class="pagina-link"
-                   title="Página anterior">
-
-                    <i class="bi bi-chevron-left"></i>
-
-                </a>
+                <a asp-action="Index" asp-route-busqueda="@busqueda" asp-route-ordenarPor="@ordenarPor"
+                   asp-route-direccion="@direccion" asp-route-pagina="@numeroPagina"
+                   class="pagina-link @(numeroPagina == paginaActual ? "activa" : "")">@numeroPagina</a>
             }
-            else
-            {
-                <span class="pagina-link deshabilitada">
-
-                    <i class="bi bi-chevron-left"></i>
-
-                </span>
-            }
-
-            @for (int numeroPagina = 1;
-                    numeroPagina <= totalPaginas;
-                    numeroPagina++)
-            {
-                <a asp-controller="CuentasPorCobrar"
-                   asp-action="Index"
-                   asp-route-vista="@vista"
-                   asp-route-busqueda="@busqueda"
-                   asp-route-ordenarPor="@ordenarPor"
-                   asp-route-direccion="@direccion"
-                   asp-route-pagina="@numeroPagina"
-                   class="pagina-link @(numeroPagina == paginaActual ? "activa" : "")">
-
-                    @numeroPagina
-
-                </a>
-            }
-
-            @if (paginaActual < totalPaginas)
-            {
-                <a asp-controller="CuentasPorCobrar"
-                   asp-action="Index"
-                   asp-route-vista="@vista"
-                   asp-route-busqueda="@busqueda"
-                   asp-route-ordenarPor="@ordenarPor"
-                   asp-route-direccion="@direccion"
-                   asp-route-pagina="@(paginaActual + 1)"
-                   class="pagina-link"
-                   title="Página siguiente">
-
-                    <i class="bi bi-chevron-right"></i>
-
-                </a>
-            }
-            else
-            {
-                <span class="pagina-link deshabilitada">
-
-                    <i class="bi bi-chevron-right"></i>
-
-                </span>
-            }
-
         </div>
     }
-
 </div>
 
 @section Scripts {
-
     <script>
         let temporizadorBusqueda;
-
-        const campoBusqueda =
-            document.getElementById("busqueda");
-
-        const formularioBusqueda =
-            document.getElementById("formBusqueda");
+        const campoBusqueda = document.getElementById("busqueda");
+        const formularioBusqueda = document.getElementById("formBusqueda");
 
         campoBusqueda.addEventListener("input", function () {
             clearTimeout(temporizadorBusqueda);
-
             temporizadorBusqueda = setTimeout(function () {
                 formularioBusqueda.submit();
             }, 350);
         });
     </script>
-
 }
