@@ -13,6 +13,7 @@
   <div class="col-md-6 mb-3"><div class="detalle-label">Número de DPI</div><div class="detalle-valor">@Mostrar(Model.NumeroDpi)</div></div>
   <div class="col-md-6 mb-3"><div class="detalle-label">Correo</div><div class="detalle-valor">@Mostrar(Model.Correo)</div></div>
   <div class="col-md-6 mb-3"><div class="detalle-label">Última placa registrada</div><div class="detalle-valor">@Mostrar(Model.PlacaReciente)</div></div>
+  <div class="col-md-6 mb-3"><div class="detalle-label">Limpieza habitual</div><div class="detalle-valor">@(Model.SolicitaLimpieza ? "Sí, solicita limpieza" : "No solicita limpieza")</div></div>
   <div class="col-12 mb-3"><div class="detalle-label">Dirección</div><div class="detalle-valor">@Mostrar(Model.Direccion)</div></div>
   <div class="col-md-6 mb-3"><div class="detalle-label">Estado</div><div class="detalle-valor">@Model.Estado</div></div>
  </div>

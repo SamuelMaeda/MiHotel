@@ -1328,6 +1328,7 @@ namespace MiHotel.Controllers
                         r.fecha_hora_checkout,
                         r.total_reserva,
                         r.saldo_pendiente,
+                        COALESCE(cd.solicita_limpieza, 1) AS solicita_limpieza,
                         r.estado,
                         r.observaciones,
                         COALESCE(rf.estado_facturacion, 'sin_definir') AS estado_facturacion,

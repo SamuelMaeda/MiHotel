@@ -15,6 +15,7 @@ namespace MiHotel.Models
         public string? PlacaReciente { get; set; }
         public string CodigoClasificacion { get; set; } = "B";
         public string NombreClasificacion { get; set; } = "Neutral";
+        public bool SolicitaLimpieza { get; set; } = true;
         public bool TieneDpiFrente { get; set; }
         public string Estado { get; set; } = "activo";
         public List<ReservaResumenFiscalViewModel> Reservas { get; set; } = new();

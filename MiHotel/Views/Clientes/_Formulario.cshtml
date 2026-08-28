@@ -54,6 +54,14 @@
         <span asp-validation-for="CodigoClasificacion" class="text-danger"></span>
         <div class="form-text">A: Tranquilo, B: Neutral, C: Problemático. Uso interno.</div>
     </div>
+    <div class="col-12 col-lg-6 mb-3">
+        <label asp-for="SolicitaLimpieza" class="form-label">Limpieza habitual</label>
+        <select asp-for="SolicitaLimpieza" class="form-select">
+            <option value="true">Sí, solicita limpieza</option>
+            <option value="false">No solicita limpieza</option>
+        </select>
+        <div class="form-text">Preferencia habitual del huésped. Puede modificarse cuando sea necesario.</div>
+    </div>
     <div class="col-12 mt-2 mb-2"><h5>Fotografía del DPI <span class="texto-opcional">(Opcional)</span></h5></div>
     <div class="col-12 mb-3">
         <label asp-for="DpiFrente" class="form-label">Parte frontal del DPI</label>

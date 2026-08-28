@@ -44,6 +44,9 @@ namespace MiHotel.Models
         [Display(Name = "Tipo de cliente")]
         public string CodigoClasificacion { get; set; } = "B";
 
+        [Display(Name = "Limpieza habitual")]
+        public bool SolicitaLimpieza { get; set; } = true;
+
         [Display(Name = "Fotografía frontal del DPI")]
         public IFormFile? DpiFrente { get; set; }
 

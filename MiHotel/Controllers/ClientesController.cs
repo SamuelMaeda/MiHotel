@@ -65,6 +65,7 @@ namespace MiHotel.Controllers
             "empresa" => "ec.nombre",
             "tipo" => "cc.codigo",
             "placa" => "cd.placa_reciente",
+            "limpieza" => "cd.solicita_limpieza",
             _ => "c.nombre"
         };
 
@@ -250,7 +251,7 @@ namespace MiHotel.Controllers
 
                 string sql = @"
                     SELECT c.id_clipro, c.nombre, c.nit, c.telefono, c.correo,
-                           ec.nombre AS empresa_procedencia, cd.placa_reciente,
+                           ec.nombre AS empresa_procedencia, cd.placa_reciente, cd.solicita_limpieza,
                            cc.codigo AS codigo_clasificacion, cc.nombre AS nombre_clasificacion, c.estado " +
                            desde + $" ORDER BY {columna} {sentido} LIMIT @limite OFFSET @offset;";
                 using var comando = new MySqlCommand(sql, conexion);
@@ -342,14 +343,17 @@ namespace MiHotel.Controllers
                 int id = Convert.ToInt32(comandoCliente.LastInsertedId);
 
                 const string insertarDetalle = @"
-                    INSERT INTO cliente_detalle (id_clipro,id_empresa_cliente,numero_dpi,placa_reciente,codigo_clasificacion)
-                    VALUES (@id,@empresa,@dpi,@placa,@clasificacion);";
+                    INSERT INTO cliente_detalle
+                        (id_clipro,id_empresa_cliente,numero_dpi,placa_reciente,codigo_clasificacion,solicita_limpieza)
+                    VALUES
+                        (@id,@empresa,@dpi,@placa,@clasificacion,@solicita_limpieza);";
                 using var comandoDetalle = new MySqlCommand(insertarDetalle, conexion, transaccion);
                 comandoDetalle.Parameters.AddWithValue("@id", id);
                 comandoDetalle.Parameters.AddWithValue("@empresa", (object?)modelo.IdEmpresaCliente ?? DBNull.Value);
                 comandoDetalle.Parameters.AddWithValue("@dpi", (object?)modelo.NumeroDpi ?? DBNull.Value);
                 comandoDetalle.Parameters.AddWithValue("@placa", (object?)modelo.PlacaReciente ?? DBNull.Value);
                 comandoDetalle.Parameters.AddWithValue("@clasificacion", modelo.CodigoClasificacion);
+                comandoDetalle.Parameters.AddWithValue("@solicita_limpieza", modelo.SolicitaLimpieza);
                 comandoDetalle.ExecuteNonQuery();
 
                 GuardarDocumento(conexion, transaccion, id, "dpi_frente", modelo.DpiFrente);
@@ -385,7 +389,7 @@ namespace MiHotel.Controllers
                 int tipo = ObtenerIdTipoCliente(conexion);
                 const string sql = @"
                     SELECT c.id_clipro,c.nombre,c.nit,c.telefono,c.correo,c.direccion,
-                           cd.id_empresa_cliente,cd.numero_dpi,cd.placa_reciente,cd.codigo_clasificacion,
+                           cd.id_empresa_cliente,cd.numero_dpi,cd.placa_reciente,cd.codigo_clasificacion,cd.solicita_limpieza,
                            EXISTS(SELECT 1 FROM cliente_documento d WHERE d.id_clipro=c.id_clipro AND d.tipo_documento='dpi_frente') AS frente
                     FROM clipro c INNER JOIN cliente_detalle cd ON cd.id_clipro=c.id_clipro
                     WHERE c.id_clipro=@id AND c.id_tipoclipro=@tipo LIMIT 1;";
@@ -411,6 +415,7 @@ namespace MiHotel.Controllers
                     NumeroDpi = lector["numero_dpi"] == DBNull.Value ? null : lector["numero_dpi"].ToString(),
                     PlacaReciente = lector["placa_reciente"] == DBNull.Value ? null : lector["placa_reciente"].ToString(),
                     CodigoClasificacion = lector["codigo_clasificacion"]?.ToString() ?? "B",
+                    SolicitaLimpieza = Convert.ToBoolean(lector["solicita_limpieza"]),
                     TieneDpiFrente = Convert.ToBoolean(lector["frente"])
                 };
                 CargarCatalogos(modelo.IdEmpresaCliente, modelo.CodigoClasificacion);
@@ -475,12 +480,14 @@ namespace MiHotel.Controllers
 
                 const string actualizarDetalle = @"
                     UPDATE cliente_detalle SET id_empresa_cliente=@empresa,numero_dpi=@dpi,
-                        placa_reciente=@placa,codigo_clasificacion=@clasificacion WHERE id_clipro=@id;";
+                        placa_reciente=@placa,codigo_clasificacion=@clasificacion,
+                        solicita_limpieza=@solicita_limpieza WHERE id_clipro=@id;";
                 using var comandoDetalle = new MySqlCommand(actualizarDetalle, conexion, transaccion);
                 comandoDetalle.Parameters.AddWithValue("@empresa", (object?)modelo.IdEmpresaCliente ?? DBNull.Value);
                 comandoDetalle.Parameters.AddWithValue("@dpi", (object?)modelo.NumeroDpi ?? DBNull.Value);
                 comandoDetalle.Parameters.AddWithValue("@placa", (object?)modelo.PlacaReciente ?? DBNull.Value);
                 comandoDetalle.Parameters.AddWithValue("@clasificacion", modelo.CodigoClasificacion);
+                comandoDetalle.Parameters.AddWithValue("@solicita_limpieza", modelo.SolicitaLimpieza);
                 comandoDetalle.Parameters.AddWithValue("@id", modelo.IdClipro);
                 comandoDetalle.ExecuteNonQuery();
 
@@ -511,7 +518,7 @@ namespace MiHotel.Controllers
                 int tipo = ObtenerIdTipoCliente(conexion);
                 const string sql = @"
                     SELECT c.id_clipro,c.nombre,c.nit,c.telefono,c.correo,c.direccion,c.estado,
-                           ec.nombre AS empresa,cd.numero_dpi,cd.placa_reciente,
+                           ec.nombre AS empresa,cd.numero_dpi,cd.placa_reciente,cd.solicita_limpieza,
                            cc.codigo AS clasificacion,cc.nombre AS nombre_clasificacion,
                            EXISTS(SELECT 1 FROM cliente_documento d WHERE d.id_clipro=c.id_clipro AND d.tipo_documento='dpi_frente') AS frente
                     FROM clipro c INNER JOIN cliente_detalle cd ON cd.id_clipro=c.id_clipro
@@ -536,6 +543,7 @@ namespace MiHotel.Controllers
                     PlacaReciente = lector["placa_reciente"] == DBNull.Value ? null : lector["placa_reciente"].ToString(),
                     CodigoClasificacion = lector["clasificacion"]?.ToString() ?? "B",
                     NombreClasificacion = lector["nombre_clasificacion"]?.ToString() ?? "Neutral",
+                    SolicitaLimpieza = Convert.ToBoolean(lector["solicita_limpieza"]),
                     TieneDpiFrente = Convert.ToBoolean(lector["frente"]),
                     Estado = lector["estado"]?.ToString() ?? "activo"
                 };
