@@ -170,14 +170,16 @@
                     <th>Fecha</th>
                     <th>Movimiento</th>
                     <th>Forma de pago</th>
-                    <th>Monto</th>
+                    <th>Abono</th>
+                    <th>Recargo</th>
+                    <th>Total cobrado</th>
                     <th>Estado</th>
                 </tr>
             </thead>
             <tbody>
                 @if (Model.Movimientos.Count == 0)
                 {
-                    <tr><td colspan="5" class="text-center py-3">No hay movimientos registrados.</td></tr>
+                    <tr><td colspan="7" class="text-center py-3">No hay movimientos registrados.</td></tr>
                 }
                 else
                 {
@@ -188,6 +190,8 @@
                             <td>@movimiento.MovimientoLegible</td>
                             <td>@movimiento.FormaPagoLegible</td>
                             <td>Q @movimiento.Monto.ToString("N2")</td>
+                            <td>@(movimiento.RecargoTarjeta > 0 ? $"Q {movimiento.RecargoTarjeta:N2}" : "—")</td>
+                            <td>Q @movimiento.TotalCobrado.ToString("N2")</td>
                             <td>@(movimiento.Estado.Trim().ToLower() == "activo" ? "Activo" : "Anulado")</td>
                         </tr>
                     }

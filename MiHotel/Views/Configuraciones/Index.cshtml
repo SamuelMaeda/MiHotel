@@ -1,0 +1,78 @@
+@model MiHotel.Models.ConfiguracionRecargoViewModel
+
+@{
+    ViewData["Title"] = "Configuraciones";
+}
+
+<style>
+    .tarjeta-contenido{background:#fff;border-radius:15px;padding:25px;box-shadow:0 4px 10px rgba(0,0,0,.10);max-width:900px;margin:0 auto}
+    .seccion-configuracion{background:#f8f9fa;border:1px solid #dee2e6;border-radius:10px;padding:20px;margin-top:22px}
+    .campo-recargo{max-width:360px}
+    .vista-recargo{background:#f5efee;border:1px solid #e6d3d0;border-radius:10px;padding:14px 16px;margin-top:14px;max-width:520px}
+    .acciones{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
+    .btn-guardar,.btn-volver{color:#fff;border:0;border-radius:8px;padding:10px 17px;text-decoration:none;font-weight:500}
+    .btn-guardar{background:#464482}.btn-guardar:hover{background:#36366b;color:#fff}
+    .btn-volver{background:#824B44}.btn-volver:hover{background:#6e3f39;color:#fff}
+</style>
+
+<div class="container-fluid px-3 px-md-4 py-4">
+    <div class="tarjeta-contenido">
+        <h3 class="mb-1">Configuraciones</h3>
+        <p class="text-muted mb-0">Ajustes generales utilizados en la operación del hotel.</p>
+
+        @if (TempData["Exito"] != null)
+        {
+            <div class="alert alert-success mt-3">@TempData["Exito"]</div>
+        }
+        @if (ViewBag.Mensaje != null)
+        {
+            <div class="alert alert-danger mt-3">@ViewBag.Mensaje</div>
+        }
+
+        <form asp-action="Index" method="post">
+            @Html.AntiForgeryToken()
+            <div class="seccion-configuracion">
+                <h5><i class="bi bi-credit-card-fill me-2"></i>Recargo por tarjeta</h5>
+                <p class="text-muted">Esta cantidad se añade una vez a cada pago registrado con tarjeta.</p>
+
+                <div class="campo-recargo">
+                    <label asp-for="RecargoTarjeta" class="form-label"></label>
+                    <div class="input-group">
+                        <span class="input-group-text">Q</span>
+                        <input asp-for="RecargoTarjeta" class="form-control" type="number" min="0" max="99999.99" step="0.01" />
+                    </div>
+                    <span asp-validation-for="RecargoTarjeta" class="text-danger"></span>
+                </div>
+
+                <div class="vista-recargo">
+                    <span class="text-muted d-block small">Ejemplo con un abono de Q250.00</span>
+                    <strong>Total cobrado con tarjeta: Q <span id="totalEjemplo">@((250m + Model.RecargoTarjeta).ToString("N2"))</span></strong>
+                </div>
+
+                @if (Model.FechaActualizacion.HasValue)
+                {
+                    <small class="text-muted d-block mt-3">Última actualización: @Model.FechaActualizacion.Value.ToString("dd/MM/yyyy HH:mm")</small>
+                }
+            </div>
+
+            <div class="acciones">
+                <button type="submit" class="btn-guardar"><i class="bi bi-floppy-fill me-1"></i> Guardar configuración</button>
+                <a asp-controller="Panel" asp-action="Index" class="btn-volver"><i class="bi bi-arrow-left-circle me-1"></i> Volver al panel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const recargo = document.getElementById("RecargoTarjeta");
+            const total = document.getElementById("totalEjemplo");
+            recargo?.addEventListener("input", function () {
+                const valor = Number.parseFloat(recargo.value) || 0;
+                total.textContent = (250 + valor).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            });
+        });
+    </script>
+}

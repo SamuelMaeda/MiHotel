@@ -2759,6 +2759,7 @@ namespace MiHotel.Controllers
                     m.id_movimiento,
                     tm.nombre_tipomov AS tipo,
                     fp.nombre_forma AS forma_pago,
+                    m.recargo_tarjeta,
                     m.fecha_hora,
                     m.estado,
                     m.observaciones,
@@ -2799,6 +2800,7 @@ namespace MiHotel.Controllers
                     m.id_movimiento,
                     tm.nombre_tipomov,
                     fp.nombre_forma,
+                    m.recargo_tarjeta,
                     m.fecha_hora,
                     m.estado,
                     m.observaciones
@@ -2824,6 +2826,7 @@ namespace MiHotel.Controllers
                         Descripcion = lector["descripcion"]?.ToString() ?? "",
                         FormaPago = lector["forma_pago"]?.ToString() ?? "",
                         Monto = Convert.ToDecimal(lector["monto"]),
+                        RecargoTarjeta = Convert.ToDecimal(lector["recargo_tarjeta"]),
                         FechaHora = Convert.ToDateTime(lector["fecha_hora"]),
                         Estado = lector["estado"]?.ToString() ?? "",
                         Observaciones = lector["observaciones"]?.ToString() ?? "",

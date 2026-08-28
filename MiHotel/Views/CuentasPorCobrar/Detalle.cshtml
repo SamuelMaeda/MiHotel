@@ -9,6 +9,7 @@
         : Model.EstadoReserva.Trim().ToLower() == "en_checkout";
     string accionRegistrar = Model.EsCuentaAgrupada ? "RegistrarAbonoGrupo" : "RegistrarAbono";
     DataTable formasPago = ViewBag.FormasPago as DataTable ?? new DataTable();
+    decimal recargoTarjeta = ViewBag.RecargoTarjeta is decimal recargo ? recargo : 25m;
 }
 
 <style>
@@ -65,6 +66,7 @@
     .btn-accion:hover { color: white; }
     .btn-guardar { background-color: #464482; }
     .btn-volver { background-color: #824B44; }
+    .resumen-recargo { background:#fff4d6;border:1px solid #f0d58c;border-radius:10px;padding:14px 16px; }
 </style>
 
 <div class="tarjeta-contenido">
@@ -207,9 +209,17 @@
                         <option value="">Seleccione</option>
                         @foreach (DataRow forma in formasPago.Rows)
                         {
-                            <option value="@forma["id_formapago"]">@forma["nombre_forma"]</option>
+                            <option value="@forma["id_formapago"]" data-es-tarjeta="@(Convert.ToInt32(forma["es_tarjeta"]) == 1 ? "true" : "false")">@forma["nombre_forma"]</option>
                         }
                     </select>
+                </div>
+                <div id="resumenRecargoTarjeta" class="col-12 d-none">
+                    <div class="resumen-recargo">
+                        <strong>Pago con tarjeta</strong>
+                        <div>Monto que reduce la deuda: Q <span id="montoAbonoResumen">0.00</span></div>
+                        <div>Recargo fijo: Q <span id="recargoResumen">@recargoTarjeta.ToString("N2")</span></div>
+                        <div class="fw-bold mt-1">Total a cobrar en la terminal: Q <span id="totalCobroResumen">@recargoTarjeta.ToString("N2")</span></div>
+                    </div>
                 </div>
                 <div class="col-12">
                     <div class="form-check border rounded p-3 ps-5 bg-light">
@@ -246,14 +256,16 @@
                     <th>Fecha</th>
                     <th>Movimiento</th>
                     <th>Forma de pago</th>
-                    <th>Monto</th>
+                    <th>Abono</th>
+                    <th>Recargo</th>
+                    <th>Total cobrado</th>
                     <th>Estado</th>
                 </tr>
             </thead>
             <tbody>
                 @if (Model.Movimientos.Count == 0)
                 {
-                    <tr><td colspan="5" class="text-center py-3">No hay movimientos registrados.</td></tr>
+                    <tr><td colspan="7" class="text-center py-3">No hay movimientos registrados.</td></tr>
                 }
                 else
                 {
@@ -264,6 +276,8 @@
                             <td>@movimiento.MovimientoLegible</td>
                             <td>@movimiento.FormaPagoLegible</td>
                             <td>Q @movimiento.Monto.ToString("N2")</td>
+                            <td>@(movimiento.RecargoTarjeta > 0 ? $"Q {movimiento.RecargoTarjeta:N2}" : "—")</td>
+                            <td>Q @movimiento.TotalCobrado.ToString("N2")</td>
                             <td>@(movimiento.Estado.Trim().ToLower() == "activo" ? "Activo" : "Anulado")</td>
                         </tr>
                     }
@@ -273,6 +287,32 @@
     </div>
 
 </div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const monto = document.getElementById("monto");
+        const formaPago = document.getElementById("idFormaPago");
+        const resumen = document.getElementById("resumenRecargoTarjeta");
+        const montoResumen = document.getElementById("montoAbonoResumen");
+        const totalResumen = document.getElementById("totalCobroResumen");
+        const recargo = @recargoTarjeta.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+        window.actualizarResumenRecargo = function () {
+            if (!formaPago || !resumen || !monto || !montoResumen || !totalResumen) return;
+            const opcion = formaPago.options[formaPago.selectedIndex];
+            const esTarjeta = opcion?.dataset.esTarjeta === "true";
+            const valorMonto = Number.parseFloat(monto.value) || 0;
+
+            resumen.classList.toggle("d-none", !esTarjeta);
+            montoResumen.textContent = valorMonto.toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            totalResumen.textContent = (valorMonto + recargo).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        };
+
+        formaPago?.addEventListener("change", window.actualizarResumenRecargo);
+        monto?.addEventListener("input", window.actualizarResumenRecargo);
+        window.actualizarResumenRecargo();
+    });
+</script>
 
 @if (Model.EsCuentaAgrupada)
 {
@@ -303,6 +343,7 @@
                 if (saldo) {
                     monto.value = saldo;
                     monto.focus();
+                    window.actualizarResumenRecargo?.();
                 }
             });
             actualizarMontoMaximo();

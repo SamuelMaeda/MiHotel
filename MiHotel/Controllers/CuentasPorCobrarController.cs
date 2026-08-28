@@ -51,6 +51,43 @@ namespace MiHotel.Controllers
             return nombreRol == "admin";
         }
 
+        private static bool EsFormaPagoTarjeta(string nombreFormaPago)
+        {
+            return nombreFormaPago.Contains("tarjeta", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private decimal ObtenerRecargoTarjeta(
+            MySqlConnection conexion,
+            MySqlTransaction? transaccion = null)
+        {
+            using var comando = new MySqlCommand(@"
+                SELECT recargo_tarjeta
+                FROM configuracion_sistema
+                WHERE id_configuracion = 1
+                LIMIT 1;", conexion, transaccion);
+
+            object? resultado = comando.ExecuteScalar();
+            return resultado == null || resultado == DBNull.Value
+                ? 25m
+                : Convert.ToDecimal(resultado);
+        }
+
+        private string? ObtenerNombreFormaPago(
+            MySqlConnection conexion,
+            MySqlTransaction transaccion,
+            int idFormaPago)
+        {
+            using var comando = new MySqlCommand(@"
+                SELECT nombre_forma
+                FROM forma_pago
+                WHERE id_formapago = @id_formapago
+                  AND LOWER(nombre_forma) <> 'credito'
+                LIMIT 1;", conexion, transaccion);
+
+            comando.Parameters.AddWithValue("@id_formapago", idFormaPago);
+            return comando.ExecuteScalar()?.ToString();
+        }
+
         // ================================================
         // VALIDAR PERMISO ASIGNADO AL ROL
         // ================================================
@@ -466,6 +503,7 @@ namespace MiHotel.Controllers
                     m.id_movimiento,
                     tm.nombre_tipomov AS tipo,
                     fp.nombre_forma AS forma_pago,
+                    m.recargo_tarjeta,
                     m.fecha_hora,
                     m.estado,
                     m.observaciones,
@@ -495,6 +533,7 @@ namespace MiHotel.Controllers
                     m.id_movimiento,
                     tm.nombre_tipomov,
                     fp.nombre_forma,
+                    m.recargo_tarjeta,
                     m.fecha_hora,
                     m.estado,
                     m.observaciones
@@ -517,6 +556,7 @@ namespace MiHotel.Controllers
                         Descripcion = lector["descripcion"]?.ToString() ?? "",
                         FormaPago = lector["forma_pago"]?.ToString() ?? "",
                         Monto = Convert.ToDecimal(lector["monto"]),
+                        RecargoTarjeta = Convert.ToDecimal(lector["recargo_tarjeta"]),
                         FechaHora = Convert.ToDateTime(lector["fecha_hora"]),
                         Estado = lector["estado"]?.ToString() ?? "",
                         Observaciones = lector["observaciones"]?.ToString() ?? "",
@@ -612,6 +652,7 @@ namespace MiHotel.Controllers
                     m.id_movimiento,
                     tm.nombre_tipomov AS tipo,
                     fp.nombre_forma AS forma_pago,
+                    m.recargo_tarjeta,
                     m.fecha_hora,
                     m.estado,
                     m.observaciones,
@@ -638,6 +679,7 @@ namespace MiHotel.Controllers
                     m.id_movimiento,
                     tm.nombre_tipomov,
                     fp.nombre_forma,
+                    m.recargo_tarjeta,
                     m.fecha_hora,
                     m.estado,
                     m.observaciones
@@ -656,6 +698,7 @@ namespace MiHotel.Controllers
                         Descripcion = lector["descripcion"]?.ToString() ?? "",
                         FormaPago = lector["forma_pago"]?.ToString() ?? "",
                         Monto = Convert.ToDecimal(lector["monto"]),
+                        RecargoTarjeta = Convert.ToDecimal(lector["recargo_tarjeta"]),
                         FechaHora = Convert.ToDateTime(lector["fecha_hora"]),
                         Estado = lector["estado"]?.ToString() ?? "",
                         Observaciones = lector["observaciones"]?.ToString() ?? "",
@@ -672,13 +715,15 @@ namespace MiHotel.Controllers
             var formasPago = new DataTable();
 
             using var adaptador = new MySqlDataAdapter(@"
-                SELECT id_formapago, nombre_forma
+                SELECT id_formapago, nombre_forma,
+                       CASE WHEN LOWER(nombre_forma) LIKE '%tarjeta%' THEN 1 ELSE 0 END AS es_tarjeta
                 FROM forma_pago
                 WHERE LOWER(nombre_forma) <> 'credito'
                 ORDER BY nombre_forma;", conexion);
 
             adaptador.Fill(formasPago);
             ViewBag.FormasPago = formasPago;
+            ViewBag.RecargoTarjeta = ObtenerRecargoTarjeta(conexion);
         }
 
         [HttpGet]
@@ -843,23 +888,18 @@ namespace MiHotel.Controllers
                     return RedirectToAction("Detalle", new { id = idReserva });
                 }
 
-                string validarFormaPago = @"
-                    SELECT COUNT(*)
-                    FROM forma_pago
-                    WHERE id_formapago = @id_formapago
-                      AND LOWER(nombre_forma) <> 'credito';";
+                string? nombreFormaPago = ObtenerNombreFormaPago(conexion, transaccion, idFormaPago);
 
-                using (var comando = new MySqlCommand(validarFormaPago, conexion, transaccion))
+                if (string.IsNullOrWhiteSpace(nombreFormaPago))
                 {
-                    comando.Parameters.AddWithValue("@id_formapago", idFormaPago);
-
-                    if (Convert.ToInt32(comando.ExecuteScalar()) == 0)
-                    {
-                        transaccion.Rollback();
-                        TempData["Mensaje"] = "La forma de pago seleccionada no es válida.";
-                        return RedirectToAction("Detalle", new { id = idReserva });
-                    }
+                    transaccion.Rollback();
+                    TempData["Mensaje"] = "La forma de pago seleccionada no es válida.";
+                    return RedirectToAction("Detalle", new { id = idReserva });
                 }
+
+                decimal recargoTarjeta = EsFormaPagoTarjeta(nombreFormaPago)
+                    ? ObtenerRecargoTarjeta(conexion, transaccion)
+                    : 0m;
 
                 string obtenerTipoAbono = @"
                     SELECT id_tipomov
@@ -902,6 +942,7 @@ namespace MiHotel.Controllers
                         id_tipomov,
                         id_formapago,
                         id_reserva,
+                        recargo_tarjeta,
                         fecha_hora,
                         estado,
                         observaciones
@@ -913,6 +954,7 @@ namespace MiHotel.Controllers
                         @id_tipomov,
                         @id_formapago,
                         @id_reserva,
+                        @recargo_tarjeta,
                         NOW(),
                         'activo',
                         @observaciones
@@ -927,6 +969,7 @@ namespace MiHotel.Controllers
                     comando.Parameters.AddWithValue("@id_tipomov", idTipoAbono);
                     comando.Parameters.AddWithValue("@id_formapago", idFormaPago);
                     comando.Parameters.AddWithValue("@id_reserva", idReserva);
+                    comando.Parameters.AddWithValue("@recargo_tarjeta", recargoTarjeta);
                     comando.Parameters.AddWithValue(
                         "@observaciones",
                         string.IsNullOrWhiteSpace(observacionCompleta)
@@ -989,9 +1032,12 @@ namespace MiHotel.Controllers
                 }
 
                 transaccion.Commit();
+                string resumenRecargo = recargoTarjeta > 0
+                    ? $" Se aplicó un recargo de Q{recargoTarjeta:N2}; total cobrado Q{monto + recargoTarjeta:N2}."
+                    : "";
                 TempData["Exito"] = solicitarFacturaAlLiquidar
-                    ? "Pago registrado y reservación enviada a Facturas pendientes."
-                    : "Abono registrado correctamente.";
+                    ? "Pago registrado y reservación enviada a Facturas pendientes." + resumenRecargo
+                    : "Abono registrado correctamente." + resumenRecargo;
 
                 return volverCheckout
                     ? RedirectToAction("Checkout", "Reservas", new { id = idReserva })
@@ -1125,21 +1171,18 @@ namespace MiHotel.Controllers
                     return RedirectToAction("DetalleGrupo", new { id = idReservaGrupo, idReservaRetorno });
                 }
 
-                using (var comando = new MySqlCommand(@"
-                    SELECT COUNT(*)
-                    FROM forma_pago
-                    WHERE id_formapago = @id_formapago
-                      AND LOWER(nombre_forma) <> 'credito';", conexion, transaccion))
-                {
-                    comando.Parameters.AddWithValue("@id_formapago", idFormaPago);
+                string? nombreFormaPago = ObtenerNombreFormaPago(conexion, transaccion, idFormaPago);
 
-                    if (Convert.ToInt32(comando.ExecuteScalar()) == 0)
-                    {
-                        transaccion.Rollback();
-                        TempData["Mensaje"] = "La forma de pago seleccionada no es válida.";
-                        return RedirectToAction("DetalleGrupo", new { id = idReservaGrupo, idReservaRetorno });
-                    }
+                if (string.IsNullOrWhiteSpace(nombreFormaPago))
+                {
+                    transaccion.Rollback();
+                    TempData["Mensaje"] = "La forma de pago seleccionada no es válida.";
+                    return RedirectToAction("DetalleGrupo", new { id = idReservaGrupo, idReservaRetorno });
                 }
+
+                decimal recargoTarjeta = EsFormaPagoTarjeta(nombreFormaPago)
+                    ? ObtenerRecargoTarjeta(conexion, transaccion)
+                    : 0m;
 
                 int idTipoAbono;
 
@@ -1183,6 +1226,7 @@ namespace MiHotel.Controllers
                         id_formapago,
                         id_reserva,
                         id_reserva_grupo,
+                        recargo_tarjeta,
                         fecha_hora,
                         estado,
                         observaciones
@@ -1195,6 +1239,7 @@ namespace MiHotel.Controllers
                         @id_formapago,
                         NULL,
                         @id_reserva_grupo,
+                        @recargo_tarjeta,
                         NOW(),
                         'activo',
                         @observaciones
@@ -1205,6 +1250,7 @@ namespace MiHotel.Controllers
                     comando.Parameters.AddWithValue("@id_tipomov", idTipoAbono);
                     comando.Parameters.AddWithValue("@id_formapago", idFormaPago);
                     comando.Parameters.AddWithValue("@id_reserva_grupo", idReservaGrupo);
+                    comando.Parameters.AddWithValue("@recargo_tarjeta", recargoTarjeta);
                     comando.Parameters.AddWithValue(
                         "@observaciones",
                         string.IsNullOrWhiteSpace(observacionCompleta)
@@ -1300,11 +1346,15 @@ namespace MiHotel.Controllers
                 }
 
                 transaccion.Commit();
+                string resumenRecargo = recargoTarjeta > 0
+                    ? $" Se aplicó un recargo de Q{recargoTarjeta:N2}; total cobrado Q{monto + recargoTarjeta:N2}."
+                    : "";
                 TempData["Exito"] = solicitarFacturaAlLiquidar
                     ? "Pago registrado y solicitud enviada a Facturas pendientes."
                     : idReservaObjetivo.HasValue
                         ? "Abono registrado correctamente para la estadía seleccionada."
                         : "Abono registrado correctamente en la cuenta agrupada.";
+                TempData["Exito"] = (TempData["Exito"]?.ToString() ?? "") + resumenRecargo;
 
                 return volverCheckout && idReservaRetorno.HasValue
                     ? RedirectToAction("Checkout", "Reservas", new { id = idReservaRetorno.Value })
