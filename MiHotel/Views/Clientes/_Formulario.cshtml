@@ -65,8 +65,228 @@
     <div class="col-12 mt-2 mb-2"><h5>Fotografía del DPI <span class="texto-opcional">(Opcional)</span></h5></div>
     <div class="col-12 mb-3">
         <label asp-for="DpiFrente" class="form-label">Parte frontal del DPI</label>
-        <input asp-for="DpiFrente" type="file" class="form-control" accept="image/jpeg,image/png,image/webp" />
+        <div class="opciones-dpi">
+            <div class="opcion-archivo-dpi">
+                <label for="DpiFrente" class="form-label mb-1">Subir imagen</label>
+                <input asp-for="DpiFrente" id="DpiFrente" type="file" class="form-control" accept="image/jpeg,image/png,image/webp" />
+            </div>
+            <button type="button" id="btnAbrirCamaraDpi" class="btn-camara-dpi">
+                <i class="bi bi-camera-fill"></i>
+                Tomar fotografía
+            </button>
+        </div>
         <span asp-validation-for="DpiFrente" class="text-danger"></span>
+
+        <div id="mensajeCamaraDpi" class="mensaje-camara-dpi" role="alert"></div>
+
+        <div id="panelCamaraDpi" class="panel-camara-dpi d-none">
+            <div id="selectorCamaraDpiContenedor" class="selector-camara-dpi d-none">
+                <label for="selectorCamaraDpi" class="form-label">Cámara que desea utilizar</label>
+                <select id="selectorCamaraDpi" class="form-select"></select>
+                <div class="form-text">Si aparece una cámara virtual como Iriun, seleccione la cámara integrada o USB.</div>
+            </div>
+            <div class="visor-camara-dpi">
+                <video id="videoCamaraDpi" autoplay playsinline muted></video>
+            </div>
+            <div class="acciones-camara-dpi">
+                <button type="button" id="btnCapturarDpi" class="btn-capturar-dpi">
+                    <i class="bi bi-camera"></i> Capturar DPI
+                </button>
+                <button type="button" id="btnCancelarCamaraDpi" class="btn-cancelar-camara-dpi">
+                    Cancelar cámara
+                </button>
+            </div>
+        </div>
+
+        <div id="vistaPreviaDpi" class="vista-previa-dpi d-none">
+            <div class="form-label mb-2">Vista previa</div>
+            <button type="button" class="abrir-vista-previa-dpi" data-bs-toggle="modal" data-bs-target="#modalVistaPreviaDpi" aria-label="Ampliar vista previa del DPI">
+                <img id="imagenVistaPreviaDpi" alt="Vista previa de la fotografía del DPI" />
+            </button>
+            <small id="origenVistaPreviaDpi" class="text-muted d-block mt-2"></small>
+        </div>
     </div>
     <div class="col-12"><div class="nota-imagen">Nota: las imágenes tienen que tener el formato JPG, PNG o WEBP. El tamaño máximo es de 10 MB por fotografía.</div></div>
 </div>
+
+<div class="modal fade" id="modalVistaPreviaDpi" tabindex="-1" aria-labelledby="tituloVistaPreviaDpi" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="tituloVistaPreviaDpi">Vista previa del DPI</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body bg-light text-center">
+                <img id="imagenVistaPreviaDpiAmpliada" class="imagen-dpi-ampliada" alt="Vista ampliada de la fotografía del DPI" />
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .opciones-dpi{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap}.opcion-archivo-dpi{flex:1 1 460px}.btn-camara-dpi,.btn-capturar-dpi,.btn-cancelar-camara-dpi{border:0;border-radius:8px;padding:10px 15px;font-weight:500}.btn-camara-dpi{background:#464482;color:#fff;display:inline-flex;align-items:center;gap:7px}.btn-camara-dpi:hover,.btn-capturar-dpi:hover{background:#36366b}.panel-camara-dpi{margin-top:14px;padding:14px;background:#f8f9fa;border:1px solid #dee2e6;border-radius:10px}.selector-camara-dpi{max-width:720px;margin-bottom:12px}.visor-camara-dpi{max-width:720px;background:#202428;border-radius:10px;overflow:hidden}.visor-camara-dpi video{display:block;width:100%;max-height:480px;object-fit:contain}.acciones-camara-dpi{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}.btn-capturar-dpi{background:#464482;color:#fff}.btn-cancelar-camara-dpi{background:#824B44;color:#fff}.mensaje-camara-dpi{display:none;color:#8f1d26;font-size:14px;margin-top:9px}.vista-previa-dpi{margin-top:14px}.abrir-vista-previa-dpi{display:block;width:min(100%,420px);padding:0;border:0;background:transparent;border-radius:10px;cursor:zoom-in}.abrir-vista-previa-dpi img{display:block;width:100%;height:240px;object-fit:contain;background:#f4f4f4;border:1px solid #ddd;border-radius:10px;padding:5px}.abrir-vista-previa-dpi:hover img{border-color:#464482;box-shadow:0 0 0 2px rgba(70,68,130,.15)}.imagen-dpi-ampliada{display:block;max-width:100%;max-height:78vh;object-fit:contain;margin:auto}
+</style>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const archivoDpi = document.getElementById("DpiFrente");
+        const btnAbrirCamara = document.getElementById("btnAbrirCamaraDpi");
+        const btnCapturar = document.getElementById("btnCapturarDpi");
+        const btnCancelar = document.getElementById("btnCancelarCamaraDpi");
+        const panelCamara = document.getElementById("panelCamaraDpi");
+        const video = document.getElementById("videoCamaraDpi");
+        const selectorCamara = document.getElementById("selectorCamaraDpi");
+        const selectorCamaraContenedor = document.getElementById("selectorCamaraDpiContenedor");
+        const mensaje = document.getElementById("mensajeCamaraDpi");
+        const contenedorVistaPrevia = document.getElementById("vistaPreviaDpi");
+        const imagenVistaPrevia = document.getElementById("imagenVistaPreviaDpi");
+        const imagenAmpliada = document.getElementById("imagenVistaPreviaDpiAmpliada");
+        const origenVistaPrevia = document.getElementById("origenVistaPreviaDpi");
+        let flujoCamara = null;
+        let urlVistaPrevia = null;
+
+        function mostrarMensaje(texto) {
+            if (!mensaje) return;
+            mensaje.textContent = texto || "";
+            mensaje.style.display = texto ? "block" : "none";
+        }
+
+        function detenerFlujoCamara() {
+            flujoCamara?.getTracks().forEach(function (pista) { pista.stop(); });
+            flujoCamara = null;
+            if (video) video.srcObject = null;
+        }
+
+        function detenerCamara() {
+            detenerFlujoCamara();
+            panelCamara?.classList.add("d-none");
+        }
+
+        function esCamaraVirtual(etiqueta) {
+            return /(iriun|virtual|obs|droidcam|manycam|snap camera|xsplit)/i.test(etiqueta || "");
+        }
+
+        async function iniciarCamara(deviceId) {
+            detenerFlujoCamara();
+            flujoCamara = await navigator.mediaDevices.getUserMedia({
+                video: deviceId
+                    ? { deviceId: { exact: deviceId } }
+                    : { facingMode: { ideal: "environment" } },
+                audio: false
+            });
+            video.srcObject = flujoCamara;
+            panelCamara?.classList.remove("d-none");
+            await video.play();
+        }
+
+        async function cargarCamaras(deviceIdActual) {
+            const dispositivos = await navigator.mediaDevices.enumerateDevices();
+            const camaras = dispositivos.filter(function (dispositivo) {
+                return dispositivo.kind === "videoinput";
+            });
+
+            if (!selectorCamara) return deviceIdActual;
+            selectorCamara.innerHTML = "";
+            camaras.forEach(function (camara, indice) {
+                const opcion = document.createElement("option");
+                opcion.value = camara.deviceId;
+                opcion.textContent = camara.label || `Cámara ${indice + 1}`;
+                selectorCamara.appendChild(opcion);
+            });
+
+            selectorCamaraContenedor?.classList.toggle("d-none", camaras.length < 2);
+            const actual = camaras.find(function (camara) { return camara.deviceId === deviceIdActual; });
+            const fisica = camaras.find(function (camara) { return !esCamaraVirtual(camara.label); });
+            const elegida = actual && !esCamaraVirtual(actual.label) ? actual : (fisica || actual || camaras[0]);
+            if (elegida) selectorCamara.value = elegida.deviceId;
+            return elegida?.deviceId || deviceIdActual;
+        }
+
+        function mostrarVistaPrevia(archivo, origen) {
+            if (!archivo || !archivo.type.startsWith("image/")) return;
+            if (urlVistaPrevia) URL.revokeObjectURL(urlVistaPrevia);
+            urlVistaPrevia = URL.createObjectURL(archivo);
+            if (imagenVistaPrevia) imagenVistaPrevia.src = urlVistaPrevia;
+            if (imagenAmpliada) imagenAmpliada.src = urlVistaPrevia;
+            if (origenVistaPrevia) origenVistaPrevia.textContent = origen;
+            contenedorVistaPrevia?.classList.remove("d-none");
+        }
+
+        async function abrirCamara() {
+            mostrarMensaje("");
+
+            if (!navigator.mediaDevices?.getUserMedia) {
+                mostrarMensaje("Este dispositivo o navegador no permite utilizar la cámara. Puede subir una imagen desde sus archivos.");
+                return;
+            }
+
+            try {
+                detenerCamara();
+                await iniciarCamara();
+                const deviceIdActual = flujoCamara?.getVideoTracks()[0]?.getSettings()?.deviceId;
+                const deviceIdPreferido = await cargarCamaras(deviceIdActual);
+                if (deviceIdPreferido && deviceIdPreferido !== deviceIdActual) {
+                    await iniciarCamara(deviceIdPreferido);
+                }
+            }
+            catch (error) {
+                detenerCamara();
+                const detalle = error?.name === "NotAllowedError"
+                    ? "El navegador no tiene permiso para utilizar la cámara."
+                    : "No fue posible abrir la cámara seleccionada.";
+                mostrarMensaje(`${detalle} Revise la configuración de cámara o utilice la opción Subir imagen.`);
+            }
+        }
+
+        function capturarFotografia() {
+            if (!video?.videoWidth || !video?.videoHeight || !archivoDpi) {
+                mostrarMensaje("La cámara todavía no está lista. Espere un momento e intente nuevamente.");
+                return;
+            }
+
+            const dimensionMaxima = 1800;
+            const escala = Math.min(1, dimensionMaxima / Math.max(video.videoWidth, video.videoHeight));
+            const canvas = document.createElement("canvas");
+            canvas.width = Math.round(video.videoWidth * escala);
+            canvas.height = Math.round(video.videoHeight * escala);
+            canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            canvas.toBlob(function (blob) {
+                if (!blob) {
+                    mostrarMensaje("No fue posible procesar la fotografía. Intente nuevamente.");
+                    return;
+                }
+
+                const archivo = new File([blob], `dpi-frontal-${Date.now()}.jpg`, { type: "image/jpeg" });
+                const transferencia = new DataTransfer();
+                transferencia.items.add(archivo);
+                archivoDpi.files = transferencia.files;
+                archivoDpi.dispatchEvent(new Event("change", { bubbles: true }));
+                mostrarVistaPrevia(archivo, "Fotografía tomada con la cámara. Puede ampliarla haciendo clic en la imagen.");
+                detenerCamara();
+                mostrarMensaje("");
+            }, "image/jpeg", 0.82);
+        }
+
+        archivoDpi?.addEventListener("change", function () {
+            const archivo = archivoDpi.files?.[0];
+            if (archivo) {
+                mostrarVistaPrevia(archivo, "Imagen seleccionada. Puede ampliarla haciendo clic en la imagen.");
+            }
+        });
+        btnAbrirCamara?.addEventListener("click", abrirCamara);
+        selectorCamara?.addEventListener("change", async function () {
+            mostrarMensaje("");
+            try {
+                await iniciarCamara(selectorCamara.value);
+            }
+            catch {
+                mostrarMensaje("No fue posible abrir esa cámara. Compruebe que no esté siendo utilizada por otra aplicación.");
+            }
+        });
+        btnCapturar?.addEventListener("click", capturarFotografia);
+        btnCancelar?.addEventListener("click", detenerCamara);
+        window.addEventListener("pagehide", detenerCamara);
+        archivoDpi?.closest("form")?.addEventListener("submit", detenerCamara);
+    });
+</script>
