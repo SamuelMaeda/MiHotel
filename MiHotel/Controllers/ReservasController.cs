@@ -1033,7 +1033,7 @@ namespace MiHotel.Controllers
             bool registrarCuentaIndividual = true)
         {
             int noches = (fechaSalida.Date - fechaEntrada.Date).Days;
-            decimal totalReserva = precioPorNoche * noches;
+            decimal totalReserva = precioPorNoche * noches * modelo.CantidadPersonas;
 
             const string insertarReserva = @"
                 INSERT INTO reserva
@@ -1126,7 +1126,8 @@ namespace MiHotel.Controllers
             int idTipoMovimientoCxc,
             int idFormaPagoCredito)
         {
-            decimal totalGrupo = precioPorNoche * fechas.Count;
+            decimal precioPorFecha = precioPorNoche * modelo.CantidadPersonas;
+            decimal totalGrupo = precioPorFecha * fechas.Count;
 
             const string insertarMovimiento = @"
                 INSERT INTO movimiento
@@ -1198,7 +1199,7 @@ namespace MiHotel.Controllers
             comandoDetalle.Parameters.AddWithValue("@id_movimiento", idMovimiento);
             comandoDetalle.Parameters.AddWithValue("@id_proser", modelo.IdHabitacion);
             comandoDetalle.Parameters.AddWithValue("@cantidad", fechas.Count);
-            comandoDetalle.Parameters.AddWithValue("@precio_unitario", precioPorNoche);
+            comandoDetalle.Parameters.AddWithValue("@precio_unitario", precioPorFecha);
             comandoDetalle.Parameters.AddWithValue("@subtotal", totalGrupo);
             comandoDetalle.Parameters.AddWithValue("@descripcion", descripcion);
             comandoDetalle.ExecuteNonQuery();
@@ -2601,7 +2602,7 @@ namespace MiHotel.Controllers
                     precioPorNoche = modelo.PrecioNocheAplicado;
                 }
 
-                decimal totalReserva = precioPorNoche * noches;
+                decimal totalReserva = precioPorNoche * noches * modelo.CantidadPersonas;
                 decimal totalPagado = ObtenerTotalPagadoReserva(conexion, modelo.IdReserva);
                 decimal saldoPendiente = totalReserva - totalPagado;
 

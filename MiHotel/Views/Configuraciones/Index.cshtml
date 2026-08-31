@@ -33,7 +33,7 @@
             @Html.AntiForgeryToken()
             <div class="seccion-configuracion">
                 <h5><i class="bi bi-credit-card-fill me-2"></i>Recargo por tarjeta</h5>
-                <p class="text-muted">Esta cantidad se añade una vez a cada pago registrado con tarjeta.</p>
+                <p class="text-muted">Esta cantidad se aplica por cada persona y por cada noche cuando el pago se realiza con tarjeta.</p>
 
                 <div class="campo-recargo">
                     <label asp-for="RecargoTarjeta" class="form-label"></label>
@@ -45,7 +45,7 @@
                 </div>
 
                 <div class="vista-recargo">
-                    <span class="text-muted d-block small">Ejemplo con un abono de Q250.00</span>
+                    <span class="text-muted d-block small">Ejemplo: una persona, una noche de Q250.00</span>
                     <strong>Total cobrado con tarjeta: Q <span id="totalEjemplo">@((250m + Model.RecargoTarjeta).ToString("N2"))</span></strong>
                 </div>
 

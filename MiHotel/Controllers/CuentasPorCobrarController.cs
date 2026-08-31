@@ -462,6 +462,8 @@ namespace MiHotel.Controllers
                     h.nombre_proser AS habitacion,
                     r.fecha_entrada,
                     r.fecha_salida,
+                    r.cantidad_personas,
+                    r.total_reserva,
                     r.estado,
                     r.saldo_pendiente
                 FROM reserva r
@@ -493,6 +495,8 @@ namespace MiHotel.Controllers
                     Habitacion = lector["habitacion"]?.ToString() ?? "",
                     FechaEntrada = Convert.ToDateTime(lector["fecha_entrada"]),
                     FechaSalida = Convert.ToDateTime(lector["fecha_salida"]),
+                    CantidadPersonas = Convert.ToInt32(lector["cantidad_personas"]),
+                    TotalReserva = Convert.ToDecimal(lector["total_reserva"]),
                     EstadoReserva = lector["estado"]?.ToString() ?? "",
                     SaldoPendiente = Convert.ToDecimal(lector["saldo_pendiente"])
                 };
@@ -621,6 +625,7 @@ namespace MiHotel.Controllers
                     h.nombre_proser AS habitacion,
                     r.fecha_entrada,
                     r.fecha_salida,
+                    r.cantidad_personas,
                     r.total_reserva,
                     r.saldo_pendiente,
                     r.estado
@@ -640,6 +645,7 @@ namespace MiHotel.Controllers
                         Habitacion = lector["habitacion"]?.ToString() ?? "",
                         FechaEntrada = Convert.ToDateTime(lector["fecha_entrada"]),
                         FechaSalida = Convert.ToDateTime(lector["fecha_salida"]),
+                        CantidadPersonas = Convert.ToInt32(lector["cantidad_personas"]),
                         TotalReserva = Convert.ToDecimal(lector["total_reserva"]),
                         SaldoPendiente = Convert.ToDecimal(lector["saldo_pendiente"]),
                         Estado = lector["estado"]?.ToString() ?? ""
@@ -837,7 +843,9 @@ namespace MiHotel.Controllers
                 using var transaccion = conexion.BeginTransaction();
 
                 string consultaReserva = @"
-                    SELECT id_clipro, saldo_pendiente, estado
+                    SELECT id_clipro, saldo_pendiente, estado,
+                           cantidad_personas,
+                           GREATEST(DATEDIFF(fecha_salida, fecha_entrada), 1) AS noches
                     FROM reserva
                     WHERE id_reserva = @id_reserva
                     LIMIT 1
@@ -846,6 +854,7 @@ namespace MiHotel.Controllers
                 int idCliente;
                 decimal saldoPendiente;
                 string estadoReserva;
+                int unidadesRecargo;
 
                 using (var comando = new MySqlCommand(consultaReserva, conexion, transaccion))
                 {
@@ -863,6 +872,8 @@ namespace MiHotel.Controllers
                     idCliente = Convert.ToInt32(lector["id_clipro"]);
                     saldoPendiente = Convert.ToDecimal(lector["saldo_pendiente"]);
                     estadoReserva = lector["estado"]?.ToString()?.Trim().ToLower() ?? "";
+                    unidadesRecargo = Convert.ToInt32(lector["cantidad_personas"])
+                        * Convert.ToInt32(lector["noches"]);
                 }
 
                 string[] estadosPermitidos = { "pendiente", "en_curso", "en_checkout", "finalizada" };
@@ -898,7 +909,7 @@ namespace MiHotel.Controllers
                 }
 
                 decimal recargoTarjeta = EsFormaPagoTarjeta(nombreFormaPago)
-                    ? ObtenerRecargoTarjeta(conexion, transaccion)
+                    ? ObtenerRecargoTarjeta(conexion, transaccion) * unidadesRecargo
                     : 0m;
 
                 string obtenerTipoAbono = @"
@@ -1104,10 +1115,12 @@ namespace MiHotel.Controllers
                     idCliente = Convert.ToInt32(resultado);
                 }
 
-                var reservas = new List<(int IdReserva, decimal SaldoPendiente)>();
+                var reservas = new List<(int IdReserva, decimal SaldoPendiente, int UnidadesRecargo)>();
 
                 using (var comando = new MySqlCommand(@"
-                    SELECT id_reserva, saldo_pendiente, estado
+                    SELECT id_reserva, saldo_pendiente, estado,
+                           cantidad_personas,
+                           GREATEST(DATEDIFF(fecha_salida, fecha_entrada), 1) AS noches
                     FROM reserva
                     WHERE id_reserva_grupo = @id_reserva_grupo
                     ORDER BY fecha_entrada, id_reserva
@@ -1125,7 +1138,10 @@ namespace MiHotel.Controllers
 
                         if (estadosPermitidos.Contains(estado) && saldo > 0)
                         {
-                            reservas.Add((Convert.ToInt32(lector["id_reserva"]), saldo));
+                            reservas.Add((
+                                Convert.ToInt32(lector["id_reserva"]),
+                                saldo,
+                                Convert.ToInt32(lector["cantidad_personas"]) * Convert.ToInt32(lector["noches"])));
                         }
                     }
                 }
@@ -1144,7 +1160,7 @@ namespace MiHotel.Controllers
                         return RedirectToAction("DetalleGrupo", new { id = idReservaGrupo, idReservaRetorno });
                     }
 
-                    reservas = new List<(int IdReserva, decimal SaldoPendiente)> { reservaObjetivo };
+                    reservas = new List<(int IdReserva, decimal SaldoPendiente, int UnidadesRecargo)> { reservaObjetivo };
                     saldoTotal = reservaObjetivo.SaldoPendiente;
                 }
 
@@ -1181,7 +1197,7 @@ namespace MiHotel.Controllers
                 }
 
                 decimal recargoTarjeta = EsFormaPagoTarjeta(nombreFormaPago)
-                    ? ObtenerRecargoTarjeta(conexion, transaccion)
+                    ? ObtenerRecargoTarjeta(conexion, transaccion) * reservas.Sum(reserva => reserva.UnidadesRecargo)
                     : 0m;
 
                 int idTipoAbono;

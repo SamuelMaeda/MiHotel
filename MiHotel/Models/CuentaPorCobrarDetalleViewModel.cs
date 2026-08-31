@@ -11,6 +11,8 @@ namespace MiHotel.Models
         public DateTime FechaEntrada { get; set; }
         public DateTime FechaSalida { get; set; }
         public string EstadoReserva { get; set; } = "";
+        public int CantidadPersonas { get; set; } = 1;
+        public decimal TotalReserva { get; set; }
         public decimal SaldoPendiente { get; set; }
         public string EstadoFacturacion { get; set; } = "sin_definir";
         public List<MovimientoCuentaViewModel> Movimientos { get; set; } = new();

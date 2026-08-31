@@ -299,8 +299,13 @@
                         </div>
 
                         <div class="col-12 col-md-6 mb-3">
-                            <label class="form-label">Precio por noche</label>
+                            <label class="form-label">Precio por persona y noche</label>
                             <input type="text" id="precioHabitacion" class="form-control campo-solo-lectura" readonly />
+                        </div>
+
+                        <div class="col-12 col-md-6 mb-3">
+                            <label class="form-label">Total estimado de hospedaje</label>
+                            <input type="text" id="totalReservaEstimado" class="form-control campo-solo-lectura" readonly />
                         </div>
 
                         @if (!esClienteSesion)
@@ -430,6 +435,7 @@
             const selectHabitacion = document.getElementById("selectHabitacion");
             const precioHabitacion = document.getElementById("precioHabitacion");
             const tipoHabitacion = document.getElementById("tipoHabitacion");
+            const totalReservaEstimado = document.getElementById("totalReservaEstimado");
 
             const btnRegistrarCliente = document.getElementById("btnRegistrarCliente");
             const urlBaseCrearCliente = "@Url.Action("Crear", "Clientes")";
@@ -596,6 +602,33 @@
 
                 precioHabitacion.value = precio ? "Q " + parseFloat(precio).toFixed(2) : "";
                 tipoHabitacion.value = tipo ? tipo : "";
+                actualizarTotalEstimado();
+            }
+
+            function actualizarTotalEstimado() {
+                if (!selectHabitacion || !totalReservaEstimado) {
+                    return;
+                }
+
+                const opcionSeleccionada = selectHabitacion.options[selectHabitacion.selectedIndex];
+                const precio = Number.parseFloat(opcionSeleccionada?.getAttribute("data-precio")) || 0;
+                const personas = Math.max(1, Number.parseInt(cantidadPersonasElement?.value || "1", 10));
+                let noches = 0;
+
+                if (usarFechasSeparadasElement?.checked) {
+                    noches = Array.from(document.querySelectorAll(".fecha-separada-input"))
+                        .filter(function (input) { return input.value; })
+                        .length;
+                }
+                else if (fechaEntradaElement?.value && fechaSalidaElement?.value) {
+                    const entrada = new Date(fechaEntradaElement.value + "T00:00:00");
+                    const salida = new Date(fechaSalidaElement.value + "T00:00:00");
+                    noches = Math.max(0, Math.round((salida - entrada) / 86400000));
+                }
+
+                totalReservaEstimado.value = precio > 0 && noches > 0
+                    ? "Q " + (precio * personas * noches).toFixed(2)
+                    : "";
             }
 
             function cargarClienteSeleccionadoInicial() {
@@ -699,15 +732,24 @@
             }
 
             if (fechaEntradaElement && !esClienteSesion) {
-                fechaEntradaElement.addEventListener("change", actualizarEnlaceRegistrarCliente);
+                fechaEntradaElement.addEventListener("change", function () {
+                    actualizarEnlaceRegistrarCliente();
+                    actualizarTotalEstimado();
+                });
             }
 
             if (fechaSalidaElement && !esClienteSesion) {
-                fechaSalidaElement.addEventListener("change", actualizarEnlaceRegistrarCliente);
+                fechaSalidaElement.addEventListener("change", function () {
+                    actualizarEnlaceRegistrarCliente();
+                    actualizarTotalEstimado();
+                });
             }
 
             if (cantidadPersonasElement) {
-                cantidadPersonasElement.addEventListener("input", actualizarEnlaceRegistrarCliente);
+                cantidadPersonasElement.addEventListener("input", function () {
+                    actualizarEnlaceRegistrarCliente();
+                    actualizarTotalEstimado();
+                });
             }
 
             if (observacionesElement) {
@@ -715,13 +757,22 @@
             }
 
             if (usarFechasSeparadasElement) {
-                usarFechasSeparadasElement.addEventListener("change", actualizarModoFechas);
+                usarFechasSeparadasElement.addEventListener("change", function () {
+                    actualizarModoFechas();
+                    actualizarTotalEstimado();
+                });
             }
+
+            listaFechasSeparadas?.addEventListener("change", actualizarTotalEstimado);
+            listaFechasSeparadas?.addEventListener("click", function () {
+                window.setTimeout(actualizarTotalEstimado, 0);
+            });
 
             if (btnAgregarFecha) {
                 btnAgregarFecha.addEventListener("click", function () {
                     crearFilaFecha("");
                     actualizarEnlaceRegistrarCliente();
+                    actualizarTotalEstimado();
                 });
             }
 

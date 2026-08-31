@@ -9,7 +9,13 @@
         : Model.EstadoReserva.Trim().ToLower() == "en_checkout";
     string accionRegistrar = Model.EsCuentaAgrupada ? "RegistrarAbonoGrupo" : "RegistrarAbono";
     DataTable formasPago = ViewBag.FormasPago as DataTable ?? new DataTable();
-    decimal recargoTarjeta = ViewBag.RecargoTarjeta is decimal recargo ? recargo : 25m;
+    decimal recargoTarjetaUnitario = ViewBag.RecargoTarjeta is decimal recargo ? recargo : 25m;
+    int unidadesRecargo = Model.EsCuentaAgrupada
+        ? Model.EstadiasAgrupadas
+            .Where(estadia => estadia.Estado.Trim().ToLower() != "cancelada" && estadia.SaldoPendiente > 0)
+            .Sum(estadia => estadia.CantidadPersonas * Math.Max(1, (estadia.FechaSalida.Date - estadia.FechaEntrada.Date).Days))
+        : Model.CantidadPersonas * Math.Max(1, (Model.FechaSalida.Date - Model.FechaEntrada.Date).Days);
+    decimal recargoTarjeta = recargoTarjetaUnitario * unidadesRecargo;
 }
 
 <style>
@@ -175,14 +181,17 @@
                     <div class="col-12">
                         <label for="idReservaObjetivo" class="form-label">Aplicar el pago a</label>
                         <select id="idReservaObjetivo" name="idReservaObjetivo" class="form-select">
-                            <option value="" data-saldo="@Model.SaldoPendiente.ToString(System.Globalization.CultureInfo.InvariantCulture)">
+                            <option value=""
+                                    data-saldo="@Model.SaldoPendiente.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                    data-recargo="@recargoTarjeta.ToString(System.Globalization.CultureInfo.InvariantCulture)">
                                 Todas las estadías del grupo — saldo total Q @Model.SaldoPendiente.ToString("N2")
                             </option>
                             @foreach (var estadia in Model.EstadiasAgrupadas.Where(estadia =>
                                 estadia.Estado.Trim().ToLower() != "cancelada" && estadia.SaldoPendiente > 0))
                             {
                                 <option value="@estadia.IdReserva"
-                                        data-saldo="@estadia.SaldoPendiente.ToString(System.Globalization.CultureInfo.InvariantCulture)">
+                                        data-saldo="@estadia.SaldoPendiente.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                        data-recargo="@((recargoTarjetaUnitario * estadia.CantidadPersonas * Math.Max(1, (estadia.FechaSalida.Date - estadia.FechaEntrada.Date).Days)).ToString(System.Globalization.CultureInfo.InvariantCulture))">
                                     Solo estadía #@estadia.IdReserva del @estadia.FechaEntrada.ToString("dd/MM/yyyy") — saldo Q @estadia.SaldoPendiente.ToString("N2")
                                 </option>
                             }
@@ -217,7 +226,7 @@
                     <div class="resumen-recargo">
                         <strong>Pago con tarjeta</strong>
                         <div>Monto que reduce la deuda: Q <span id="montoAbonoResumen">0.00</span></div>
-                        <div>Recargo fijo: Q <span id="recargoResumen">@recargoTarjeta.ToString("N2")</span></div>
+                        <div>Recargo por personas y noches: Q <span id="recargoResumen">@recargoTarjeta.ToString("N2")</span></div>
                         <div class="fw-bold mt-1">Total a cobrar en la terminal: Q <span id="totalCobroResumen">@recargoTarjeta.ToString("N2")</span></div>
                     </div>
                 </div>
@@ -294,17 +303,22 @@
         const formaPago = document.getElementById("idFormaPago");
         const resumen = document.getElementById("resumenRecargoTarjeta");
         const montoResumen = document.getElementById("montoAbonoResumen");
+        const recargoResumen = document.getElementById("recargoResumen");
         const totalResumen = document.getElementById("totalCobroResumen");
-        const recargo = @recargoTarjeta.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        const recargoPredeterminado = @recargoTarjeta.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
         window.actualizarResumenRecargo = function () {
-            if (!formaPago || !resumen || !monto || !montoResumen || !totalResumen) return;
+            if (!formaPago || !resumen || !monto || !montoResumen || !recargoResumen || !totalResumen) return;
             const opcion = formaPago.options[formaPago.selectedIndex];
             const esTarjeta = opcion?.dataset.esTarjeta === "true";
             const valorMonto = Number.parseFloat(monto.value) || 0;
+            const destino = document.getElementById("idReservaObjetivo");
+            const opcionDestino = destino?.options[destino.selectedIndex];
+            const recargo = Number.parseFloat(opcionDestino?.dataset.recargo) || recargoPredeterminado;
 
             resumen.classList.toggle("d-none", !esTarjeta);
             montoResumen.textContent = valorMonto.toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            recargoResumen.textContent = recargo.toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             totalResumen.textContent = (valorMonto + recargo).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         };
 
@@ -336,6 +350,9 @@
             }
 
             destino.addEventListener("change", actualizarMontoMaximo);
+            destino.addEventListener("change", function () {
+                window.actualizarResumenRecargo?.();
+            });
             usarSaldoCompleto?.addEventListener("click", function () {
                 const opcion = destino.options[destino.selectedIndex];
                 const saldo = opcion ? opcion.dataset.saldo : null;

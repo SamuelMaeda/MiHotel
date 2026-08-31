@@ -87,13 +87,13 @@
 
             <div class="col-md-6 mb-3">
                 <label asp-for="IdHabitacion" class="form-label">Habitación</label>
-                <select asp-for="IdHabitacion" class="form-select">
+                <select asp-for="IdHabitacion" class="form-select" id="IdHabitacion">
                     <option value="">Seleccione una habitación</option>
                     @if (habitaciones != null)
                     {
                         foreach (var habitacion in habitaciones)
                         {
-                            <option value="@habitacion.Id">Habitación @habitacion.Codigo</option>
+                            <option value="@habitacion.Id" data-precio="@habitacion.Precio">Habitación @habitacion.Codigo</option>
                         }
                     }
                 </select>
@@ -119,7 +119,7 @@
             </div>
 
             <div class="col-md-6 mb-3">
-                <label asp-for="TotalReserva" class="form-label">Total actual</label>
+                <label asp-for="TotalReserva" class="form-label">Total estimado</label>
                 <input asp-for="TotalReserva" class="form-control" readonly />
             </div>
 
@@ -139,4 +139,43 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const habitacion = document.getElementById("IdHabitacion");
+            const entrada = document.getElementById("FechaEntrada");
+            const salida = document.getElementById("FechaSalida");
+            const personas = document.getElementById("CantidadPersonas");
+            const total = document.getElementById("TotalReserva");
+            const habitacionOriginal = @Model.IdHabitacion;
+            const precioHistorico = @Model.PrecioNocheAplicado.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+            function actualizarTotal() {
+                const opcion = habitacion?.options[habitacion.selectedIndex];
+                const precioActual = Number.parseFloat(opcion?.dataset.precio) || 0;
+                const precio = Number.parseInt(habitacion?.value || "0", 10) === habitacionOriginal
+                    ? precioHistorico
+                    : precioActual;
+                const cantidad = Math.max(1, Number.parseInt(personas?.value || "1", 10));
+                let noches = 0;
+
+                if (entrada?.value && salida?.value) {
+                    const fechaEntrada = new Date(entrada.value + "T00:00:00");
+                    const fechaSalida = new Date(salida.value + "T00:00:00");
+                    noches = Math.max(0, Math.round((fechaSalida - fechaEntrada) / 86400000));
+                }
+
+                if (total) {
+                    total.value = precio > 0 && noches > 0
+                        ? (precio * cantidad * noches).toFixed(2)
+                        : "";
+                }
+            }
+
+            habitacion?.addEventListener("change", actualizarTotal);
+            entrada?.addEventListener("change", actualizarTotal);
+            salida?.addEventListener("change", actualizarTotal);
+            personas?.addEventListener("input", actualizarTotal);
+            actualizarTotal();
+        });
+    </script>
 }

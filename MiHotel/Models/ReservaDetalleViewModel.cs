@@ -37,6 +37,7 @@
         public string Habitacion { get; set; } = "";
         public DateTime FechaEntrada { get; set; }
         public DateTime FechaSalida { get; set; }
+        public int CantidadPersonas { get; set; } = 1;
         public decimal TotalReserva { get; set; }
         public decimal SaldoPendiente { get; set; }
         public string Estado { get; set; } = "";
