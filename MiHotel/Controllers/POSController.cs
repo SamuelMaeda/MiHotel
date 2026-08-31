@@ -42,7 +42,10 @@ namespace MiHotel.Controllers
             FROM proser p
             INNER JOIN tipo_proser tp
                 ON p.id_tipoproser = tp.id_tipoproser
-            WHERE LOWER(tp.nombre) IN ('producto', 'servicio')", conexion).Fill(dtProd);
+            INNER JOIN tipo_estado te
+                ON p.id_tipoestado = te.id_tipoestado
+            WHERE LOWER(tp.nombre) IN ('producto', 'servicio')
+              AND LOWER(te.estado) = 'activo'", conexion).Fill(dtProd);
 
             var dtCli = new DataTable();
             new MySqlDataAdapter(@"
@@ -176,12 +179,20 @@ namespace MiHotel.Controllers
     FROM proser p
     INNER JOIN tipo_proser tp
         ON p.id_tipoproser = tp.id_tipoproser
+    INNER JOIN tipo_estado te
+        ON p.id_tipoestado = te.id_tipoestado
     WHERE p.id_proser = @id
+      AND LOWER(te.estado) = 'activo'
     LIMIT 1", conexion, tx);
 
                     cmdTipo.Parameters.AddWithValue("@id", item.id);
 
                     string tipo = Convert.ToString(cmdTipo.ExecuteScalar()) ?? "";
+
+                    if (string.IsNullOrEmpty(tipo))
+                    {
+                        throw new InvalidOperationException("Uno de los productos o servicios seleccionados está inactivo o ya no existe.");
+                    }
 
                     if (tipo == "producto")
                     {

@@ -66,9 +66,12 @@ namespace MiHotel.Services
                     COALESCE(s.precio, 0) AS precio,
                     te.estado
                 FROM proser p
-                LEFT JOIN subcategoria s ON p.id_subcategoria = s.id_subcategoria
+                INNER JOIN subcategoria s ON p.id_subcategoria = s.id_subcategoria
+                INNER JOIN categoria c ON s.id_categoria = c.id_categoria
                 INNER JOIN tipo_estado te ON p.id_tipoestado = te.id_tipoestado
                 WHERE p.id_tipoproser = @id_tipoproser
+                  AND LOWER(s.estado) = 'activo'
+                  AND LOWER(c.estado) = 'activo'
                   AND LOWER(te.estado) NOT IN ('remodelacion', 'renta')
                   {filtroSubcategoria}
                   AND NOT EXISTS
@@ -161,13 +164,22 @@ namespace MiHotel.Services
                 SELECT LOWER(te.estado)
                 FROM proser p
                 INNER JOIN tipo_estado te ON p.id_tipoestado = te.id_tipoestado
+                INNER JOIN subcategoria s ON p.id_subcategoria = s.id_subcategoria
+                INNER JOIN categoria c ON s.id_categoria = c.id_categoria
                 WHERE p.id_proser = @id_habitacion
+                  AND LOWER(s.estado) = 'activo'
+                  AND LOWER(c.estado) = 'activo'
                 LIMIT 1;";
 
             using var comandoEstado = new MySqlCommand(consultaEstadoOperativo, conexion);
             comandoEstado.Parameters.AddWithValue("@id_habitacion", idHabitacion);
 
             object? resultadoEstado = comandoEstado.ExecuteScalar();
+            if (resultadoEstado == null)
+            {
+                return false;
+            }
+
             string estadoActual = resultadoEstado?.ToString()?.Trim().ToLower() ?? "";
 
             if (estadoActual == "remodelacion" || estadoActual == "renta")

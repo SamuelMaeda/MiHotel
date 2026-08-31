@@ -39,12 +39,14 @@ namespace MiHotel.Controllers
                 s.nombre_subcategoria
             FROM proser p
             LEFT JOIN subcategoria s ON p.id_subcategoria = s.id_subcategoria
+            INNER JOIN tipo_estado te ON p.id_tipoestado = te.id_tipoestado
             WHERE p.id_tipoproser = (
                 SELECT id_tipoproser 
                 FROM tipo_proser 
                 WHERE LOWER(nombre) = 'producto'
                 LIMIT 1
             )
+            AND LOWER(te.estado) = 'activo'
             AND p.nombre_proser LIKE @busqueda
             ORDER BY p.nombre_proser ASC";
 

@@ -376,6 +376,7 @@ namespace MiHotel.Controllers
             CargarCombos();
 
             ValidarFotografias(modelo.Fotografias);
+            ValidarSubcategoriaActiva(modelo);
             int nuevasFotografias = modelo.Fotografias.Count(a => a.Length > 0);
             if (nuevasFotografias > MaximoFotografiasPorHabitacion)
             {
@@ -544,6 +545,7 @@ namespace MiHotel.Controllers
             CargarCombos();
 
             ValidarFotografias(modelo.Fotografias);
+            ValidarSubcategoriaActiva(modelo);
             if (!ModelState.IsValid)
             {
                 CargarFotografiasExistentes(modelo);
@@ -653,6 +655,8 @@ namespace MiHotel.Controllers
             FROM subcategoria s
             INNER JOIN categoria c ON s.id_categoria = c.id_categoria
             WHERE LOWER(c.nombre_categoria) = 'habitaciones'
+              AND LOWER(s.estado) = 'activo'
+              AND LOWER(c.estado) = 'activo'
             ORDER BY s.nombre_subcategoria;";
 
             using (var comando = new MySqlCommand(consultaSubcategorias, conexion))
@@ -688,6 +692,32 @@ namespace MiHotel.Controllers
 
             ViewBag.SubcategoriasHabitacion = listaSubcategorias;
             ViewBag.EstadosHabitacion = listaEstados;
+        }
+
+        private void ValidarSubcategoriaActiva(HabitacionFormViewModel modelo)
+        {
+            if (modelo.IdSubcategoria <= 0)
+            {
+                return;
+            }
+
+            using var conexion = _conexionBD.ObtenerConexion();
+            conexion.Open();
+            using var comando = new MySqlCommand(@"
+                SELECT COUNT(*)
+                FROM subcategoria s
+                INNER JOIN categoria c ON s.id_categoria = c.id_categoria
+                WHERE s.id_subcategoria = @id_subcategoria
+                  AND LOWER(s.estado) = 'activo'
+                  AND LOWER(c.estado) = 'activo'
+                  AND LOWER(c.nombre_categoria) = 'habitaciones';", conexion);
+            comando.Parameters.AddWithValue("@id_subcategoria", modelo.IdSubcategoria);
+
+            if (Convert.ToInt32(comando.ExecuteScalar()) == 0)
+            {
+                ModelState.AddModelError(nameof(modelo.IdSubcategoria),
+                    "Debe seleccionar un tipo de habitación activo.");
+            }
         }
     }
 }

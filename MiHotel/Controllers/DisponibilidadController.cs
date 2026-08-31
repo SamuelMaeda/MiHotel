@@ -83,8 +83,11 @@ namespace MiHotel.Controllers
                         s.nombre_subcategoria
                     FROM proser p
                     INNER JOIN subcategoria s ON p.id_subcategoria = s.id_subcategoria
+                    INNER JOIN categoria c ON s.id_categoria = c.id_categoria
                     WHERE p.id_tipoproser = @id_tipoproser
                       AND p.id_subcategoria IS NOT NULL
+                      AND LOWER(s.estado) = 'activo'
+                      AND LOWER(c.estado) = 'activo'
                     ORDER BY s.nombre_subcategoria;";
 
                 using var comando = new MySqlCommand(consulta, conexion);

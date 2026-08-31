@@ -203,12 +203,61 @@ namespace MiHotel.Controllers
                     {
                         ModelState.AddModelError("IdUnidadMedida", "Debe seleccionar la unidad de medida.");
                     }
+
+                    if (modelo.IdCategoria.HasValue && !ExisteCategoriaActiva(conexion, modelo.IdCategoria.Value))
+                    {
+                        ModelState.AddModelError("IdCategoria", "Debe seleccionar una categoría activa.");
+                    }
+
+                    if (modelo.IdSubcategoria.HasValue && !ExisteSubcategoriaActiva(conexion, modelo.IdSubcategoria.Value))
+                    {
+                        ModelState.AddModelError("IdSubcategoria", "Debe seleccionar una subcategoría activa.");
+                    }
+
+                    if (modelo.IdMarca.HasValue && !ExisteMarcaActiva(conexion, modelo.IdMarca.Value))
+                    {
+                        ModelState.AddModelError("IdMarca", "Debe seleccionar una marca activa.");
+                    }
                 }
             }
             catch (Exception ex)
             {
                 ModelState.AddModelError("", "Ocurrió un error al validar el tipo: " + ex.Message);
             }
+        }
+
+        private static bool ExisteCategoriaActiva(MySqlConnection conexion, int idCategoria)
+        {
+            using var comando = new MySqlCommand(@"
+                SELECT COUNT(*) FROM categoria
+                WHERE id_categoria = @id
+                  AND LOWER(estado) = 'activo'
+                  AND LOWER(nombre_categoria) <> 'habitaciones';", conexion);
+            comando.Parameters.AddWithValue("@id", idCategoria);
+            return Convert.ToInt32(comando.ExecuteScalar()) > 0;
+        }
+
+        private static bool ExisteSubcategoriaActiva(MySqlConnection conexion, int idSubcategoria)
+        {
+            using var comando = new MySqlCommand(@"
+                SELECT COUNT(*)
+                FROM subcategoria s
+                INNER JOIN categoria c ON c.id_categoria = s.id_categoria
+                WHERE s.id_subcategoria = @id
+                  AND LOWER(s.estado) = 'activo'
+                  AND LOWER(c.estado) = 'activo'
+                  AND LOWER(c.nombre_categoria) <> 'habitaciones';", conexion);
+            comando.Parameters.AddWithValue("@id", idSubcategoria);
+            return Convert.ToInt32(comando.ExecuteScalar()) > 0;
+        }
+
+        private static bool ExisteMarcaActiva(MySqlConnection conexion, int idMarca)
+        {
+            using var comando = new MySqlCommand(@"
+                SELECT COUNT(*) FROM marca
+                WHERE id_marca = @id AND LOWER(estado) = 'activo';", conexion);
+            comando.Parameters.AddWithValue("@id", idMarca);
+            return Convert.ToInt32(comando.ExecuteScalar()) > 0;
         }
 
         // ===============================
@@ -801,6 +850,7 @@ namespace MiHotel.Controllers
                     SELECT id_categoria, nombre_categoria
                     FROM categoria
                     WHERE LOWER(nombre_categoria) <> 'habitaciones'
+                      AND LOWER(estado) = 'activo'
                     ORDER BY nombre_categoria;";
 
                 using (var comando = new MySqlCommand(consultaCategorias, conexion))
@@ -822,6 +872,7 @@ namespace MiHotel.Controllers
                 INNER JOIN categoria c ON s.id_categoria = c.id_categoria
                 WHERE LOWER(c.nombre_categoria) <> 'habitaciones'
                   AND LOWER(s.estado) = 'activo'
+                  AND LOWER(c.estado) = 'activo'
                 ORDER BY s.nombre_subcategoria;";
 
                 using (var comando = new MySqlCommand(consultaSubcategorias, conexion))
@@ -840,6 +891,7 @@ namespace MiHotel.Controllers
                 string consultaMarcas = @"
                     SELECT id_marca, nombre_marca
                     FROM marca
+                    WHERE LOWER(estado) = 'activo'
                     ORDER BY nombre_marca;";
 
                 using (var comando = new MySqlCommand(consultaMarcas, conexion))

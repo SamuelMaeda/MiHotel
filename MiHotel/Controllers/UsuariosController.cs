@@ -336,6 +336,13 @@ namespace MiHotel.Controllers
                 using var conexion = _conexionBD.ObtenerConexion();
                 conexion.Open();
 
+                if (!RolEstaActivo(conexion, modelo.IdRol))
+                {
+                    ModelState.AddModelError(nameof(modelo.IdRol), "Debe seleccionar un rol activo.");
+                    modelo.Telefono = FormatearTelefono(modelo.Telefono);
+                    return View(modelo);
+                }
+
                 string verificarCorreo = @"
                     SELECT COUNT(*)
                     FROM usuario
@@ -485,6 +492,13 @@ namespace MiHotel.Controllers
 
                 using var conexion = _conexionBD.ObtenerConexion();
                 conexion.Open();
+
+                if (!RolEstaActivo(conexion, modelo.IdRol))
+                {
+                    ModelState.AddModelError(nameof(modelo.IdRol), "Debe seleccionar un rol activo.");
+                    modelo.Telefono = FormatearTelefono(modelo.Telefono);
+                    return View(modelo);
+                }
 
                 string verificarCorreo = @"
                     SELECT COUNT(*)
@@ -740,6 +754,15 @@ namespace MiHotel.Controllers
             }
 
             ViewBag.Roles = listaRoles;
+        }
+
+        private static bool RolEstaActivo(MySqlConnection conexion, int idRol)
+        {
+            using var comando = new MySqlCommand(@"
+                SELECT COUNT(*) FROM rol
+                WHERE id_rol = @id_rol AND estado = 'activo';", conexion);
+            comando.Parameters.AddWithValue("@id_rol", idRol);
+            return Convert.ToInt32(comando.ExecuteScalar()) > 0;
         }
     }
 }

@@ -188,6 +188,35 @@ namespace MiHotel.Controllers
             comando.ExecuteNonQuery();
         }
 
+        private static bool EmpresaClienteEsValida(
+            MySqlConnection conexion,
+            MySqlTransaction transaccion,
+            int? idEmpresa,
+            int? idClienteExistente = null)
+        {
+            if (!idEmpresa.HasValue)
+            {
+                return true;
+            }
+
+            const string sql = @"
+                SELECT COUNT(*)
+                FROM empresa_cliente e
+                WHERE e.id_empresa_cliente = @id_empresa
+                  AND (
+                      e.estado = 'activo'
+                      OR EXISTS (
+                          SELECT 1 FROM cliente_detalle cd
+                          WHERE cd.id_clipro = @id_cliente
+                            AND cd.id_empresa_cliente = e.id_empresa_cliente
+                      )
+                  );";
+            using var comando = new MySqlCommand(sql, conexion, transaccion);
+            comando.Parameters.AddWithValue("@id_empresa", idEmpresa.Value);
+            comando.Parameters.AddWithValue("@id_cliente", (object?)idClienteExistente ?? DBNull.Value);
+            return Convert.ToInt32(comando.ExecuteScalar()) > 0;
+        }
+
         private bool ExisteDpi(MySqlConnection conexion, string? dpi, int? excluirId = null, MySqlTransaction? transaccion = null)
         {
             if (string.IsNullOrWhiteSpace(dpi)) return false;
@@ -312,6 +341,14 @@ namespace MiHotel.Controllers
                 conexion.Open();
                 using var transaccion = conexion.BeginTransaction();
                 int tipo = ObtenerIdTipoCliente(conexion, transaccion);
+
+                if (!EmpresaClienteEsValida(conexion, transaccion, modelo.IdEmpresaCliente))
+                {
+                    ModelState.AddModelError(nameof(modelo.IdEmpresaCliente), "Debe seleccionar una empresa activa.");
+                    transaccion.Rollback();
+                    CargarCatalogos(modelo.IdEmpresaCliente, modelo.CodigoClasificacion);
+                    return View(modelo);
+                }
 
                 if (ExisteCorreo(conexion, modelo.Correo, tipo, null, transaccion))
                 {
@@ -450,6 +487,15 @@ namespace MiHotel.Controllers
                 conexion.Open();
                 using var transaccion = conexion.BeginTransaction();
                 int tipo = ObtenerIdTipoCliente(conexion, transaccion);
+
+                if (!EmpresaClienteEsValida(conexion, transaccion, modelo.IdEmpresaCliente, modelo.IdClipro))
+                {
+                    ModelState.AddModelError(nameof(modelo.IdEmpresaCliente), "Debe seleccionar una empresa activa.");
+                    transaccion.Rollback();
+                    CargarCatalogos(modelo.IdEmpresaCliente, modelo.CodigoClasificacion);
+                    return View(modelo);
+                }
+
                 if (ExisteCorreo(conexion, modelo.Correo, tipo, modelo.IdClipro, transaccion))
                 {
                     ModelState.AddModelError(nameof(modelo.Correo), "El correo ya está registrado en otro cliente.");

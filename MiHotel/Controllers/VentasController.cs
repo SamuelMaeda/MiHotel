@@ -35,13 +35,15 @@ namespace MiHotel.Controllers
 
             string sqlProd = @"
                 SELECT id_proser, nombre_proser, precio, stock
-                FROM proser
-                WHERE id_tipoproser = (
+                FROM proser p
+                INNER JOIN tipo_estado te ON p.id_tipoestado = te.id_tipoestado
+                WHERE p.id_tipoproser = (
                     SELECT id_tipoproser 
                     FROM tipo_proser 
                     WHERE LOWER(nombre)='producto'
                     LIMIT 1
-                )";
+                )
+                  AND LOWER(te.estado) = 'activo'";
 
             var da = new MySqlDataAdapter(sqlProd, conexion);
             var dt = new DataTable();
@@ -88,13 +90,23 @@ namespace MiHotel.Controllers
                 for (int i = 0; i < idProducto.Count; i++)
                 {
                     // VALIDAR STOCK
-                    string sqlCheck = "SELECT stock FROM proser WHERE id_proser=@id";
+                    string sqlCheck = @"
+                        SELECT p.stock
+                        FROM proser p
+                        INNER JOIN tipo_proser tp ON p.id_tipoproser = tp.id_tipoproser
+                        INNER JOIN tipo_estado te ON p.id_tipoestado = te.id_tipoestado
+                        WHERE p.id_proser=@id
+                          AND LOWER(tp.nombre)='producto'
+                          AND LOWER(te.estado)='activo';";
                     int stockActual;
 
                     using (var cmdCheck = new MySqlCommand(sqlCheck, conexion, transaccion))
                     {
                         cmdCheck.Parameters.AddWithValue("@id", idProducto[i]);
-                        stockActual = Convert.ToInt32(cmdCheck.ExecuteScalar());
+                        object? resultadoStock = cmdCheck.ExecuteScalar();
+                        if (resultadoStock == null)
+                            throw new Exception("Uno de los productos seleccionados está inactivo o ya no existe.");
+                        stockActual = Convert.ToInt32(resultadoStock);
                     }
 
                     if (cantidad[i] > stockActual)
