@@ -74,14 +74,27 @@
     .btn-regresar { background-color: #824B44; }
 
     .decision-factura {
-        margin-top: 22px;
-        padding: 18px;
-        border: 1px solid #d8c5c2;
-        border-radius: 10px;
-        background-color: #fff9f8;
+        margin: -4px 0 22px;
+        padding: 12px 14px;
+        border: 1px solid #eadfdd;
+        border-left: 3px solid #824B44;
+        border-radius: 8px;
+        background-color: #fbf9f8;
     }
 
-    .opciones-factura { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 12px; }
+    .decision-factura-contenido {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 10px 20px;
+    }
+
+    .decision-factura h5 { font-size: 1rem; }
+    .decision-factura p { font-size: .875rem; }
+    .opciones-factura { display: flex; flex-wrap: wrap; gap: 16px; }
+    .opciones-factura .form-check { margin: 0; }
+    .decision-factura .form-text { margin-top: 5px; font-size: .8rem; }
 
 </style>
 
@@ -102,22 +115,6 @@
         </div>
         <span class="badge rounded-pill text-bg-warning px-3 py-2">En check-out</span>
     </div>
-
-    <section class="decision-factura" aria-labelledby="tituloDecisionFactura">
-        <h5 id="tituloDecisionFactura" class="mb-1">Decisión de facturación</h5>
-        <p class="text-muted mb-0">Debe indicar expresamente si el huésped solicitó factura para esta estadía.</p>
-        <div class="opciones-factura">
-            <div class="form-check">
-                <input class="form-check-input decision-factura-opcion" type="radio" name="decisionFacturaVisual" id="requiereFacturaSi" value="true" />
-                <label class="form-check-label" for="requiereFacturaSi">Sí, requiere factura</label>
-            </div>
-            <div class="form-check">
-                <input class="form-check-input decision-factura-opcion" type="radio" name="decisionFacturaVisual" id="requiereFacturaNo" value="false" />
-                <label class="form-check-label" for="requiereFacturaNo">No requiere factura</label>
-            </div>
-        </div>
-        <div id="avisoDecisionFactura" class="form-text">Ninguna opción se selecciona automáticamente.</div>
-    </section>
 
     @if (TempData["Exito"] != null)
     {
@@ -149,6 +146,26 @@
             </div>
         }
     </div>
+
+    <section class="decision-factura" aria-labelledby="tituloDecisionFactura">
+        <div class="decision-factura-contenido">
+            <div>
+                <h5 id="tituloDecisionFactura" class="mb-1">Decisión de facturación</h5>
+                <p class="text-muted mb-0">Indique si el huésped solicitó factura para esta estadía.</p>
+            </div>
+            <div class="opciones-factura">
+                <div class="form-check">
+                    <input class="form-check-input decision-factura-opcion" type="radio" name="decisionFacturaVisual" id="requiereFacturaSi" value="true" />
+                    <label class="form-check-label" for="requiereFacturaSi">Sí, requiere factura</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input decision-factura-opcion" type="radio" name="decisionFacturaVisual" id="requiereFacturaNo" value="false" />
+                    <label class="form-check-label" for="requiereFacturaNo">No requiere factura</label>
+                </div>
+            </div>
+        </div>
+        <div id="avisoDecisionFactura" class="form-text">Ninguna opción se selecciona automáticamente.</div>
+    </section>
 
     @if (esCierreIntermedio && Model.SaldoPendienteGrupo > 0)
     {

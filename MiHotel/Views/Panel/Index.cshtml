@@ -502,21 +502,21 @@
             </div>
 
             <div class="opciones-panel">
-                <a href="#" class="opcion-panel proximamente" aria-disabled="true" tabindex="-1">
-                    <span class="etiqueta-proximamente">Próximamente</span>
+                <a asp-controller="Reservas" asp-action="Index" class="opcion-panel principal">
                     <span class="opcion-icono cafe"><i class="bi bi-calendar-check-fill"></i></span>
                     <span class="opcion-texto"><span class="opcion-titulo">Reservas</span><span class="opcion-descripcion">Consulta y administra las reservaciones.</span></span>
                 </a>
-                <a href="#" class="opcion-panel proximamente" aria-disabled="true" tabindex="-1">
-                    <span class="etiqueta-proximamente">Próximamente</span>
-                    <span class="opcion-icono"><i class="bi bi-box-arrow-in-right"></i></span>
-                    <span class="opcion-texto"><span class="opcion-titulo">Check-in</span><span class="opcion-descripcion">Registra la entrada de los huéspedes.</span></span>
+
+                <a asp-controller="Disponibilidad" asp-action="Index" class="opcion-panel">
+                    <span class="opcion-icono"><i class="bi bi-calendar2-week-fill"></i></span>
+                    <span class="opcion-texto"><span class="opcion-titulo">Disponibilidad</span><span class="opcion-descripcion">Revisa las habitaciones disponibles y comienza nuevas reservas.</span></span>
                 </a>
-                <a href="#" class="opcion-panel proximamente" aria-disabled="true" tabindex="-1">
-                    <span class="etiqueta-proximamente">Próximamente</span>
-                    <span class="opcion-icono oscuro"><i class="bi bi-box-arrow-right"></i></span>
-                    <span class="opcion-texto"><span class="opcion-titulo">Check-out</span><span class="opcion-descripcion">Registra la salida de los huéspedes.</span></span>
+
+                <a asp-controller="Reservas" asp-action="BuscarPorCodigo" class="opcion-panel">
+                    <span class="opcion-icono oscuro"><i class="bi bi-search"></i></span>
+                    <span class="opcion-texto"><span class="opcion-titulo">Buscar reserva por código</span><span class="opcion-descripcion">Localiza rápidamente una reservación para darle seguimiento.</span></span>
                 </a>
+
                 <a asp-controller="Habitaciones" asp-action="Index" class="opcion-panel">
                     <span class="opcion-icono"><i class="bi bi-door-open-fill"></i></span>
                     <span class="opcion-texto"><span class="opcion-titulo">Habitaciones</span><span class="opcion-descripcion">Consulta las habitaciones del hotel.</span></span>
@@ -547,10 +547,15 @@
         </section>
 
         <section class="grupo-panel">
-            <div class="grupo-encabezado"><i class="bi bi-cart-fill"></i><h3>Ventas</h3></div>
+            <div class="grupo-encabezado"><i class="bi bi-cash-coin"></i><h3>Cobros y ventas</h3></div>
             <div class="opciones-panel">
+                <a asp-controller="CuentasPorCobrar" asp-action="Index" class="opcion-panel principal">
+                    <span class="opcion-icono cafe"><i class="bi bi-wallet2"></i></span>
+                    <span class="opcion-texto"><span class="opcion-titulo">Cuentas por cobrar</span><span class="opcion-descripcion">Consulta saldos y registra los pagos de los huéspedes.</span></span>
+                </a>
+
                 <a asp-controller="POS" asp-action="Index" class="opcion-panel principal">
-                    <span class="opcion-icono cafe"><i class="bi bi-cart-fill"></i></span>
+                    <span class="opcion-icono"><i class="bi bi-cart-fill"></i></span>
                     <span class="opcion-texto"><span class="opcion-titulo">Punto de venta</span><span class="opcion-descripcion">Registra ventas de productos y servicios.</span></span>
                 </a>
             </div>

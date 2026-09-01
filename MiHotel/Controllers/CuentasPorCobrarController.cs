@@ -51,6 +51,16 @@ namespace MiHotel.Controllers
             return nombreRol == "admin";
         }
 
+        private bool EsRecepcionista()
+        {
+            string nombreRol = HttpContext.Session
+                .GetString("NombreRol")?
+                .Trim()
+                .ToLower() ?? "";
+
+            return nombreRol == "recepcionista";
+        }
+
         private static bool EsFormaPagoTarjeta(string nombreFormaPago)
         {
             return nombreFormaPago.Contains("tarjeta", StringComparison.OrdinalIgnoreCase);
@@ -100,6 +110,15 @@ namespace MiHotel.Controllers
             }
 
             if (EsAdministrador())
+            {
+                return true;
+            }
+
+            // Consultar cuentas y registrar cobros son funciones operativas
+            // indispensables de recepción. Se conservan como acceso base del
+            // rol aunque la asignación configurable de permisos esté incompleta.
+            if (EsRecepcionista()
+                && nombrePermiso is "gestionar_cxc" or "cobrar_cuenta")
             {
                 return true;
             }
