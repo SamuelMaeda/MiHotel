@@ -4,6 +4,8 @@
     ViewData["Title"] = "Crear Habitación";
 }
 
+<link rel="stylesheet" href="~/css/habitaciones-fotografias.css" asp-append-version="true" />
+
 <style>
     .tarjeta-contenido {
         background-color: white;
@@ -86,13 +88,20 @@
             <span asp-validation-for="Descripcion" class="text-danger"></span>
         </div>
 
-        <div class="mb-3">
+        <div class="mb-3 carga-fotografias" data-maximo="6" data-existentes="0">
             <label asp-for="Fotografias" class="form-label">Fotografías de la habitación (Opcional)</label>
             <input asp-for="Fotografias"
-                   class="form-control"
+                   class="form-control input-fotografias"
                    type="file"
                    accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
                    multiple />
+            <div class="zona-fotografias" tabindex="0" role="button" aria-label="Arrastrar, pegar o seleccionar fotografías">
+                <i class="bi bi-images"></i>
+                <span class="instruccion-principal">Arrastre y suelte las fotografías aquí</span>
+                <span class="instruccion-secundaria">También puede hacer clic para buscarlas o pegar una imagen con Ctrl+V.</span>
+            </div>
+            <div class="mensaje-fotografias" role="alert"></div>
+            <div class="previsualizaciones-fotografias"></div>
             <span asp-validation-for="Fotografias" class="text-danger d-block"></span>
             <div class="form-text">
                 Nota: puede seleccionar hasta 6 fotografías en formato JPG, PNG o WEBP. El tamaño máximo es de 10 MB por fotografía.
@@ -114,4 +123,5 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/habitaciones-fotografias.js" asp-append-version="true"></script>
 }

@@ -1,0 +1,83 @@
+.zona-fotografias {
+    margin-top: 10px;
+    padding: 22px 16px;
+    border: 2px dashed #aaa8c7;
+    border-radius: 10px;
+    background: #f8f8fb;
+    color: #4b4b55;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .15s ease, background-color .15s ease, box-shadow .15s ease;
+}
+
+.zona-fotografias:hover,
+.zona-fotografias:focus,
+.zona-fotografias.arrastrando {
+    border-color: #464482;
+    background: #f0eff8;
+    box-shadow: 0 0 0 3px rgba(70, 68, 130, .12);
+    outline: none;
+}
+
+.zona-fotografias i {
+    display: block;
+    margin-bottom: 6px;
+    color: #464482;
+    font-size: 1.7rem;
+}
+
+.zona-fotografias .instruccion-principal {
+    display: block;
+    font-weight: 600;
+}
+
+.zona-fotografias .instruccion-secundaria {
+    display: block;
+    margin-top: 3px;
+    color: #6c757d;
+    font-size: .9rem;
+}
+
+.mensaje-fotografias {
+    display: none;
+    margin-top: 8px;
+    color: #8f1d26;
+    font-size: .9rem;
+}
+
+.previsualizaciones-fotografias {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.previsualizacion-fotografia {
+    position: relative;
+    overflow: hidden;
+    min-height: 115px;
+    border: 1px solid #dedede;
+    border-radius: 9px;
+    background: #f4f4f4;
+}
+
+.previsualizacion-fotografia img {
+    display: block;
+    width: 100%;
+    height: 115px;
+    object-fit: cover;
+}
+
+.quitar-fotografia {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(130, 75, 68, .94);
+    color: white;
+    line-height: 30px;
+}

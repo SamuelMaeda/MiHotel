@@ -377,7 +377,7 @@ namespace MiHotel.Controllers
 
             ValidarFotografias(modelo.Fotografias);
             ValidarSubcategoriaActiva(modelo);
-            int nuevasFotografias = modelo.Fotografias.Count(a => a.Length > 0);
+            int nuevasFotografias = modelo.Fotografias?.Count(a => a.Length > 0) ?? 0;
             if (nuevasFotografias > MaximoFotografiasPorHabitacion)
             {
                 ModelState.AddModelError(nameof(modelo.Fotografias),
@@ -559,7 +559,7 @@ namespace MiHotel.Controllers
                 using var transaccion = conexion.BeginTransaction();
 
                 int existentes = ContarFotografias(conexion, modelo.IdProser, transaccion);
-                int nuevas = modelo.Fotografias.Count(a => a.Length > 0);
+                int nuevas = modelo.Fotografias?.Count(a => a.Length > 0) ?? 0;
                 if (existentes + nuevas > MaximoFotografiasPorHabitacion)
                 {
                     transaccion.Rollback();

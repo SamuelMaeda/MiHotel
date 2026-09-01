@@ -23,7 +23,7 @@ namespace MiHotel.Models
         public string? Descripcion { get; set; }
 
         [Display(Name = "Fotografías de la habitación")]
-        public List<IFormFile> Fotografias { get; set; } = new();
+        public List<IFormFile>? Fotografias { get; set; }
 
         public List<HabitacionFotografiaViewModel> FotografiasExistentes { get; set; } = new();
     }
