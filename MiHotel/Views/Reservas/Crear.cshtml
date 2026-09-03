@@ -181,9 +181,12 @@
 <div class="container-fluid px-3 px-md-4 py-4">
     <div class="row justify-content-center">
         <div class="col-12 col-xl-10">
-            <div class="tarjeta-contenido">
-                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                    <h3 class="m-0">Nueva Reserva</h3>
+            <div class="tarjeta-contenido mh-page-shell mh-page-shell--form">
+                <div class="mh-page-header">
+                    <div>
+                        <h3>Nueva reserva</h3>
+                        <p>Complete los datos de la estadía y revise el total estimado antes de guardarla.</p>
+                    </div>
                 </div>
 
                 @if (ViewBag.Mensaje != null)
@@ -225,8 +228,8 @@
                             <div class="col-12 col-lg-6 mb-3">
                                 <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
                                     <label class="form-label m-0">Cliente</label>
-                                    <a href="#" id="btnRegistrarCliente" class="btn-cliente">
-                                        Registrar Cliente
+                                    <a href="#" id="btnRegistrarCliente" class="btn-cliente mh-btn mh-btn-outline" title="Registrar un cliente nuevo sin perder los datos de esta reserva">
+                                        <i class="bi bi-person-plus-fill"></i> Registrar cliente
                                     </a>
                                 </div>
 
@@ -337,14 +340,14 @@
                                                        name="FechasSeparadas"
                                                        value="@fecha.ToString("yyyy-MM-dd")"
                                                        class="form-control fecha-separada-input" />
-                                                <button type="button" class="btn-quitar-fecha" title="Quitar fecha">
+                                                <button type="button" class="btn-quitar-fecha mh-icon-button mh-icon-cancel" title="Quitar esta fecha de hospedaje">
                                                     <i class="bi bi-trash-fill"></i>
                                                 </button>
                                             </div>
                                         }
                                     </div>
 
-                                    <button type="button" id="btnAgregarFecha" class="btn-agregar-fecha">
+                                    <button type="button" id="btnAgregarFecha" class="btn-agregar-fecha mh-btn mh-btn-primary" title="Agregar otra fecha de hospedaje">
                                         <i class="bi bi-plus-lg"></i> Agregar fecha
                                     </button>
                                 </div>
@@ -402,17 +405,16 @@
                         </div>
                     </div>
 
-                    <div class="acciones-formulario">
-                        <button type="submit" class="btn-guardar">Guardar reserva</button>
-
+                    <div class="acciones-formulario mh-bottom-actions">
                         @if (esClienteSesion)
                         {
-                            <a asp-controller="Disponibilidad" asp-action="Index" class="btn-volver">Volver a disponibilidad</a>
+                            <a asp-controller="Disponibilidad" asp-action="Index" class="btn-volver mh-btn mh-btn-back" title="Regresar a la consulta de disponibilidad"><i class="bi bi-arrow-left-circle-fill"></i> Volver a disponibilidad</a>
                         }
                         else
                         {
-                            <a asp-controller="Reservas" asp-action="Index" class="btn-volver">Volver al listado</a>
+                            <a asp-controller="Reservas" asp-action="Index" class="btn-volver mh-btn mh-btn-back" title="Regresar al listado de reservas"><i class="bi bi-arrow-left-circle-fill"></i> Volver al listado</a>
                         }
+                        <button type="submit" class="btn-guardar mh-btn mh-btn-primary" title="Registrar la nueva reserva"><i class="bi bi-calendar-check-fill"></i> Guardar reserva</button>
                     </div>
                 </form>
             </div>

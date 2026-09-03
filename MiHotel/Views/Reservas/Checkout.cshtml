@@ -98,8 +98,8 @@
 
 </style>
 
-<div class="tarjeta-contenido">
-    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4">
+<div class="tarjeta-contenido mh-page-shell">
+    <div class="mh-page-header">
         <div>
             <h3 class="mb-1">Check-out de la reservación #@Model.IdReserva</h3>
             <p class="text-muted mb-0">
@@ -181,7 +181,7 @@
 
     <h5 class="mt-4">Movimientos de la cuenta</h5>
     <div class="table-responsive">
-        <table class="table table-bordered table-striped align-middle">
+        <table class="table table-bordered table-striped align-middle mh-table" data-mh-sortable>
             <thead class="table-dark">
                 <tr>
                     <th>Fecha</th>
@@ -217,27 +217,31 @@
         </table>
     </div>
 
-    <div class="acciones-checkout">
-        <a asp-controller="CuentasPorCobrar" asp-action="Detalle" asp-route-id="@Model.IdReserva" class="btn-checkout btn-pagar">
+    <div class="acciones-checkout mh-bottom-actions">
+        <a asp-controller="Reservas" asp-action="Index" class="btn-checkout mh-btn mh-btn-back" title="Regresar al listado de reservas">
+            <i class="bi bi-arrow-left-circle-fill"></i> Volver al listado
+        </a>
+
+        <form asp-controller="Reservas" asp-action="RegresarEnCurso" asp-route-id="@Model.IdReserva" method="post">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn-checkout btn-regresar mh-btn mh-btn-cancel" title="Cancelar este check-out y regresar la estadía a En curso" onclick="return confirm('¿Desea cancelar el check-out y permitir nuevamente consumos en la estadía?');">
+                <i class="bi bi-arrow-counterclockwise"></i> Regresar a en curso
+            </button>
+        </form>
+
+        <a asp-controller="CuentasPorCobrar" asp-action="Detalle" asp-route-id="@Model.IdReserva" class="btn-checkout btn-pagar mh-btn mh-btn-primary" title="Registrar o consultar los abonos de esta cuenta">
             <i class="bi bi-cash-coin"></i>
             @(Model.EsReservaAgrupada
                 ? "Pagar esta estadía o la cuenta agrupada"
                 : cuentaPagada ? "Consultar o corregir abonos" : "Registrar o corregir abonos")
         </a>
 
-        <form asp-controller="Reservas" asp-action="RegresarEnCurso" asp-route-id="@Model.IdReserva" method="post">
-            @Html.AntiForgeryToken()
-            <button type="submit" class="btn-checkout btn-regresar" onclick="return confirm('¿Desea cancelar el check-out y permitir nuevamente consumos en la estadía?');">
-                <i class="bi bi-arrow-left-circle"></i> Regresar a en curso
-            </button>
-        </form>
-
         @if (puedeFinalizarDirectamente)
         {
             <form asp-controller="Reservas" asp-action="FinalizarEstadia" asp-route-id="@Model.IdReserva" method="post">
                 @Html.AntiForgeryToken()
                 <input type="hidden" class="valor-requiere-factura" name="requiereFactura" />
-                <button type="submit" class="btn-checkout btn-finalizar boton-finalizar-estadia" disabled onclick="return confirm('¿Desea registrar la salida y liberar la habitación?');">
+                <button type="submit" class="btn-checkout btn-finalizar boton-finalizar-estadia mh-btn mh-btn-primary" title="Finalizar la estadía y liberar la habitación" disabled onclick="return confirm('¿Desea registrar la salida y liberar la habitación?');">
                     <i class="bi bi-check-circle"></i> <span class="texto-finalizar">Finalizar estadía</span>
                 </button>
             </form>
@@ -245,7 +249,8 @@
         else
         {
             <button type="button"
-                    class="btn-checkout btn-finalizar boton-finalizar-estadia"
+                    class="btn-checkout btn-finalizar boton-finalizar-estadia mh-btn mh-btn-primary"
+                    title="Finalizar la estadía"
                     disabled
                     data-bs-toggle="modal"
                     data-bs-target="#modalFinalizarConDeuda">
@@ -262,7 +267,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="tituloFinalizarConDeuda">La cuenta todavía tiene saldo pendiente</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar" title="Cerrar esta ventana"></button>
                 </div>
 
                 @if (Model.EsAdministrador)
@@ -289,9 +294,9 @@
                         </div>
 
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Continuar cobrando</button>
-                            <button type="submit" class="btn btn-success boton-finalizar-estadia" disabled onclick="return confirm('¿Confirma que desea finalizar esta estadía con deuda pendiente?');">
-                                <span class="texto-finalizar">Autorizar y finalizar con deuda</span>
+                            <button type="button" class="mh-btn mh-btn-back" data-bs-dismiss="modal" title="Cerrar esta ventana y continuar con los cobros"><i class="bi bi-arrow-left-circle-fill"></i> Continuar cobrando</button>
+                            <button type="submit" class="mh-btn mh-btn-primary boton-finalizar-estadia" title="Autorizar la salida conservando la deuda pendiente" disabled onclick="return confirm('¿Confirma que desea finalizar esta estadía con deuda pendiente?');">
+                                <i class="bi bi-check-circle-fill"></i> <span class="texto-finalizar">Autorizar y finalizar con deuda</span>
                             </button>
                         </div>
                     </form>
@@ -305,7 +310,7 @@
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Continuar cobrando</button>
+                        <button type="button" class="mh-btn mh-btn-back" data-bs-dismiss="modal" title="Cerrar esta ventana y continuar con los cobros"><i class="bi bi-arrow-left-circle-fill"></i> Continuar cobrando</button>
                     </div>
                 }
             </div>

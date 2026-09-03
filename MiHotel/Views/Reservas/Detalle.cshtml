@@ -40,7 +40,7 @@
         border-radius: 15px;
         padding: 25px;
         box-shadow: 0 4px 10px rgba(0,0,0,0.10);
-        max-width: 900px;
+        max-width: 1180px;
     }
 
     .detalle-label {
@@ -223,8 +223,10 @@
     }
 </style>
 
-<div class="tarjeta-contenido">
-    <h3 class="mb-4">Detalle de la Reserva</h3>
+<div class="tarjeta-contenido mh-page-shell mh-page-shell--form">
+    <div class="mh-page-header">
+        <div><h3>Detalle de la reserva #@Model.IdReserva</h3><p>Información de la estadía, su cuenta y los documentos relacionados.</p></div>
+    </div>
 
     @if (TempData["Mensaje"] != null)
     {
@@ -349,7 +351,7 @@
             </div>
 
             <div class="table-responsive">
-                <table class="table table-bordered align-middle mb-0">
+                <table class="table table-bordered align-middle mb-0 mh-table" data-mh-sortable>
                     <thead class="table-dark">
                         <tr>
                             <th>Entrada</th>
@@ -358,7 +360,7 @@
                             <th>Total</th>
                             <th>Saldo</th>
                             <th>Estado</th>
-                            <th>Acción</th>
+                            <th data-no-sort>Acción</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -378,7 +380,7 @@
                                     }
                                     else
                                     {
-                                        <a asp-controller="Reservas" asp-action="Detalle" asp-route-id="@reservaGrupo.IdReserva" class="btn-cuenta py-1 px-2">Ver</a>
+                                        <a asp-controller="Reservas" asp-action="Detalle" asp-route-id="@reservaGrupo.IdReserva" class="btn-cuenta mh-btn mh-btn-neutral py-1 px-2" title="Ver el detalle de esta estadía"><i class="bi bi-eye-fill"></i> Ver</a>
                                     }
                                 </td>
                             </tr>
@@ -401,7 +403,7 @@
                 <form asp-controller="Facturas" asp-action="Solicitar" method="post">
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="idReserva" value="@Model.IdReserva" />
-                    <button type="submit" class="btn-factura btn-factura-ver">Enviar a Facturas pendientes</button>
+                    <button type="submit" class="btn-factura btn-factura-ver mh-btn mh-btn-primary" title="Enviar esta reserva al listado de facturas pendientes"><i class="bi bi-send-fill"></i> Enviar a Facturas pendientes</button>
                 </form>
             }
         </div>
@@ -432,13 +434,13 @@
                     @if (!string.IsNullOrWhiteSpace(documento.MotivoEstado)) { <div class="alert alert-warning py-2 mt-2 mb-0"><strong>Motivo:</strong> @documento.MotivoEstado</div> }
                     <div class="vista-previa-factura mt-3">
                         <object data="@Url.Action("DocumentoPdf", "Facturas", new { id = documento.IdDocumentoFiscal })#page=1&amp;view=FitH&amp;toolbar=0" type="application/pdf" aria-label="Vista previa de la factura"></object>
-                        <button type="button" class="ampliar-factura" data-bs-toggle="modal" data-bs-target="#@modalId" aria-label="Ampliar factura">
+                        <button type="button" class="ampliar-factura" data-bs-toggle="modal" data-bs-target="#@modalId" aria-label="Ampliar factura" title="Ampliar la vista previa de la factura">
                             <i class="bi bi-zoom-in me-1"></i> Ampliar factura
                         </button>
                     </div>
                     <div class="d-flex flex-wrap gap-2 mt-3">
-                        <a asp-controller="Facturas" asp-action="DocumentoPdf" asp-route-id="@documento.IdDocumentoFiscal" target="_blank" rel="noopener" class="btn-factura btn-factura-ver">Ver PDF</a>
-                        <a asp-controller="Facturas" asp-action="DocumentoPdf" asp-route-id="@documento.IdDocumentoFiscal" asp-route-descargar="true" class="btn-factura btn-factura-descargar">Descargar</a>
+                        <a asp-controller="Facturas" asp-action="DocumentoPdf" asp-route-id="@documento.IdDocumentoFiscal" target="_blank" rel="noopener" class="btn-factura btn-factura-ver mh-btn mh-btn-neutral" title="Abrir la factura en una pestaña nueva"><i class="bi bi-file-earmark-pdf-fill"></i> Ver PDF</a>
+                        <a asp-controller="Facturas" asp-action="DocumentoPdf" asp-route-id="@documento.IdDocumentoFiscal" asp-route-descargar="true" class="btn-factura btn-factura-descargar mh-btn mh-btn-primary" title="Descargar esta factura en formato PDF"><i class="bi bi-download"></i> Descargar</a>
                     </div>
                     @if (Model.EsAdministrador && documento.Estado == "vigente")
                     {
@@ -447,14 +449,14 @@
                             <input type="hidden" name="idDocumentoFiscal" value="@documento.IdDocumentoFiscal" />
                             <input type="hidden" name="idReservaRetorno" value="@Model.IdReserva" />
                             <div class="col-md-9"><input name="motivo" class="form-control" maxlength="255" required placeholder="Motivo obligatorio de anulación" /></div>
-                            <div class="col-md-3 d-grid"><button class="btn-factura btn-factura-eliminar" type="submit">Anular documento</button></div>
+                            <div class="col-md-3 d-grid"><button class="btn-factura btn-factura-eliminar mh-btn mh-btn-cancel" type="submit" title="Anular este documento fiscal"><i class="bi bi-file-earmark-x-fill"></i> Anular documento</button></div>
                         </form>
                     }
                 </article>
 
                 <div class="modal fade" id="@modalId" tabindex="-1" aria-hidden="true">
                     <div class="modal-dialog modal-xl modal-dialog-centered"><div class="modal-content">
-                        <div class="modal-header"><h5 class="modal-title">@documento.Serie - @documento.NumeroDte</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                        <div class="modal-header"><h5 class="modal-title">@documento.Serie - @documento.NumeroDte</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar" title="Cerrar la vista ampliada"></button></div>
                         <div class="modal-body p-2 bg-light"><object class="factura-ampliada" data="@Url.Action("DocumentoPdf", "Facturas", new { id = documento.IdDocumentoFiscal })#page=1&amp;view=FitH" type="application/pdf"></object></div>
                     </div></div>
                 </div>
@@ -497,7 +499,7 @@
                     <input type="hidden" name="alcance" value="especifica" />
                     <input type="hidden" name="idReservaEspecifica" value="@Model.IdReserva" />
                 }
-                <div class="col-12"><button type="submit" class="btn-factura btn-factura-ver">Guardar factura</button></div>
+                <div class="col-12"><button type="submit" class="btn-factura btn-factura-ver mh-btn mh-btn-primary" title="Guardar la factura adjunta"><i class="bi bi-file-earmark-check-fill"></i> Guardar factura</button></div>
             </form>
 
             <hr />
@@ -509,7 +511,7 @@
             else
             {
                 <div class="table-responsive">
-                    <table class="table table-sm table-bordered align-middle mb-0">
+                    <table class="table table-sm table-bordered align-middle mb-0 mh-table" data-mh-sortable>
                         <thead><tr><th>Fecha</th><th>Hora</th><th>Usuario</th><th>Detalle</th></tr></thead>
                         <tbody>
                         @foreach (var movimiento in Model.HistorialFacturacion)
@@ -528,12 +530,10 @@
         }
     </section>
 
-    <div class="acciones-formulario">
-        <a asp-controller="CuentasPorCobrar" asp-action="Detalle" asp-route-id="@Model.IdReserva" class="btn-cuenta">
-            Ver cuenta y abonos
-        </a>
-        <a asp-controller="Reservas" asp-action="Index" class="btn-volver">
-            Volver al listado
+    <div class="acciones-formulario mh-bottom-actions">
+        <a asp-controller="Reservas" asp-action="Index" class="btn-volver mh-btn mh-btn-back" title="Regresar al listado de reservas"><i class="bi bi-arrow-left-circle-fill"></i> Volver al listado</a>
+        <a asp-controller="CuentasPorCobrar" asp-action="Detalle" asp-route-id="@Model.IdReserva" class="btn-cuenta mh-btn mh-btn-primary" title="Consultar la cuenta y los abonos de esta reserva">
+            <i class="bi bi-wallet2"></i> Ver cuenta y abonos
         </a>
     </div>
 </div>

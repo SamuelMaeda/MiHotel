@@ -231,9 +231,15 @@ namespace MiHotel.Controllers
             {
                 "cliente" => "c.nombre",
                 "empresa" => "ec.nombre",
+                "habitacion" => "p.codigo",
                 "fecha_entrada" => "r.fecha_entrada",
+                "fecha_salida" => "r.fecha_salida",
                 "hora_checkin" => "r.fecha_hora_checkin",
                 "hora_checkout" => "r.fecha_hora_checkout",
+                "total" => "total_reserva",
+                "saldo" => "r.saldo_pendiente",
+                "limpieza" => "cd.solicita_limpieza",
+                "estado" => "r.estado",
                 _ => "r.fecha_entrada"
             };
         }
@@ -413,7 +419,19 @@ namespace MiHotel.Controllers
                     r.fecha_hora_checkout,
                     r.codigo_seguridad,
                     r.cantidad_personas,
-                    r.total_reserva,
+                    r.total_reserva + COALESCE((
+                        SELECT SUM(m_legacy.recargo_tarjeta)
+                        FROM movimiento m_legacy
+                        WHERE m_legacy.id_reserva = r.id_reserva
+                          AND m_legacy.estado = 'activo'
+                          AND m_legacy.recargo_tarjeta > 0
+                          AND NOT EXISTS (
+                              SELECT 1
+                              FROM detalle marcador_legacy
+                              WHERE marcador_legacy.id_movimiento = m_legacy.id_movimiento
+                                AND marcador_legacy.descripcion = 'Recargo de tarjeta incorporado al total de la reserva'
+                          )
+                    ), 0) AS total_reserva,
                     r.saldo_pendiente,
                     r.estado,
                     r.observaciones
@@ -483,7 +501,19 @@ namespace MiHotel.Controllers
                     p.codigo AS habitacion,
                     r.fecha_entrada,
                     r.fecha_salida,
-                    r.total_reserva,
+                    r.total_reserva + COALESCE((
+                        SELECT SUM(m_legacy.recargo_tarjeta)
+                        FROM movimiento m_legacy
+                        WHERE m_legacy.id_reserva = r.id_reserva
+                          AND m_legacy.estado = 'activo'
+                          AND m_legacy.recargo_tarjeta > 0
+                          AND NOT EXISTS (
+                              SELECT 1
+                              FROM detalle marcador_legacy
+                              WHERE marcador_legacy.id_movimiento = m_legacy.id_movimiento
+                                AND marcador_legacy.descripcion = 'Recargo de tarjeta incorporado al total de la reserva'
+                          )
+                    ), 0) AS total_reserva,
                     r.saldo_pendiente,
                     r.estado
                 FROM reserva r
@@ -1332,7 +1362,19 @@ namespace MiHotel.Controllers
                         r.fecha_salida,
                         r.fecha_hora_checkin,
                         r.fecha_hora_checkout,
-                        r.total_reserva,
+                        r.total_reserva + COALESCE((
+                            SELECT SUM(m_legacy.recargo_tarjeta)
+                            FROM movimiento m_legacy
+                            WHERE m_legacy.id_reserva = r.id_reserva
+                              AND m_legacy.estado = 'activo'
+                              AND m_legacy.recargo_tarjeta > 0
+                              AND NOT EXISTS (
+                                  SELECT 1
+                                  FROM detalle marcador_legacy
+                                  WHERE marcador_legacy.id_movimiento = m_legacy.id_movimiento
+                                    AND marcador_legacy.descripcion = 'Recargo de tarjeta incorporado al total de la reserva'
+                              )
+                        ), 0) AS total_reserva,
                         r.saldo_pendiente,
                         COALESCE(cd.solicita_limpieza, 1) AS solicita_limpieza,
                         r.estado,
@@ -1346,7 +1388,24 @@ namespace MiHotel.Controllers
                             WHERE dfr.id_reserva = r.id_reserva
                               AND df.tipo_documento = 'factura'
                               AND df.estado = 'vigente'
-                        ) AS tiene_factura
+                        ) AS tiene_factura,
+                        EXISTS(
+                            SELECT 1
+                            FROM movimiento m_tarjeta
+                            INNER JOIN forma_pago fp_tarjeta
+                                ON fp_tarjeta.id_formapago = m_tarjeta.id_formapago
+                            WHERE m_tarjeta.estado = 'activo'
+                              AND LOWER(fp_tarjeta.nombre_forma) LIKE '%tarjeta%'
+                              AND (
+                                  m_tarjeta.id_reserva = r.id_reserva
+                                  OR EXISTS (
+                                      SELECT 1
+                                      FROM movimiento_reserva_aplicacion mra_tarjeta
+                                      WHERE mra_tarjeta.id_movimiento = m_tarjeta.id_movimiento
+                                        AND mra_tarjeta.id_reserva = r.id_reserva
+                                  )
+                              )
+                        ) AS pago_con_tarjeta
                     FROM reserva r
                     INNER JOIN clipro c ON r.id_clipro = c.id_clipro
                     LEFT JOIN cliente_detalle cd ON c.id_clipro = cd.id_clipro
@@ -2677,7 +2736,19 @@ namespace MiHotel.Controllers
                     r.fecha_entrada,
                     r.fecha_salida,
                     r.fecha_hora_checkin,
-                    r.total_reserva,
+                    r.total_reserva + COALESCE((
+                        SELECT SUM(m_legacy.recargo_tarjeta)
+                        FROM movimiento m_legacy
+                        WHERE m_legacy.id_reserva = r.id_reserva
+                          AND m_legacy.estado = 'activo'
+                          AND m_legacy.recargo_tarjeta > 0
+                          AND NOT EXISTS (
+                              SELECT 1
+                              FROM detalle marcador_legacy
+                              WHERE marcador_legacy.id_movimiento = m_legacy.id_movimiento
+                                AND marcador_legacy.descripcion = 'Recargo de tarjeta incorporado al total de la reserva'
+                          )
+                    ), 0) AS total_reserva,
                     r.saldo_pendiente,
                     CASE
                         WHEN r.id_reserva_grupo IS NULL THEN r.saldo_pendiente
@@ -2811,7 +2882,7 @@ namespace MiHotel.Controllers
                     m.fecha_hora,
                     m.estado,
                     m.observaciones
-                ORDER BY m.fecha_hora, m.id_movimiento;";
+                ORDER BY m.fecha_hora DESC, m.id_movimiento DESC;";
 
             using (var comando = new MySqlCommand(consultaMovimientos, conexion))
             {

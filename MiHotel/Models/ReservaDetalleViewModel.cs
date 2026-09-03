@@ -40,6 +40,7 @@
         public int CantidadPersonas { get; set; } = 1;
         public decimal TotalReserva { get; set; }
         public decimal SaldoPendiente { get; set; }
+        public bool RecargoTarjetaAplicado { get; set; }
         public string Estado { get; set; } = "";
     }
 }

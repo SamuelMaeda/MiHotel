@@ -207,22 +207,40 @@
         background-color: #fff0c9;
         color: #885b00;
     }
+
+    .indicador-tarjeta {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 27px;
+        height: 27px;
+        margin-left: 6px;
+        border-radius: 50%;
+        background-color: #e3e2f3;
+        color: #464482;
+        vertical-align: middle;
+    }
 </style>
 
-<div class="tarjeta-contenido">
-    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-        <h3 class="m-0">Gestión de Reservas</h3>
-        <a asp-controller="Reservas" asp-action="Crear" class="btn-crear">Nueva Reserva</a>
+<div class="tarjeta-contenido mh-page-shell">
+    <div class="mh-page-header">
+        <div>
+            <h3>Gestión de Reservas</h3>
+            <p>Consulta y administra las estadías registradas en el hotel.</p>
+        </div>
+        <a asp-controller="Reservas" asp-action="Crear" class="btn-crear mh-btn mh-btn-primary" title="Crear una nueva reservación">
+            <i class="bi bi-calendar-plus-fill"></i> Nueva reserva
+        </a>
     </div>
 
     <div class="tabs-vista">
-        <a asp-controller="Reservas" asp-action="Index" asp-route-vista="todas" asp-route-busqueda="@busqueda" asp-route-ordenarPor="@ordenarPor" asp-route-direccion="@direccion" class="tab-vista @(vista == "todas" ? "activa" : "")">Todas</a>
-        <a asp-controller="Reservas" asp-action="Index" asp-route-vista="pendiente" asp-route-busqueda="@busqueda" asp-route-ordenarPor="@ordenarPor" asp-route-direccion="@direccion" class="tab-vista @(vista == "pendiente" ? "activa" : "")">Pendientes de ingreso</a>
-        <a asp-controller="Reservas" asp-action="Index" asp-route-vista="en_curso" asp-route-busqueda="@busqueda" asp-route-ordenarPor="@ordenarPor" asp-route-direccion="@direccion" class="tab-vista @(vista == "en_curso" ? "activa" : "")">En curso</a>
-        <a asp-controller="Reservas" asp-action="Index" asp-route-vista="en_checkout" asp-route-busqueda="@busqueda" asp-route-ordenarPor="@ordenarPor" asp-route-direccion="@direccion" class="tab-vista @(vista == "en_checkout" ? "activa" : "")">En check-out</a>
-        <a asp-controller="Reservas" asp-action="Index" asp-route-vista="finalizada" asp-route-busqueda="@busqueda" asp-route-ordenarPor="@ordenarPor" asp-route-direccion="@direccion" class="tab-vista @(vista == "finalizada" ? "activa" : "")">Finalizadas</a>
-        <a asp-controller="Reservas" asp-action="Index" asp-route-vista="pendientes_factura" asp-route-busqueda="@busqueda" asp-route-ordenarPor="@ordenarPor" asp-route-direccion="@direccion" class="tab-vista @(vista == "pendientes_factura" ? "activa" : "")">Pendientes de factura</a>
-        <a asp-controller="Reservas" asp-action="Index" asp-route-vista="cancelada" asp-route-busqueda="@busqueda" asp-route-ordenarPor="@ordenarPor" asp-route-direccion="@direccion" class="tab-vista @(vista == "cancelada" ? "activa" : "")">Canceladas</a>
+        <a asp-controller="Reservas" asp-action="Index" asp-route-vista="todas" asp-route-busqueda="@busqueda" asp-route-ordenarPor="@ordenarPor" asp-route-direccion="@direccion" class="tab-vista @(vista == "todas" ? "activa" : "")" title="Mostrar todas las reservas"><i class="bi bi-grid-fill me-1"></i>Todas</a>
+        <a asp-controller="Reservas" asp-action="Index" asp-route-vista="pendiente" asp-route-busqueda="@busqueda" asp-route-ordenarPor="@ordenarPor" asp-route-direccion="@direccion" class="tab-vista @(vista == "pendiente" ? "activa" : "")" title="Mostrar reservas pendientes de ingreso"><i class="bi bi-hourglass-split me-1"></i>Pendientes de ingreso</a>
+        <a asp-controller="Reservas" asp-action="Index" asp-route-vista="en_curso" asp-route-busqueda="@busqueda" asp-route-ordenarPor="@ordenarPor" asp-route-direccion="@direccion" class="tab-vista @(vista == "en_curso" ? "activa" : "")" title="Mostrar estadías en curso"><i class="bi bi-door-open-fill me-1"></i>En curso</a>
+        <a asp-controller="Reservas" asp-action="Index" asp-route-vista="en_checkout" asp-route-busqueda="@busqueda" asp-route-ordenarPor="@ordenarPor" asp-route-direccion="@direccion" class="tab-vista @(vista == "en_checkout" ? "activa" : "")" title="Mostrar estadías en proceso de salida"><i class="bi bi-box-arrow-right me-1"></i>En check-out</a>
+        <a asp-controller="Reservas" asp-action="Index" asp-route-vista="finalizada" asp-route-busqueda="@busqueda" asp-route-ordenarPor="@ordenarPor" asp-route-direccion="@direccion" class="tab-vista @(vista == "finalizada" ? "activa" : "")" title="Mostrar estadías finalizadas"><i class="bi bi-check-circle-fill me-1"></i>Finalizadas</a>
+        <a asp-controller="Reservas" asp-action="Index" asp-route-vista="pendientes_factura" asp-route-busqueda="@busqueda" asp-route-ordenarPor="@ordenarPor" asp-route-direccion="@direccion" class="tab-vista @(vista == "pendientes_factura" ? "activa" : "")" title="Mostrar reservas pendientes de factura"><i class="bi bi-receipt me-1"></i>Pendientes de factura</a>
+        <a asp-controller="Reservas" asp-action="Index" asp-route-vista="cancelada" asp-route-busqueda="@busqueda" asp-route-ordenarPor="@ordenarPor" asp-route-direccion="@direccion" class="tab-vista @(vista == "cancelada" ? "activa" : "")" title="Mostrar reservas canceladas"><i class="bi bi-x-circle-fill me-1"></i>Canceladas</a>
     </div>
 
     @if (TempData["Exito"] != null)
@@ -247,7 +265,7 @@
                   onsubmit="return confirm('¿Confirma que el dinero fue devuelto al huésped y desea registrar el reembolso? Esta acción no se puede deshacer desde esta pantalla.');">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="registrarReembolso" value="true" />
-                <button type="submit" class="btn btn-danger">
+                <button type="submit" class="mh-btn mh-btn-cancel" title="Registrar el reembolso y cancelar esta reserva">
                     <i class="bi bi-cash-stack me-1"></i> Registrar reembolso y cancelar
                 </button>
             </form>
@@ -279,7 +297,7 @@
     </div>
 
     <div class="table-responsive">
-        <table class="table table-bordered table-striped">
+        <table class="table table-bordered table-striped mh-table @(vista == "pendiente" ? "" : "tabla-reservas")">
             <thead class="table-dark">
                 <tr>
                     <th>
@@ -292,13 +310,21 @@
                             Empresa <i class="bi @IconoOrden("empresa")"></i>
                         </a>
                     </th>
-                    <th>Habitación</th>
+                    <th>
+                        <a asp-controller="Reservas" asp-action="Index" asp-route-busqueda="@busqueda" asp-route-ordenarPor="habitacion" asp-route-direccion="@SiguienteDireccion("habitacion")" asp-route-vista="@vista" class="encabezado-orden">
+                            Habitación <i class="bi @IconoOrden("habitacion")"></i>
+                        </a>
+                    </th>
                     <th>
                         <a asp-controller="Reservas" asp-action="Index" asp-route-busqueda="@busqueda" asp-route-ordenarPor="fecha_entrada" asp-route-direccion="@SiguienteDireccion("fecha_entrada")" asp-route-vista="@vista" class="encabezado-orden">
                             Entrada <i class="bi @IconoOrden("fecha_entrada")"></i>
                         </a>
                     </th>
-                    <th>Salida</th>
+                    <th>
+                        <a asp-controller="Reservas" asp-action="Index" asp-route-busqueda="@busqueda" asp-route-ordenarPor="fecha_salida" asp-route-direccion="@SiguienteDireccion("fecha_salida")" asp-route-vista="@vista" class="encabezado-orden">
+                            Salida <i class="bi @IconoOrden("fecha_salida")"></i>
+                        </a>
+                    </th>
                     @if (mostrarHoras)
                     {
                         <th>
@@ -312,13 +338,29 @@
                             </a>
                         </th>
                     }
-                    <th>Total</th>
-                    <th>Pago Pendiente</th>
+                    <th>
+                        <a asp-controller="Reservas" asp-action="Index" asp-route-busqueda="@busqueda" asp-route-ordenarPor="total" asp-route-direccion="@SiguienteDireccion("total")" asp-route-vista="@vista" class="encabezado-orden">
+                            Total <i class="bi @IconoOrden("total")"></i>
+                        </a>
+                    </th>
+                    <th>
+                        <a asp-controller="Reservas" asp-action="Index" asp-route-busqueda="@busqueda" asp-route-ordenarPor="saldo" asp-route-direccion="@SiguienteDireccion("saldo")" asp-route-vista="@vista" class="encabezado-orden">
+                            Pago pendiente <i class="bi @IconoOrden("saldo")"></i>
+                        </a>
+                    </th>
                     @if (mostrarLimpieza)
                     {
-                        <th>Limpieza</th>
+                        <th>
+                            <a asp-controller="Reservas" asp-action="Index" asp-route-busqueda="@busqueda" asp-route-ordenarPor="limpieza" asp-route-direccion="@SiguienteDireccion("limpieza")" asp-route-vista="@vista" class="encabezado-orden">
+                                Limpieza <i class="bi @IconoOrden("limpieza")"></i>
+                            </a>
+                        </th>
                     }
-                    <th>Estado</th>
+                    <th>
+                        <a asp-controller="Reservas" asp-action="Index" asp-route-busqueda="@busqueda" asp-route-ordenarPor="estado" asp-route-direccion="@SiguienteDireccion("estado")" asp-route-vista="@vista" class="encabezado-orden">
+                            Estado <i class="bi @IconoOrden("estado")"></i>
+                        </a>
+                    </th>
                     <th>Acciones</th>
                 </tr>
             </thead>
@@ -327,7 +369,7 @@
                 @if (Model.Rows.Count == 0)
                 {
                     <tr>
-                        <td colspan="@(9 + (mostrarHoras ? 2 : 0) + (mostrarLimpieza ? 1 : 0))" class="text-center">No se encontraron reservas.</td>
+                        <td colspan="@(9 + (mostrarHoras ? 2 : 0) + (mostrarLimpieza ? 1 : 0))" class="mh-empty-state"><i class="bi bi-calendar-x me-2"></i>No se encontraron reservas.</td>
                     </tr>
                 }
                 else
@@ -337,6 +379,7 @@
                         string estado = fila["estado"]?.ToString()?.Trim().ToLower() ?? "";
                         string estadoFacturacion = fila["estado_facturacion"]?.ToString()?.Trim().ToLower() ?? "sin_definir";
                         bool tieneFactura = Convert.ToBoolean(fila["tiene_factura"]);
+                        bool pagoConTarjeta = Convert.ToBoolean(fila["pago_con_tarjeta"]);
                         bool fechaIngresoVencida = estado == "pendiente"
                             && Convert.ToDateTime(fila["fecha_entrada"]).Date < DateTime.Today;
                         bool fechaIngresoHoy = estado == "pendiente"
@@ -361,14 +404,14 @@
                                 <td>@(fila["fecha_hora_checkin"] == DBNull.Value ? "-" : Convert.ToDateTime(fila["fecha_hora_checkin"]).ToString("HH:mm"))</td>
                                 <td>@(fila["fecha_hora_checkout"] == DBNull.Value ? "-" : Convert.ToDateTime(fila["fecha_hora_checkout"]).ToString("HH:mm"))</td>
                             }
-                            <td>Q @Convert.ToDecimal(fila["total_reserva"]).ToString("N2")</td>
-                            <td>Q @Convert.ToDecimal(fila["saldo_pendiente"]).ToString("N2")</td>
+                            <td class="celda-moneda">Q @Convert.ToDecimal(fila["total_reserva"]).ToString("N2")</td>
+                            <td class="celda-moneda">Q @Convert.ToDecimal(fila["saldo_pendiente"]).ToString("N2")</td>
                             @if (mostrarLimpieza)
                             {
                                 <td>@(Convert.ToBoolean(fila["solicita_limpieza"]) ? "Sí" : "No")</td>
                             }
 
-                            <td>
+                            <td class="celda-estado">
                                 @if (estado == "pendiente")
                                 {
                                     <span class="estado-pendiente">
@@ -409,11 +452,17 @@
                                         <i class="bi bi-hourglass-split"></i>
                                     </span>
                                 }
+                                @if (pagoConTarjeta)
+                                {
+                                    <span class="indicador-tarjeta" title="Pago realizado con tarjeta" aria-label="Pago realizado con tarjeta">
+                                        <i class="bi bi-credit-card-fill"></i>
+                                    </span>
+                                }
                             </td>
 
                             <td>
                                 <div class="acciones-contenedor">
-                                    <a asp-controller="Reservas" asp-action="Detalle" asp-route-id="@fila["id_reserva"]" class="btn-icono btn-detalle" title="Ver detalle">
+                                    <a asp-controller="Reservas" asp-action="Detalle" asp-route-id="@fila["id_reserva"]" class="btn-icono btn-detalle mh-icon-button mh-icon-view" title="Ver el detalle de la reserva" aria-label="Ver el detalle de la reserva">
                                         <i class="bi bi-eye-fill"></i>
                                     </a>
 
@@ -425,8 +474,8 @@
                                             <input type="hidden" name="idReserva" value="@fila["id_reserva"]" />
                                             <input type="hidden" name="retorno" value="reservas" />
                                             <input type="hidden" name="busqueda" value="@busqueda" />
-                                            <button type="submit" class="btn-icono btn-cancelar" title="Cancelar solicitud de factura">
-                                                <i class="bi bi-receipt-x"></i>
+                                            <button type="submit" class="btn-icono btn-cancelar mh-icon-button mh-icon-cancel" title="Cancelar la solicitud de factura" aria-label="Cancelar la solicitud de factura">
+                                                <i class="bi bi-x-circle-fill"></i>
                                             </button>
                                         </form>
                                     }
@@ -434,7 +483,7 @@
 
                                     @if (estado == "pendiente")
                                     {
-                                        <a asp-controller="Reservas" asp-action="Editar" asp-route-id="@fila["id_reserva"]" class="btn-icono btn-editar" title="Editar reserva">
+                                        <a asp-controller="Reservas" asp-action="Editar" asp-route-id="@fila["id_reserva"]" class="btn-icono btn-editar mh-icon-button mh-icon-edit" title="Editar esta reserva" aria-label="Editar esta reserva">
                                             <i class="bi bi-pencil-fill"></i>
                                         </a>
                                     }
@@ -443,7 +492,7 @@
                                     {
                                         <form asp-controller="Reservas" asp-action="CheckIn" asp-route-id="@fila["id_reserva"]" method="post" class="form-accion">
                                             @Html.AntiForgeryToken()
-                                            <button type="submit" class="btn-icono btn-checkin" title="Realizar check-in">
+                                            <button type="submit" class="btn-icono btn-checkin mh-icon-button mh-icon-positive" title="Realizar el check-in de esta reserva" aria-label="Realizar el check-in de esta reserva">
                                                 <i class="bi bi-box-arrow-in-right"></i>
                                             </button>
                                         </form>
@@ -453,7 +502,7 @@
                                     {
                                         <form asp-controller="Reservas" asp-action="IniciarCheckout" asp-route-id="@fila["id_reserva"]" method="post" class="form-accion">
                                             @Html.AntiForgeryToken()
-                                            <button type="submit" class="btn-icono btn-checkout" title="Iniciar check-out">
+                                            <button type="submit" class="btn-icono btn-checkout mh-icon-button mh-icon-positive" title="Iniciar el check-out de esta estadía" aria-label="Iniciar el check-out de esta estadía">
                                                 <i class="bi bi-box-arrow-right"></i>
                                             </button>
                                         </form>
@@ -461,7 +510,7 @@
 
                                     @if (estado == "en_checkout")
                                     {
-                                        <a asp-controller="Reservas" asp-action="Checkout" asp-route-id="@fila["id_reserva"]" class="btn-icono btn-checkout" title="Continuar check-out">
+                                        <a asp-controller="Reservas" asp-action="Checkout" asp-route-id="@fila["id_reserva"]" class="btn-icono btn-checkout mh-icon-button mh-icon-positive" title="Continuar el check-out de esta estadía" aria-label="Continuar el check-out de esta estadía">
                                             <i class="bi bi-cash-coin"></i>
                                         </a>
                                     }
@@ -470,7 +519,7 @@
                                     {
                                         <form asp-controller="Reservas" asp-action="Cancelar" asp-route-id="@fila["id_reserva"]" method="post" class="form-accion">
                                             @Html.AntiForgeryToken()
-                                            <button type="submit" class="btn-icono btn-cancelar" title="Cancelar reserva">
+                                            <button type="submit" class="btn-icono btn-cancelar mh-icon-button mh-icon-cancel" title="Cancelar esta reserva" aria-label="Cancelar esta reserva">
                                                 <i class="bi bi-x-circle-fill"></i>
                                             </button>
                                         </form>
@@ -489,7 +538,7 @@
         <div class="paginacion">
             @for (int i = 1; i <= totalPaginas; i++)
             {
-                <a asp-controller="Reservas" asp-action="Index" asp-route-busqueda="@busqueda" asp-route-ordenarPor="@ordenarPor" asp-route-direccion="@direccion" asp-route-vista="@vista" asp-route-pagina="@i" class="pagina-link @(i == paginaActual ? "activa" : "")">
+                <a asp-controller="Reservas" asp-action="Index" asp-route-busqueda="@busqueda" asp-route-ordenarPor="@ordenarPor" asp-route-direccion="@direccion" asp-route-vista="@vista" asp-route-pagina="@i" class="pagina-link @(i == paginaActual ? "activa" : "")" title="Ir a la página @i" aria-current="@(i == paginaActual ? "page" : null)">
                     @i
                 </a>
             }

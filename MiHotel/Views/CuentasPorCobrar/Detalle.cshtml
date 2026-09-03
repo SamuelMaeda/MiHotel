@@ -12,9 +12,13 @@
     decimal recargoTarjetaUnitario = ViewBag.RecargoTarjeta is decimal recargo ? recargo : 25m;
     int unidadesRecargo = Model.EsCuentaAgrupada
         ? Model.EstadiasAgrupadas
-            .Where(estadia => estadia.Estado.Trim().ToLower() != "cancelada" && estadia.SaldoPendiente > 0)
+            .Where(estadia => estadia.Estado.Trim().ToLower() != "cancelada"
+                && estadia.SaldoPendiente > 0
+                && !estadia.RecargoTarjetaAplicado)
             .Sum(estadia => estadia.CantidadPersonas * Math.Max(1, (estadia.FechaSalida.Date - estadia.FechaEntrada.Date).Days))
-        : Model.CantidadPersonas * Math.Max(1, (Model.FechaSalida.Date - Model.FechaEntrada.Date).Days);
+        : Model.RecargoTarjetaAplicado
+            ? 0
+            : Model.CantidadPersonas * Math.Max(1, (Model.FechaSalida.Date - Model.FechaEntrada.Date).Days);
     decimal recargoTarjeta = recargoTarjetaUnitario * unidadesRecargo;
 }
 
@@ -75,8 +79,8 @@
     .resumen-recargo { background:#fff4d6;border:1px solid #f0d58c;border-radius:10px;padding:14px 16px; }
 </style>
 
-<div class="tarjeta-contenido">
-    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4">
+<div class="tarjeta-contenido mh-page-shell">
+    <div class="mh-page-header">
         <div>
             @if (Model.EsCuentaAgrupada)
             {
@@ -89,18 +93,6 @@
                 <p class="text-muted mb-0">Registro y corrección de abonos de la estadía.</p>
             }
         </div>
-        @if (volverCheckout)
-        {
-            <a asp-controller="Reservas" asp-action="Checkout" asp-route-id="@(Model.IdReservaRetorno ?? Model.IdReserva)" class="btn-accion btn-volver">
-                <i class="bi bi-arrow-left"></i> Volver al check-out
-            </a>
-        }
-        else
-        {
-            <a asp-controller="CuentasPorCobrar" asp-action="Index" class="btn-accion btn-volver">
-                <i class="bi bi-arrow-left"></i> Volver al listado
-            </a>
-        }
     </div>
 
     @if (TempData["Exito"] != null)
@@ -121,7 +113,11 @@
         <div class="dato-cuenta"><span>Estado</span><strong>@(Model.EsCuentaAgrupada ? "Varias estadías" : Model.EstadoReserva.Replace("_", " "))</strong></div>
         <div class="dato-cuenta">
             <span>@(Model.EsCuentaAgrupada ? "Saldo total de la reserva agrupada" : "Saldo pendiente")</span>
-            <strong class="saldo-cuenta">Q @Model.SaldoPendiente.ToString("N2")</strong>
+            <strong id="saldoPendienteCuenta"
+                    class="saldo-cuenta"
+                    data-saldo-base="@Model.SaldoPendiente.ToString(System.Globalization.CultureInfo.InvariantCulture)">
+                Q @Model.SaldoPendiente.ToString("N2")
+            </strong>
         </div>
     </div>
 
@@ -129,7 +125,7 @@
     {
         <h5>Fechas incluidas en la cuenta</h5>
         <div class="table-responsive mb-4">
-            <table class="table table-bordered table-striped align-middle">
+            <table class="table table-bordered table-striped align-middle mh-table" data-mh-sortable>
                 <thead class="table-dark">
                     <tr>
                         <th>Reservación</th>
@@ -191,7 +187,9 @@
                             {
                                 <option value="@estadia.IdReserva"
                                         data-saldo="@estadia.SaldoPendiente.ToString(System.Globalization.CultureInfo.InvariantCulture)"
-                                        data-recargo="@((recargoTarjetaUnitario * estadia.CantidadPersonas * Math.Max(1, (estadia.FechaSalida.Date - estadia.FechaEntrada.Date).Days)).ToString(System.Globalization.CultureInfo.InvariantCulture))">
+                                        data-recargo="@((estadia.RecargoTarjetaAplicado
+                                            ? 0
+                                            : recargoTarjetaUnitario * estadia.CantidadPersonas * Math.Max(1, (estadia.FechaSalida.Date - estadia.FechaEntrada.Date).Days)).ToString(System.Globalization.CultureInfo.InvariantCulture))">
                                     Solo estadía #@estadia.IdReserva del @estadia.FechaEntrada.ToString("dd/MM/yyyy") — saldo Q @estadia.SaldoPendiente.ToString("N2")
                                 </option>
                             }
@@ -208,7 +206,7 @@
                     @if (Model.EsCuentaAgrupada)
                     {
                         <button id="usarSaldoCompleto" type="button" class="btn btn-sm btn-outline-secondary mt-2">
-                            Usar el saldo completo seleccionado
+                            <i class="bi bi-check2-square me-1"></i> Usar el saldo completo seleccionado
                         </button>
                     }
                 </div>
@@ -230,14 +228,6 @@
                         <div class="fw-bold mt-1">Total a cobrar en la terminal: Q <span id="totalCobroResumen">@recargoTarjeta.ToString("N2")</span></div>
                     </div>
                 </div>
-                <div class="col-12">
-                    <div class="form-check border rounded p-3 ps-5 bg-light">
-                        <input class="form-check-input" type="checkbox" name="solicitarFacturaAlLiquidar" value="true" id="solicitarFacturaAlLiquidar" />
-                        <label class="form-check-label fw-semibold" for="solicitarFacturaAlLiquidar">
-                            ¿El huésped necesita factura?
-                        </label>
-                    </div>
-                </div>
                 <div class="col-md-4">
                     <label for="referencia" class="form-label">Referencia opcional</label>
                     <input id="referencia" name="referencia" class="form-control" maxlength="100" placeholder="Transferencia o depósito" />
@@ -247,7 +237,7 @@
                     <textarea id="observaciones" name="observaciones" class="form-control" rows="2" maxlength="140"></textarea>
                 </div>
                 <div class="col-12">
-                    <button type="submit" class="btn-accion btn-guardar"><i class="bi bi-cash-coin"></i> Registrar abono</button>
+                    <button type="submit" class="btn-accion btn-guardar mh-btn mh-btn-primary"><i class="bi bi-cash-coin"></i> Registrar abono</button>
                 </div>
             </form>
         </div>
@@ -259,7 +249,7 @@
 
     <h5>Historial de movimientos</h5>
     <div class="table-responsive">
-        <table class="table table-bordered table-striped align-middle">
+        <table class="table table-bordered table-striped align-middle mh-table" data-mh-sortable>
             <thead class="table-dark">
                 <tr>
                     <th>Fecha</th>
@@ -295,6 +285,21 @@
         </table>
     </div>
 
+    <div class="mh-bottom-actions">
+        @if (volverCheckout)
+        {
+            <a asp-controller="Reservas" asp-action="Checkout" asp-route-id="@(Model.IdReservaRetorno ?? Model.IdReserva)" class="btn-accion btn-volver mh-btn mh-btn-back">
+                <i class="bi bi-arrow-left-circle-fill"></i> Volver al check-out
+            </a>
+        }
+        else
+        {
+            <a asp-controller="CuentasPorCobrar" asp-action="Index" class="btn-accion btn-volver mh-btn mh-btn-back">
+                <i class="bi bi-arrow-left-circle-fill"></i> Volver al listado
+            </a>
+        }
+    </div>
+
 </div>
 
 <script>
@@ -314,7 +319,10 @@
             const valorMonto = Number.parseFloat(monto.value) || 0;
             const destino = document.getElementById("idReservaObjetivo");
             const opcionDestino = destino?.options[destino.selectedIndex];
-            const recargo = Number.parseFloat(opcionDestino?.dataset.recargo) || recargoPredeterminado;
+            const recargoConfigurado = Number.parseFloat(opcionDestino?.dataset.recargo);
+            const recargo = Number.isFinite(recargoConfigurado)
+                ? recargoConfigurado
+                : recargoPredeterminado;
 
             resumen.classList.toggle("d-none", !esTarjeta);
             montoResumen.textContent = valorMonto.toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });

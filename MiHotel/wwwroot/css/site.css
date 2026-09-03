@@ -20,3 +20,213 @@ html {
 body {
   margin-bottom: 60px;
 }
+
+/* =========================================================
+   SISTEMA VISUAL MIHOTEL
+   Componentes ligeros y reutilizables para todos los módulos.
+   ========================================================= */
+:root {
+  --mh-blue: #464482;
+  --mh-blue-hover: #36366b;
+  --mh-brown: #824b44;
+  --mh-brown-hover: #6e3f39;
+  --mh-gray: #6c757d;
+  --mh-gray-hover: #565e64;
+  --mh-black: #474747;
+  --mh-mustard: #cb9f76;
+  --mh-ash-blue: #2c3e42;
+  --mh-chestnut: #542e29;
+  --mh-skin: #e6d3d0;
+  --mh-surface: #ffffff;
+  --mh-border: #e4d9d7;
+  --mh-radius: 15px;
+  --mh-control-radius: 8px;
+  --mh-shadow: 0 4px 10px rgba(71, 71, 71, .10);
+  --mh-shadow-hover: 0 8px 18px rgba(71, 71, 71, .14);
+}
+
+.mh-page-shell {
+  width: 100%;
+  padding: 25px;
+  border: 1px solid rgba(130, 75, 68, .08);
+  border-radius: var(--mh-radius);
+  background: var(--mh-surface);
+  box-shadow: var(--mh-shadow);
+  animation: mh-page-in .28s ease-out both;
+}
+
+.mh-page-shell--form {
+  width: min(100%, 1180px);
+  margin-inline: auto;
+}
+
+.mh-page-shell--compact {
+  width: min(100%, 760px);
+  margin-inline: auto;
+}
+
+.mh-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 22px;
+  padding-bottom: 17px;
+  border-bottom: 1px solid var(--mh-border);
+}
+
+.mh-page-header h2,
+.mh-page-header h3,
+.mh-page-header h4 { margin: 0; color: #292936; }
+.mh-page-header p { margin: 5px 0 0; color: #687080; }
+
+.mh-btn {
+  min-height: 42px;
+  padding: 10px 16px;
+  border: 1px solid transparent;
+  border-radius: var(--mh-control-radius);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #fff;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform .16s ease, box-shadow .16s ease, background-color .16s ease;
+}
+.mh-btn:hover { color: #fff; transform: translateY(-2px); box-shadow: 0 5px 11px rgba(71,71,71,.18); }
+.mh-btn:active { transform: translateY(0); box-shadow: none; }
+.mh-btn:focus-visible { outline: 3px solid rgba(70,68,130,.25); outline-offset: 2px; }
+.mh-btn:disabled { opacity: .58; cursor: not-allowed; transform: none; box-shadow: none; }
+.mh-btn.mh-btn-primary { background: var(--mh-blue); }
+.mh-btn.mh-btn-primary:hover { background: var(--mh-blue-hover); }
+.mh-btn.mh-btn-cancel { background: var(--mh-brown); }
+.mh-btn.mh-btn-cancel:hover { background: var(--mh-brown-hover); }
+.mh-btn.mh-btn-back { background: var(--mh-gray); }
+.mh-btn.mh-btn-back:hover { background: var(--mh-gray-hover); }
+.mh-btn.mh-btn-neutral { background: var(--mh-ash-blue); }
+.mh-btn.mh-btn-neutral:hover { background: #223135; }
+.mh-btn.mh-btn-outline {
+  color: var(--mh-blue);
+  border-color: var(--mh-blue);
+  background: #fff;
+}
+.mh-btn.mh-btn-outline:hover { color: #fff; background: var(--mh-blue); }
+
+.mh-bottom-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 26px;
+  padding-top: 18px;
+  border-top: 1px solid var(--mh-border);
+}
+
+.mh-icon-button {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  text-decoration: none;
+  transition: transform .15s ease, filter .15s ease, box-shadow .15s ease;
+}
+.mh-icon-button:hover { color: #fff; filter: brightness(.92); transform: translateY(-2px); box-shadow: 0 4px 9px rgba(0,0,0,.16); }
+.mh-icon-button:focus-visible { outline: 3px solid rgba(70,68,130,.25); outline-offset: 2px; }
+.mh-icon-button.mh-icon-view { background: var(--mh-blue); }
+.mh-icon-button.mh-icon-edit,
+.mh-icon-button.mh-icon-cancel { background: var(--mh-brown); }
+.mh-icon-button.mh-icon-positive { background: var(--mh-blue); }
+
+.mh-table { margin-bottom: 0; }
+.mh-table thead th { background: #212529; color: #fff; vertical-align: middle; white-space: normal; }
+.mh-table td,.mh-table th { padding: .5rem; vertical-align: middle; }
+.mh-table tbody tr { transition: background-color .14s ease; }
+.mh-table tbody tr:hover td { background-color: #f5efee; }
+.mh-table .encabezado-orden {
+  width: auto;
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  color: inherit;
+  text-decoration: none;
+}
+.mh-sortable-heading { cursor: pointer; user-select: none; }
+.mh-sortable-heading:hover { background: var(--mh-black); }
+.mh-sortable-heading .mh-sort-icon { margin-left: 7px; opacity: .75; }
+
+.mh-table .acciones-contenedor { flex-wrap: nowrap; }
+
+.tabla-reservas {
+  width: 100%;
+  table-layout: fixed;
+}
+.tabla-reservas .celda-moneda,
+.tabla-reservas .celda-estado { white-space: nowrap; }
+.tabla-reservas td,
+.tabla-reservas th { overflow-wrap: break-word; }
+
+.mh-empty-state {
+  padding: 25px !important;
+  color: #6c757d;
+  text-align: center;
+}
+
+.mh-section {
+  margin-top: 22px;
+  padding: 18px;
+  border: 1px solid var(--mh-border);
+  border-radius: 11px;
+  background: #fcfbfb;
+}
+.mh-section-title { margin: 0 0 15px; color: var(--mh-black); }
+
+.mh-page-shell .form-control,
+.mh-page-shell .form-select {
+  border-radius: var(--mh-control-radius);
+  border-color: #cfd3d7;
+  min-height: 42px;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.mh-page-shell .form-control:focus,
+.mh-page-shell .form-select:focus {
+  border-color: var(--mh-blue);
+  box-shadow: 0 0 0 .2rem rgba(70,68,130,.14);
+}
+.mh-page-shell .form-label { font-weight: 600; color: #363636; }
+.mh-page-shell .alert { border-radius: 10px; animation: mh-alert-in .22s ease-out both; }
+
+.tooltip .tooltip-inner { max-width: 260px; padding: 7px 10px; background: var(--mh-black); font-size: .82rem; }
+.tooltip.bs-tooltip-top .tooltip-arrow::before { border-top-color: var(--mh-black); }
+
+@keyframes mh-page-in {
+  from { opacity: 0; transform: translateY(7px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes mh-alert-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 768px) {
+  .mh-page-shell { padding: 18px; }
+  .mh-page-header { flex-direction: column; }
+  .mh-page-header .mh-btn { width: 100%; }
+  .mh-bottom-actions { align-items: stretch; flex-direction: column; }
+  .mh-bottom-actions .mh-btn,
+  .mh-bottom-actions form,
+  .mh-bottom-actions form .mh-btn { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,*::before,*::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}

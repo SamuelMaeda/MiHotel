@@ -93,10 +93,12 @@
     }
 </style>
 
-<div class="tarjeta-contenido">
-    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-        <h3 class="m-0">Detalle de Mi Reserva</h3>
-        <a asp-controller="Reservas" asp-action="MisReservas" class="btn-volver">Volver a mis reservas</a>
+<div class="tarjeta-contenido mh-page-shell mh-page-shell--form">
+    <div class="mh-page-header">
+        <div>
+            <h3>Detalle de mi reserva</h3>
+            <p>Información completa de la estadía seleccionada.</p>
+        </div>
     </div>
 
     @if (TempData["Exito"] != null)
@@ -110,7 +112,7 @@
     }
 
     <div class="table-responsive">
-        <table class="table table-bordered table-striped tabla-detalle">
+        <table class="table table-bordered table-striped tabla-detalle mh-table">
             <tbody>
                 <tr>
                     <th>Número de reserva</th>
@@ -208,7 +210,7 @@
         <div class="grupo-reservas">
             <h5>Fechas incluidas en el grupo #@Model.IdReservaGrupo</h5>
             <div class="table-responsive mt-3">
-                <table class="table table-bordered align-middle mb-0">
+                <table class="table table-bordered align-middle mb-0 mh-table" data-mh-sortable>
                     <thead class="table-dark">
                         <tr>
                             <th>Entrada</th>
@@ -235,7 +237,8 @@
         </div>
     }
 
-    <div class="acciones-contenedor">
+    <div class="acciones-contenedor mh-bottom-actions">
+        <a asp-controller="Reservas" asp-action="MisReservas" class="btn-volver mh-btn mh-btn-back" title="Regresar al listado de mis reservas"><i class="bi bi-arrow-left-circle-fill"></i> Volver a mis reservas</a>
         @if (puedeCancelar)
         {
             <form asp-controller="Reservas"
@@ -244,7 +247,7 @@
                   method="post"
                   onsubmit="return confirm('¿Está seguro de cancelar esta reserva?');">
                 @Html.AntiForgeryToken()
-                <button type="submit" class="btn-cancelar">Cancelar reserva</button>
+                <button type="submit" class="btn-cancelar mh-btn mh-btn-cancel" title="Cancelar esta reserva"><i class="bi bi-x-circle-fill"></i> Cancelar reserva</button>
             </form>
         }
     </div>

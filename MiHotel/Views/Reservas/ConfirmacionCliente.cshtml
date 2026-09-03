@@ -84,8 +84,8 @@
 <div class="container-fluid px-3 px-md-4 py-4">
     <div class="row justify-content-center">
         <div class="col-12 col-xl-8">
-            <div class="tarjeta-confirmacion">
-                <h3 class="mb-3">Confirmación de Reserva</h3>
+            <div class="tarjeta-confirmacion mh-page-shell mh-page-shell--form">
+                <div class="mh-page-header"><div><h3>Confirmación de reserva</h3><p>Conserve el código de seguridad para consultar la reservación.</p></div></div>
 
                 <div class="mensaje-exito">
                     <strong>Su reservación fue registrada correctamente.</strong><br />
@@ -146,9 +146,9 @@
                     </tr>
                 </table>
 
-                <div class="acciones-confirmacion">
-                    <a asp-controller="Panel" asp-action="Index" class="btn-principal">Ir al panel</a>
-                    <a asp-controller="Disponibilidad" asp-action="Index" class="btn-secundario">Hacer otra consulta</a>
+                <div class="acciones-confirmacion mh-bottom-actions">
+                    <a asp-controller="Panel" asp-action="Index" class="btn-principal mh-btn mh-btn-back" title="Regresar al panel principal"><i class="bi bi-arrow-left-circle-fill"></i> Ir al panel</a>
+                    <a asp-controller="Disponibilidad" asp-action="Index" class="btn-secundario mh-btn mh-btn-primary" title="Consultar nuevamente la disponibilidad"><i class="bi bi-calendar2-week-fill"></i> Hacer otra consulta</a>
                 </div>
             </div>
         </div>

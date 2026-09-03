@@ -482,9 +482,39 @@ namespace MiHotel.Controllers
                     r.fecha_entrada,
                     r.fecha_salida,
                     r.cantidad_personas,
-                    r.total_reserva,
+                    r.total_reserva + COALESCE((
+                        SELECT SUM(m_legacy.recargo_tarjeta)
+                        FROM movimiento m_legacy
+                        WHERE m_legacy.id_reserva = r.id_reserva
+                          AND m_legacy.estado = 'activo'
+                          AND m_legacy.recargo_tarjeta > 0
+                          AND NOT EXISTS (
+                              SELECT 1
+                              FROM detalle marcador_legacy
+                              WHERE marcador_legacy.id_movimiento = m_legacy.id_movimiento
+                                AND marcador_legacy.descripcion = 'Recargo de tarjeta incorporado al total de la reserva'
+                          )
+                    ), 0) AS total_reserva,
                     r.estado,
-                    r.saldo_pendiente
+                    r.saldo_pendiente,
+                    EXISTS (
+                        SELECT 1
+                        FROM movimiento m_recargo
+                        INNER JOIN detalle marcador_recargo
+                            ON marcador_recargo.id_movimiento = m_recargo.id_movimiento
+                           AND marcador_recargo.descripcion = 'Recargo de tarjeta incorporado al total de la reserva'
+                        WHERE m_recargo.estado = 'activo'
+                          AND m_recargo.recargo_tarjeta > 0
+                          AND (
+                              m_recargo.id_reserva = r.id_reserva
+                              OR EXISTS (
+                                  SELECT 1
+                                  FROM movimiento_reserva_aplicacion mra_recargo
+                                  WHERE mra_recargo.id_movimiento = m_recargo.id_movimiento
+                                    AND mra_recargo.id_reserva = r.id_reserva
+                              )
+                          )
+                    ) AS recargo_tarjeta_aplicado
                 FROM reserva r
                 INNER JOIN clipro c ON r.id_clipro = c.id_clipro
                 INNER JOIN proser h ON r.id_habitacion = h.id_proser
@@ -517,7 +547,8 @@ namespace MiHotel.Controllers
                     CantidadPersonas = Convert.ToInt32(lector["cantidad_personas"]),
                     TotalReserva = Convert.ToDecimal(lector["total_reserva"]),
                     EstadoReserva = lector["estado"]?.ToString() ?? "",
-                    SaldoPendiente = Convert.ToDecimal(lector["saldo_pendiente"])
+                    SaldoPendiente = Convert.ToDecimal(lector["saldo_pendiente"]),
+                    RecargoTarjetaAplicado = Convert.ToBoolean(lector["recargo_tarjeta_aplicado"])
                 };
             }
 
@@ -645,9 +676,39 @@ namespace MiHotel.Controllers
                     r.fecha_entrada,
                     r.fecha_salida,
                     r.cantidad_personas,
-                    r.total_reserva,
+                    r.total_reserva + COALESCE((
+                        SELECT SUM(m_legacy.recargo_tarjeta)
+                        FROM movimiento m_legacy
+                        WHERE m_legacy.id_reserva = r.id_reserva
+                          AND m_legacy.estado = 'activo'
+                          AND m_legacy.recargo_tarjeta > 0
+                          AND NOT EXISTS (
+                              SELECT 1
+                              FROM detalle marcador_legacy
+                              WHERE marcador_legacy.id_movimiento = m_legacy.id_movimiento
+                                AND marcador_legacy.descripcion = 'Recargo de tarjeta incorporado al total de la reserva'
+                          )
+                    ), 0) AS total_reserva,
                     r.saldo_pendiente,
-                    r.estado
+                    r.estado,
+                    EXISTS (
+                        SELECT 1
+                        FROM movimiento m_recargo
+                        INNER JOIN detalle marcador_recargo
+                            ON marcador_recargo.id_movimiento = m_recargo.id_movimiento
+                           AND marcador_recargo.descripcion = 'Recargo de tarjeta incorporado al total de la reserva'
+                        WHERE m_recargo.estado = 'activo'
+                          AND m_recargo.recargo_tarjeta > 0
+                          AND (
+                              m_recargo.id_reserva = r.id_reserva
+                              OR EXISTS (
+                                  SELECT 1
+                                  FROM movimiento_reserva_aplicacion mra_recargo
+                                  WHERE mra_recargo.id_movimiento = m_recargo.id_movimiento
+                                    AND mra_recargo.id_reserva = r.id_reserva
+                              )
+                          )
+                    ) AS recargo_tarjeta_aplicado
                 FROM reserva r
                 INNER JOIN proser h ON r.id_habitacion = h.id_proser
                 WHERE r.id_reserva_grupo = @id_reserva_grupo
@@ -667,6 +728,7 @@ namespace MiHotel.Controllers
                         CantidadPersonas = Convert.ToInt32(lector["cantidad_personas"]),
                         TotalReserva = Convert.ToDecimal(lector["total_reserva"]),
                         SaldoPendiente = Convert.ToDecimal(lector["saldo_pendiente"]),
+                        RecargoTarjetaAplicado = Convert.ToBoolean(lector["recargo_tarjeta_aplicado"]),
                         Estado = lector["estado"]?.ToString() ?? ""
                     });
                 }
@@ -864,7 +926,25 @@ namespace MiHotel.Controllers
                 string consultaReserva = @"
                     SELECT id_clipro, saldo_pendiente, estado,
                            cantidad_personas,
-                           GREATEST(DATEDIFF(fecha_salida, fecha_entrada), 1) AS noches
+                           GREATEST(DATEDIFF(fecha_salida, fecha_entrada), 1) AS noches,
+                           EXISTS (
+                               SELECT 1
+                               FROM movimiento m_recargo
+                               INNER JOIN detalle marcador_recargo
+                                   ON marcador_recargo.id_movimiento = m_recargo.id_movimiento
+                                  AND marcador_recargo.descripcion = 'Recargo de tarjeta incorporado al total de la reserva'
+                               WHERE m_recargo.estado = 'activo'
+                                 AND m_recargo.recargo_tarjeta > 0
+                                 AND (
+                                     m_recargo.id_reserva = reserva.id_reserva
+                                     OR EXISTS (
+                                         SELECT 1
+                                         FROM movimiento_reserva_aplicacion mra_recargo
+                                         WHERE mra_recargo.id_movimiento = m_recargo.id_movimiento
+                                           AND mra_recargo.id_reserva = reserva.id_reserva
+                                     )
+                                 )
+                           ) AS recargo_tarjeta_aplicado
                     FROM reserva
                     WHERE id_reserva = @id_reserva
                     LIMIT 1
@@ -874,6 +954,7 @@ namespace MiHotel.Controllers
                 decimal saldoPendiente;
                 string estadoReserva;
                 int unidadesRecargo;
+                bool recargoTarjetaAplicado;
 
                 using (var comando = new MySqlCommand(consultaReserva, conexion, transaccion))
                 {
@@ -893,6 +974,7 @@ namespace MiHotel.Controllers
                     estadoReserva = lector["estado"]?.ToString()?.Trim().ToLower() ?? "";
                     unidadesRecargo = Convert.ToInt32(lector["cantidad_personas"])
                         * Convert.ToInt32(lector["noches"]);
+                    recargoTarjetaAplicado = Convert.ToBoolean(lector["recargo_tarjeta_aplicado"]);
                 }
 
                 string[] estadosPermitidos = { "pendiente", "en_curso", "en_checkout", "finalizada" };
@@ -927,7 +1009,7 @@ namespace MiHotel.Controllers
                     return RedirectToAction("Detalle", new { id = idReserva });
                 }
 
-                decimal recargoTarjeta = EsFormaPagoTarjeta(nombreFormaPago)
+                decimal recargoTarjeta = EsFormaPagoTarjeta(nombreFormaPago) && !recargoTarjetaAplicado
                     ? ObtenerRecargoTarjeta(conexion, transaccion) * unidadesRecargo
                     : 0m;
 
@@ -1037,14 +1119,29 @@ namespace MiHotel.Controllers
                     comando.ExecuteNonQuery();
                 }
 
+                if (recargoTarjeta > 0)
+                {
+                    using var comando = new MySqlCommand(@"
+                        INSERT INTO detalle
+                            (id_movimiento, id_proser, cantidad, precio_unitario, subtotal, descripcion)
+                        VALUES
+                            (@id_movimiento, NULL, 1, 0, 0, 'Recargo de tarjeta incorporado al total de la reserva');",
+                        conexion,
+                        transaccion);
+                    comando.Parameters.AddWithValue("@id_movimiento", idMovimiento);
+                    comando.ExecuteNonQuery();
+                }
+
                 string actualizarSaldo = @"
                     UPDATE reserva
-                    SET saldo_pendiente = saldo_pendiente - @monto
+                    SET total_reserva = total_reserva + @recargo_tarjeta,
+                        saldo_pendiente = saldo_pendiente - @monto
                     WHERE id_reserva = @id_reserva;";
 
                 using (var comando = new MySqlCommand(actualizarSaldo, conexion, transaccion))
                 {
                     comando.Parameters.AddWithValue("@monto", monto);
+                    comando.Parameters.AddWithValue("@recargo_tarjeta", recargoTarjeta);
                     comando.Parameters.AddWithValue("@id_reserva", idReserva);
                     comando.ExecuteNonQuery();
                 }
@@ -1134,12 +1231,30 @@ namespace MiHotel.Controllers
                     idCliente = Convert.ToInt32(resultado);
                 }
 
-                var reservas = new List<(int IdReserva, decimal SaldoPendiente, int UnidadesRecargo)>();
+                var reservas = new List<(int IdReserva, decimal SaldoPendiente, int UnidadesRecargo, bool RecargoTarjetaAplicado)>();
 
                 using (var comando = new MySqlCommand(@"
                     SELECT id_reserva, saldo_pendiente, estado,
                            cantidad_personas,
-                           GREATEST(DATEDIFF(fecha_salida, fecha_entrada), 1) AS noches
+                           GREATEST(DATEDIFF(fecha_salida, fecha_entrada), 1) AS noches,
+                           EXISTS (
+                               SELECT 1
+                               FROM movimiento m_recargo
+                               INNER JOIN detalle marcador_recargo
+                                   ON marcador_recargo.id_movimiento = m_recargo.id_movimiento
+                                  AND marcador_recargo.descripcion = 'Recargo de tarjeta incorporado al total de la reserva'
+                               WHERE m_recargo.estado = 'activo'
+                                 AND m_recargo.recargo_tarjeta > 0
+                                 AND (
+                                     m_recargo.id_reserva = reserva.id_reserva
+                                     OR EXISTS (
+                                         SELECT 1
+                                         FROM movimiento_reserva_aplicacion mra_recargo
+                                         WHERE mra_recargo.id_movimiento = m_recargo.id_movimiento
+                                           AND mra_recargo.id_reserva = reserva.id_reserva
+                                     )
+                                 )
+                           ) AS recargo_tarjeta_aplicado
                     FROM reserva
                     WHERE id_reserva_grupo = @id_reserva_grupo
                     ORDER BY fecha_entrada, id_reserva
@@ -1160,7 +1275,8 @@ namespace MiHotel.Controllers
                             reservas.Add((
                                 Convert.ToInt32(lector["id_reserva"]),
                                 saldo,
-                                Convert.ToInt32(lector["cantidad_personas"]) * Convert.ToInt32(lector["noches"])));
+                                Convert.ToInt32(lector["cantidad_personas"]) * Convert.ToInt32(lector["noches"]),
+                                Convert.ToBoolean(lector["recargo_tarjeta_aplicado"])));
                         }
                     }
                 }
@@ -1179,7 +1295,7 @@ namespace MiHotel.Controllers
                         return RedirectToAction("DetalleGrupo", new { id = idReservaGrupo, idReservaRetorno });
                     }
 
-                    reservas = new List<(int IdReserva, decimal SaldoPendiente, int UnidadesRecargo)> { reservaObjetivo };
+                    reservas = new List<(int IdReserva, decimal SaldoPendiente, int UnidadesRecargo, bool RecargoTarjetaAplicado)> { reservaObjetivo };
                     saldoTotal = reservaObjetivo.SaldoPendiente;
                 }
 
@@ -1215,9 +1331,13 @@ namespace MiHotel.Controllers
                     return RedirectToAction("DetalleGrupo", new { id = idReservaGrupo, idReservaRetorno });
                 }
 
-                decimal recargoTarjeta = EsFormaPagoTarjeta(nombreFormaPago)
-                    ? ObtenerRecargoTarjeta(conexion, transaccion) * reservas.Sum(reserva => reserva.UnidadesRecargo)
+                decimal recargoTarjetaUnitario = EsFormaPagoTarjeta(nombreFormaPago)
+                    ? ObtenerRecargoTarjeta(conexion, transaccion)
                     : 0m;
+                decimal recargoTarjeta = recargoTarjetaUnitario
+                    * reservas
+                        .Where(reserva => !reserva.RecargoTarjetaAplicado)
+                        .Sum(reserva => reserva.UnidadesRecargo);
 
                 int idTipoAbono;
 
@@ -1325,33 +1445,47 @@ namespace MiHotel.Controllers
                     comando.ExecuteNonQuery();
                 }
 
+                if (recargoTarjeta > 0)
+                {
+                    using var comando = new MySqlCommand(@"
+                        INSERT INTO detalle
+                            (id_movimiento, id_proser, cantidad, precio_unitario, subtotal, descripcion)
+                        VALUES
+                            (@id_movimiento, NULL, 1, 0, 0, 'Recargo de tarjeta incorporado al total de la reserva');",
+                        conexion,
+                        transaccion);
+                    comando.Parameters.AddWithValue("@id_movimiento", idMovimiento);
+                    comando.ExecuteNonQuery();
+                }
+
                 decimal montoRestante = monto;
 
                 foreach (var reserva in reservas)
                 {
-                    if (montoRestante <= 0)
-                    {
-                        break;
-                    }
-
-                    decimal montoAplicado = Math.Min(reserva.SaldoPendiente, montoRestante);
+                    decimal montoAplicado = Math.Min(reserva.SaldoPendiente, Math.Max(montoRestante, 0));
+                    decimal recargoAplicado = reserva.RecargoTarjetaAplicado
+                        ? 0m
+                        : recargoTarjetaUnitario * reserva.UnidadesRecargo;
 
                     using (var comando = new MySqlCommand(@"
                         UPDATE reserva
-                        SET saldo_pendiente = saldo_pendiente - @monto
+                        SET total_reserva = total_reserva + @recargo_tarjeta,
+                            saldo_pendiente = saldo_pendiente - @monto
                         WHERE id_reserva = @id_reserva;", conexion, transaccion))
                     {
                         comando.Parameters.AddWithValue("@monto", montoAplicado);
+                        comando.Parameters.AddWithValue("@recargo_tarjeta", recargoAplicado);
                         comando.Parameters.AddWithValue("@id_reserva", reserva.IdReserva);
                         comando.ExecuteNonQuery();
                     }
 
-                    using (var comando = new MySqlCommand(@"
-                        INSERT INTO movimiento_reserva_aplicacion
-                            (id_movimiento, id_reserva, monto)
-                        VALUES
-                            (@id_movimiento, @id_reserva, @monto);", conexion, transaccion))
+                    if (montoAplicado > 0 || recargoAplicado > 0)
                     {
+                        using var comando = new MySqlCommand(@"
+                            INSERT INTO movimiento_reserva_aplicacion
+                                (id_movimiento, id_reserva, monto)
+                            VALUES
+                                (@id_movimiento, @id_reserva, @monto);", conexion, transaccion);
                         comando.Parameters.AddWithValue("@id_movimiento", idMovimiento);
                         comando.Parameters.AddWithValue("@id_reserva", reserva.IdReserva);
                         comando.Parameters.AddWithValue("@monto", montoAplicado);
@@ -1425,6 +1559,13 @@ namespace MiHotel.Controllers
                 string consultaAbono = @"
                     SELECT
                         m.id_movimiento,
+                        m.recargo_tarjeta,
+                        EXISTS(
+                            SELECT 1
+                            FROM detalle marcador
+                            WHERE marcador.id_movimiento = m.id_movimiento
+                              AND marcador.descripcion = 'Recargo de tarjeta incorporado al total de la reserva'
+                        ) AS recargo_incluido_total,
                         (
                             SELECT COALESCE(SUM(d.subtotal), 0)
                             FROM detalle d
@@ -1441,6 +1582,7 @@ namespace MiHotel.Controllers
                     FOR UPDATE;";
 
                 decimal monto;
+                decimal recargoIncluidoTotal;
 
                 using (var comando = new MySqlCommand(consultaAbono, conexion, transaccion))
                 {
@@ -1457,6 +1599,9 @@ namespace MiHotel.Controllers
                     }
 
                     monto = Convert.ToDecimal(lector["monto"]);
+                    recargoIncluidoTotal = Convert.ToInt32(lector["recargo_incluido_total"]) == 1
+                        ? Convert.ToDecimal(lector["recargo_tarjeta"])
+                        : 0m;
                 }
 
                 using (var bloquearReserva = new MySqlCommand(@"
@@ -1485,10 +1630,12 @@ namespace MiHotel.Controllers
 
                 using (var comando = new MySqlCommand(@"
                     UPDATE reserva
-                    SET saldo_pendiente = saldo_pendiente + @monto
+                    SET total_reserva = GREATEST(total_reserva - @recargo_tarjeta, 0),
+                        saldo_pendiente = saldo_pendiente + @monto
                     WHERE id_reserva = @id_reserva;", conexion, transaccion))
                 {
                     comando.Parameters.AddWithValue("@monto", monto);
+                    comando.Parameters.AddWithValue("@recargo_tarjeta", recargoIncluidoTotal);
                     comando.Parameters.AddWithValue("@id_reserva", idReserva);
                     comando.ExecuteNonQuery();
                 }
@@ -1560,8 +1707,19 @@ namespace MiHotel.Controllers
                     }
                 }
 
+                decimal recargoMovimiento = 0m;
+                bool recargoIncluidoTotal = false;
+
                 using (var comando = new MySqlCommand(@"
-                    SELECT m.id_movimiento
+                    SELECT
+                        m.id_movimiento,
+                        m.recargo_tarjeta,
+                        EXISTS(
+                            SELECT 1
+                            FROM detalle marcador
+                            WHERE marcador.id_movimiento = m.id_movimiento
+                              AND marcador.descripcion = 'Recargo de tarjeta incorporado al total de la reserva'
+                        ) AS recargo_incluido_total
                     FROM movimiento m
                     INNER JOIN tipo_movimiento tm ON m.id_tipomov = tm.id_tipomov
                     WHERE m.id_movimiento = @id_movimiento
@@ -1574,18 +1732,26 @@ namespace MiHotel.Controllers
                     comando.Parameters.AddWithValue("@id_movimiento", idMovimiento);
                     comando.Parameters.AddWithValue("@id_reserva_grupo", idReservaGrupo);
 
-                    if (comando.ExecuteScalar() == null)
+                    using var lector = comando.ExecuteReader();
+
+                    if (!lector.Read())
                     {
                         transaccion.Rollback();
                         TempData["Mensaje"] = "El abono no existe o ya fue anulado.";
                         return RedirectToAction("DetalleGrupo", new { id = idReservaGrupo, idReservaRetorno });
                     }
+
+                    recargoMovimiento = Convert.ToDecimal(lector["recargo_tarjeta"]);
+                    recargoIncluidoTotal = Convert.ToInt32(lector["recargo_incluido_total"]) == 1;
                 }
 
-                var aplicaciones = new List<(int IdReserva, decimal Monto)>();
+                var aplicaciones = new List<(int IdReserva, decimal Monto, int UnidadesRecargo)>();
 
                 using (var comando = new MySqlCommand(@"
-                    SELECT a.id_reserva, a.monto
+                    SELECT
+                        a.id_reserva,
+                        a.monto,
+                        r.cantidad_personas * GREATEST(DATEDIFF(r.fecha_salida, r.fecha_entrada), 1) AS unidades_recargo
                     FROM movimiento_reserva_aplicacion a
                     INNER JOIN reserva r ON a.id_reserva = r.id_reserva
                     WHERE a.id_movimiento = @id_movimiento
@@ -1599,7 +1765,8 @@ namespace MiHotel.Controllers
                     {
                         aplicaciones.Add((
                             Convert.ToInt32(lector["id_reserva"]),
-                            Convert.ToDecimal(lector["monto"])));
+                            Convert.ToDecimal(lector["monto"]),
+                            Convert.ToInt32(lector["unidades_recargo"])));
                     }
                 }
 
@@ -1623,13 +1790,22 @@ namespace MiHotel.Controllers
                     }
                 }
 
+                int unidadesTotales = aplicaciones.Sum(aplicacion => aplicacion.UnidadesRecargo);
+                decimal recargoUnitario = recargoIncluidoTotal && unidadesTotales > 0
+                    ? recargoMovimiento / unidadesTotales
+                    : 0m;
+
                 foreach (var aplicacion in aplicaciones)
                 {
                     using var comando = new MySqlCommand(@"
                         UPDATE reserva
-                        SET saldo_pendiente = saldo_pendiente + @monto
+                        SET total_reserva = GREATEST(total_reserva - @recargo_tarjeta, 0),
+                            saldo_pendiente = saldo_pendiente + @monto
                         WHERE id_reserva = @id_reserva;", conexion, transaccion);
                     comando.Parameters.AddWithValue("@monto", aplicacion.Monto);
+                    comando.Parameters.AddWithValue(
+                        "@recargo_tarjeta",
+                        recargoUnitario * aplicacion.UnidadesRecargo);
                     comando.Parameters.AddWithValue("@id_reserva", aplicacion.IdReserva);
                     comando.ExecuteNonQuery();
                 }

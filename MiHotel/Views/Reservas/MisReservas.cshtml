@@ -108,10 +108,12 @@
     }
 </style>
 
-<div class="tarjeta-contenido">
-    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-        <h3 class="m-0">Mis Reservas</h3>
-        <a asp-controller="Panel" asp-action="Index" class="btn-volver">Volver al panel</a>
+<div class="tarjeta-contenido mh-page-shell">
+    <div class="mh-page-header">
+        <div>
+            <h3>Mis Reservas</h3>
+            <p>Consulta el estado y la información de tus estadías.</p>
+        </div>
     </div>
 
     @if (TempData["Exito"] != null)
@@ -134,7 +136,7 @@
     </div>
 
     <div class="table-responsive">
-        <table class="table table-bordered table-striped">
+        <table class="table table-bordered table-striped mh-table" data-mh-sortable>
             <thead class="table-dark">
                 <tr>
                     <th>Habitación</th>
@@ -144,7 +146,7 @@
                     <th>Total</th>
                     <th>Pago Pendiente</th>
                     <th>Estado</th>
-                    <th>Acciones</th>
+                    <th data-no-sort>Acciones</th>
                 </tr>
             </thead>
 
@@ -152,7 +154,7 @@
                 @if (Model.Rows.Count == 0)
                 {
                     <tr>
-                        <td colspan="8" class="text-center">No se encontraron reservas.</td>
+                        <td colspan="8" class="mh-empty-state"><i class="bi bi-calendar-x me-2"></i>No se encontraron reservas.</td>
                     </tr>
                 }
                 else
@@ -199,8 +201,9 @@
                                     <a asp-controller="Reservas"
                                        asp-action="MiReservaDetalle"
                                        asp-route-id="@idReserva"
-                                       class="btn-icono btn-detalle"
-                                       title="Ver detalle">
+                                       class="btn-icono btn-detalle mh-icon-button mh-icon-view"
+                                       title="Ver el detalle de esta reserva"
+                                       aria-label="Ver el detalle de esta reserva">
                                         <i class="bi bi-eye-fill"></i>
                                     </a>
 
@@ -213,7 +216,7 @@
                                               class="form-accion"
                                               onsubmit="return confirm('¿Está seguro de cancelar esta reserva?');">
                                             @Html.AntiForgeryToken()
-                                            <button type="submit" class="btn-icono btn-cancelar" title="Cancelar reserva">
+                                            <button type="submit" class="btn-icono btn-cancelar mh-icon-button mh-icon-cancel" title="Cancelar esta reserva" aria-label="Cancelar esta reserva">
                                                 <i class="bi bi-x-circle-fill"></i>
                                             </button>
                                         </form>
@@ -235,10 +238,16 @@
                 <a asp-controller="Reservas"
                    asp-action="MisReservas"
                    asp-route-pagina="@i"
-                   class="pagina-link @(i == paginaActual ? "activa" : "")">
+                   class="pagina-link @(i == paginaActual ? "activa" : "")"
+                   title="Ir a la página @i"
+                   aria-current="@(i == paginaActual ? "page" : null)">
                     @i
                 </a>
             }
         </div>
     }
+
+    <div class="mh-bottom-actions">
+        <a asp-controller="Panel" asp-action="Index" class="btn-volver mh-btn mh-btn-back" title="Regresar al panel principal"><i class="bi bi-arrow-left-circle-fill"></i> Volver al panel</a>
+    </div>
 </div>

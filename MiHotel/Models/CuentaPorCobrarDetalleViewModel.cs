@@ -14,6 +14,7 @@ namespace MiHotel.Models
         public int CantidadPersonas { get; set; } = 1;
         public decimal TotalReserva { get; set; }
         public decimal SaldoPendiente { get; set; }
+        public bool RecargoTarjetaAplicado { get; set; }
         public string EstadoFacturacion { get; set; } = "sin_definir";
         public List<MovimientoCuentaViewModel> Movimientos { get; set; } = new();
         public List<ReservaGrupoItemViewModel> EstadiasAgrupadas { get; set; } = new();

@@ -52,9 +52,12 @@
     }
 </style>
 
-<div class="tarjeta-contenido">
-    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-        <h3 class="m-0">Editar Reserva</h3>
+<div class="tarjeta-contenido mh-page-shell mh-page-shell--form">
+    <div class="mh-page-header">
+        <div>
+            <h3>Editar reserva</h3>
+            <p>Actualice solamente los datos que necesiten corrección.</p>
+        </div>
     </div>
 
     @if (ViewBag.Mensaje != null)
@@ -130,9 +133,9 @@
             </div>
         </div>
 
-        <div class="acciones-formulario">
-            <button type="submit" class="btn-guardar">Guardar cambios</button>
-            <a asp-controller="Reservas" asp-action="Index" class="btn-volver">Volver al listado</a>
+        <div class="acciones-formulario mh-bottom-actions">
+            <a asp-controller="Reservas" asp-action="Index" class="btn-volver mh-btn mh-btn-back" title="Regresar al listado de reservas"><i class="bi bi-arrow-left-circle-fill"></i> Volver al listado</a>
+            <button type="submit" class="btn-guardar mh-btn mh-btn-primary" title="Guardar los cambios de la reserva"><i class="bi bi-floppy-fill"></i> Guardar cambios</button>
         </div>
     </form>
 </div>

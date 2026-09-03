@@ -30,9 +30,11 @@
         }
 </style>
 
-<div class="container mt-5">
-    <div class="tarjeta">
-        <h4>Buscar Reserva</h4>
+<div class="container py-4">
+    <div class="tarjeta mh-page-shell mh-page-shell--compact">
+        <div class="mh-page-header">
+            <div><h4>Buscar reserva</h4><p>Ingrese el código de seguridad entregado al crear la reservación.</p></div>
+        </div>
 
         @if (ViewBag.Mensaje != null)
         {
@@ -47,9 +49,10 @@
                 <input type="text" name="codigo" class="form-control" placeholder="Ej: RES-15-H3-142530-483" />
             </div>
 
-            <button type="submit" class="btn-buscar">
-                Buscar
-            </button>
+            <div class="mh-bottom-actions">
+                <a asp-controller="Panel" asp-action="Index" class="mh-btn mh-btn-back" title="Regresar al panel principal"><i class="bi bi-arrow-left-circle-fill"></i> Volver al panel</a>
+                <button type="submit" class="btn-buscar mh-btn mh-btn-primary" title="Buscar una reserva mediante su código"><i class="bi bi-search"></i> Buscar reserva</button>
+            </div>
         </form>
     </div>
 </div>
