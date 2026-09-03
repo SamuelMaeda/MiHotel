@@ -45,7 +45,10 @@ namespace MiHotel.Controllers
                 conexion.Open();
 
                 using var comando = new MySqlCommand(@"
-                    SELECT recargo_tarjeta, fecha_actualizacion
+                    SELECT recargo_tarjeta,
+                           iva_porcentaje,
+                           impuesto_turismo_porcentaje,
+                           fecha_actualizacion
                     FROM configuracion_sistema
                     WHERE id_configuracion = 1
                     LIMIT 1;", conexion);
@@ -56,6 +59,8 @@ namespace MiHotel.Controllers
                 if (lector.Read())
                 {
                     modelo.RecargoTarjeta = Convert.ToDecimal(lector["recargo_tarjeta"]);
+                    modelo.IvaPorcentaje = Convert.ToDecimal(lector["iva_porcentaje"]);
+                    modelo.ImpuestoTurismoPorcentaje = Convert.ToDecimal(lector["impuesto_turismo_porcentaje"]);
                     modelo.FechaActualizacion = lector["fecha_actualizacion"] == DBNull.Value
                         ? null
                         : Convert.ToDateTime(lector["fecha_actualizacion"]);
@@ -89,21 +94,27 @@ namespace MiHotel.Controllers
 
                 using var comando = new MySqlCommand(@"
                     INSERT INTO configuracion_sistema
-                        (id_configuracion, recargo_tarjeta, fecha_actualizacion, id_usuario_actualizacion)
+                        (id_configuracion, recargo_tarjeta, iva_porcentaje,
+                         impuesto_turismo_porcentaje, fecha_actualizacion, id_usuario_actualizacion)
                     VALUES
-                        (1, @recargo_tarjeta, NOW(), @id_usuario)
+                        (1, @recargo_tarjeta, @iva_porcentaje,
+                         @impuesto_turismo_porcentaje, NOW(), @id_usuario)
                     ON DUPLICATE KEY UPDATE
                         recargo_tarjeta = VALUES(recargo_tarjeta),
+                        iva_porcentaje = VALUES(iva_porcentaje),
+                        impuesto_turismo_porcentaje = VALUES(impuesto_turismo_porcentaje),
                         fecha_actualizacion = NOW(),
                         id_usuario_actualizacion = VALUES(id_usuario_actualizacion);", conexion);
 
                 comando.Parameters.AddWithValue("@recargo_tarjeta", modelo.RecargoTarjeta);
+                comando.Parameters.AddWithValue("@iva_porcentaje", modelo.IvaPorcentaje);
+                comando.Parameters.AddWithValue("@impuesto_turismo_porcentaje", modelo.ImpuestoTurismoPorcentaje);
                 comando.Parameters.AddWithValue(
                     "@id_usuario",
                     Convert.ToInt32(HttpContext.Session.GetString("IdUsuario")));
                 comando.ExecuteNonQuery();
 
-                TempData["Exito"] = "El recargo por pago con tarjeta se actualizó correctamente.";
+                TempData["Exito"] = "Las configuraciones se actualizaron correctamente.";
                 return RedirectToAction("Index");
             }
             catch (Exception ex)

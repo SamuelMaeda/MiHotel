@@ -1,0 +1,256 @@
+@model MiHotel.Models.SimulacionPreciosViewModel
+
+@{
+    ViewData["Title"] = "Simulación de precios";
+}
+
+<style>
+    .simulacion-contenido{background:#fff;border-radius:15px;padding:25px;box-shadow:0 4px 10px rgba(0,0,0,.10)}
+    .simulacion-encabezado{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin-bottom:22px}
+    .simulacion-encabezado h2{color:#262638;margin:0 0 6px}.simulacion-encabezado p{color:#687080;margin:0}
+    .etiqueta-simulacion{display:inline-flex;align-items:center;gap:8px;background:#eeeaf8;color:#464482;border-radius:999px;padding:9px 14px;font-weight:600;white-space:nowrap}
+    .bloque{border:1px solid #e3e5ea;border-radius:12px;padding:20px;margin-top:20px;background:#fafbfc}
+    .bloque h4{font-size:19px;color:#363636;margin:0 0 6px}.bloque-descripcion{color:#6c757d;margin:0 0 18px}
+    .parametros{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:18px}
+    .campo label{font-weight:600;color:#353545;margin-bottom:7px}.campo-ayuda{font-size:13px;color:#6c757d;margin-top:6px}
+    .escenarios-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:14px}
+    .escenario-campo{background:#fff;border:1px solid #dfdce8;border-radius:10px;padding:15px}
+    .escenario-campo label{display:block;font-weight:700;color:#464482;margin-bottom:9px}
+    .resumen-oportunidades{background:#f4eeee;border-left:5px solid #824B44;border-radius:9px;padding:15px 17px;margin-top:20px;color:#363636}
+    .resumen-oportunidades strong{color:#824B44}
+    .tasas{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}.tasa{background:#fff;border:1px solid #ddd6d5;border-radius:999px;padding:7px 12px;color:#555}
+    .acciones{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
+    .btn-calcular,.btn-volver{display:inline-flex;align-items:center;gap:7px;border:0;border-radius:8px;padding:11px 18px;color:#fff;text-decoration:none;font-weight:600}
+    .btn-calcular{background:#464482}.btn-calcular:hover{background:#36366b;color:#fff}.btn-volver{background:#824B44}.btn-volver:hover{background:#6e3f39;color:#fff}
+    .resultado{margin-top:26px;border:1px solid #ded9d8;border-radius:12px;overflow:hidden}
+    .resultado-encabezado{padding:18px 20px;background:#f4eeee}.resultado-encabezado h3{font-size:21px;margin:0 0 4px;color:#363636}.resultado-encabezado p{margin:0;color:#687080}
+    .tabla-resultados{margin:0}.tabla-resultados thead th{background:#212529;color:#fff;border-color:#42464a;vertical-align:middle;white-space:nowrap}.tabla-resultados td{vertical-align:middle}
+    .escenario-nombre{font-weight:700;color:#464482}.monto-final{font-weight:700;color:#17633a}
+    .nota-calculo{background:#fff8e6;border:1px solid #efdca6;border-radius:9px;padding:13px 15px;margin:18px 20px;color:#685523}
+    @@media(max-width:767px){.simulacion-contenido{padding:18px}.simulacion-encabezado{flex-direction:column}.etiqueta-simulacion{white-space:normal}.bloque{padding:16px}}
+</style>
+
+<div class="container-fluid px-3 px-md-4 py-4">
+    <div class="simulacion-contenido">
+        <div class="simulacion-encabezado">
+            <div>
+                <h2>Simulación de precios</h2>
+                <p>Compare cuánto podría generar una misma tarifa bajo distintos niveles de ocupación.</p>
+            </div>
+            <span class="etiqueta-simulacion"><i class="bi bi-bar-chart-line-fill"></i> Análisis administrativo</span>
+        </div>
+
+        @if (ViewBag.Mensaje != null)
+        {
+            <div class="alert alert-danger">@ViewBag.Mensaje</div>
+        }
+
+        <form asp-action="Index" method="post" id="formSimulacion">
+            @Html.AntiForgeryToken()
+            @if (!ViewData.ModelState.IsValid)
+            {
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+            }
+
+            <section class="bloque">
+                <h4>Parámetros generales</h4>
+                <p class="bloque-descripcion">Estos valores se mantendrán iguales en todos los escenarios de la comparación.</p>
+
+                <div class="parametros">
+                    <div class="campo">
+                        <label asp-for="CantidadHabitaciones" class="form-label"></label>
+                        <input asp-for="CantidadHabitaciones" class="form-control" type="number" min="1" max="10000" />
+                        <span asp-validation-for="CantidadHabitaciones" class="text-danger"></span>
+                        <div class="campo-ayuda">El valor predeterminado corresponde a las 12 habitaciones actuales.</div>
+                    </div>
+
+                    <div class="campo">
+                        <label asp-for="CantidadNoches" class="form-label"></label>
+                        <div class="input-group">
+                            <input asp-for="CantidadNoches" class="form-control" type="number" min="1" max="365" />
+                            <span class="input-group-text">noches</span>
+                        </div>
+                        <span asp-validation-for="CantidadNoches" class="text-danger"></span>
+                    </div>
+
+                    <div class="campo">
+                        <label asp-for="TarifaPorPersona" class="form-label"></label>
+                        <div class="input-group">
+                            <span class="input-group-text">Q</span>
+                            <input asp-for="TarifaPorPersona" class="form-control" type="number" min="0.01" step="0.01" />
+                        </div>
+                        <span asp-validation-for="TarifaPorPersona" class="text-danger"></span>
+                    </div>
+
+                    <div class="campo">
+                        <label asp-for="PersonasPorHabitacion" class="form-label"></label>
+                        <input asp-for="PersonasPorHabitacion" class="form-control" type="number" min="1" max="20" />
+                        <span asp-validation-for="PersonasPorHabitacion" class="text-danger"></span>
+                        <div class="campo-ayuda">El valor predeterminado es una persona.</div>
+                    </div>
+
+                    <div class="campo">
+                        <label asp-for="CantidadEscenarios" class="form-label"></label>
+                        <select asp-for="CantidadEscenarios" class="form-select">
+                            <option value="3">3 escenarios</option>
+                            <option value="5">5 escenarios</option>
+                        </select>
+                        <span asp-validation-for="CantidadEscenarios" class="text-danger"></span>
+                        <div class="campo-ayuda">La opción predeterminada es de tres escenarios.</div>
+                    </div>
+                </div>
+
+                <div class="resumen-oportunidades" id="resumenOportunidades">
+                    Durante <strong id="textoNoches">@Model.CantidadNoches</strong> noches, teniendo en cuenta que hay
+                    <strong id="textoHabitaciones">@Model.CantidadHabitaciones</strong> habitaciones en estudio, hay oportunidad de realizarse
+                    <strong id="textoHospedajes">@Model.HospedajesDisponibles</strong> hospedajes.
+                </div>
+            </section>
+
+            <section class="bloque">
+                <h4>Porcentajes de ocupación</h4>
+                <p class="bloque-descripcion">Los porcentajes vienen precargados para reducir trabajo, pero puede modificarlos antes de calcular.</p>
+
+                <div class="escenarios-grid">
+                    <div class="escenario-campo">
+                        <label asp-for="OcupacionBaja"></label>
+                        <div class="input-group">
+                            <input asp-for="OcupacionBaja" class="form-control ocupacion" type="number" min="0" max="100" step="0.01" />
+                            <span class="input-group-text">%</span>
+                        </div>
+                        <span asp-validation-for="OcupacionBaja" class="text-danger"></span>
+                    </div>
+
+                    <div class="escenario-campo escenario-intermedio">
+                        <label asp-for="OcupacionMediaBaja"></label>
+                        <div class="input-group">
+                            <input asp-for="OcupacionMediaBaja" class="form-control ocupacion" type="number" min="0" max="100" step="0.01" />
+                            <span class="input-group-text">%</span>
+                        </div>
+                        <span asp-validation-for="OcupacionMediaBaja" class="text-danger"></span>
+                    </div>
+
+                    <div class="escenario-campo">
+                        <label asp-for="OcupacionMedia"></label>
+                        <div class="input-group">
+                            <input asp-for="OcupacionMedia" class="form-control ocupacion" type="number" min="0" max="100" step="0.01" />
+                            <span class="input-group-text">%</span>
+                        </div>
+                        <span asp-validation-for="OcupacionMedia" class="text-danger"></span>
+                    </div>
+
+                    <div class="escenario-campo escenario-intermedio">
+                        <label asp-for="OcupacionMediaAlta"></label>
+                        <div class="input-group">
+                            <input asp-for="OcupacionMediaAlta" class="form-control ocupacion" type="number" min="0" max="100" step="0.01" />
+                            <span class="input-group-text">%</span>
+                        </div>
+                        <span asp-validation-for="OcupacionMediaAlta" class="text-danger"></span>
+                    </div>
+
+                    <div class="escenario-campo">
+                        <label asp-for="OcupacionAlta"></label>
+                        <div class="input-group">
+                            <input asp-for="OcupacionAlta" class="form-control ocupacion" type="number" min="0" max="100" step="0.01" />
+                            <span class="input-group-text">%</span>
+                        </div>
+                        <span asp-validation-for="OcupacionAlta" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="tasas">
+                    <span class="tasa"><i class="bi bi-percent me-1"></i> IVA configurado: <strong>@Model.IvaPorcentaje.ToString("0.##")%</strong></span>
+                    <span class="tasa"><i class="bi bi-bank me-1"></i> INGUAT configurado: <strong>@Model.ImpuestoTurismoPorcentaje.ToString("0.##")%</strong></span>
+                </div>
+            </section>
+
+            <div class="acciones">
+                <button type="submit" class="btn-calcular"><i class="bi bi-calculator-fill"></i> Calcular simulación</button>
+                <a asp-controller="Panel" asp-action="Index" class="btn-volver"><i class="bi bi-arrow-left-circle"></i> Volver al panel</a>
+            </div>
+        </form>
+
+        @if (Model.Calculada && Model.Resultados.Count > 0)
+        {
+            <section class="resultado">
+                <div class="resultado-encabezado">
+                    <h3>Comparación de escenarios</h3>
+                    <p>La tarifa y los demás parámetros generales son iguales; únicamente cambia la ocupación estimada.</p>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-striped table-bordered tabla-resultados">
+                        <thead>
+                            <tr>
+                                <th>Escenario</th>
+                                <th>Ocupación estimada</th>
+                                <th>Noches ocupadas estimadas</th>
+                                <th>Ingreso bruto estimado</th>
+                                <th>Impuestos estimados</th>
+                                <th>Ingreso después de impuestos</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var resultado in Model.Resultados)
+                            {
+                                <tr>
+                                    <td class="escenario-nombre">@resultado.Escenario</td>
+                                    <td>@resultado.OcupacionPorcentaje.ToString("0.##")%</td>
+                                    <td>@resultado.HospedajesEstimados</td>
+                                    <td>Q @resultado.IngresoBruto.ToString("N2")</td>
+                                    <td>Q @resultado.ImpuestosEstimados.ToString("N2")</td>
+                                    <td class="monto-final">Q @resultado.IngresoDespuesImpuestos.ToString("N2")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="nota-calculo">
+                    <i class="bi bi-info-circle-fill me-1"></i>
+                    Los resultados son estimaciones comparativas. La simulación no modifica las tarifas, habitaciones, reservaciones ni movimientos reales del hotel.
+                </div>
+            </section>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const habitaciones = document.getElementById("CantidadHabitaciones");
+            const noches = document.getElementById("CantidadNoches");
+            const cantidadEscenarios = document.getElementById("CantidadEscenarios");
+            const camposIntermedios = document.querySelectorAll(".escenario-intermedio");
+
+            function actualizarResumen() {
+                const cantidadHabitaciones = Number.parseInt(habitaciones?.value || "0", 10);
+                const cantidadNoches = Number.parseInt(noches?.value || "0", 10);
+                document.getElementById("textoHabitaciones").textContent = cantidadHabitaciones.toString();
+                document.getElementById("textoNoches").textContent = cantidadNoches.toString();
+                document.getElementById("textoHospedajes").textContent = (cantidadHabitaciones * cantidadNoches).toString();
+            }
+
+            function mostrarEscenarios() {
+                const usarCinco = cantidadEscenarios?.value === "5";
+                camposIntermedios.forEach(campo => campo.style.display = usarCinco ? "block" : "none");
+            }
+
+            cantidadEscenarios?.addEventListener("change", function () {
+                const usarCinco = cantidadEscenarios.value === "5";
+                document.getElementById("OcupacionBaja").value = usarCinco ? "20" : "30";
+                document.getElementById("OcupacionMediaBaja").value = "35";
+                document.getElementById("OcupacionMedia").value = usarCinco ? "50" : "55";
+                document.getElementById("OcupacionMediaAlta").value = "65";
+                document.getElementById("OcupacionAlta").value = "80";
+                mostrarEscenarios();
+            });
+
+            habitaciones?.addEventListener("change", actualizarResumen);
+            noches?.addEventListener("input", actualizarResumen);
+            mostrarEscenarios();
+            actualizarResumen();
+        });
+    </script>
+}
