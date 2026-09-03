@@ -1,0 +1,229 @@
+@model MiHotel.Models.ReporteGeneralViewModel
+
+@{
+    ViewData["Title"] = "Reportes";
+    int mayorEstado = Math.Max(1, Model.ReservasPorEstado.Select(x => x.Cantidad).DefaultIfEmpty(0).Max());
+    int mayorVenta = Math.Max(1, Model.ProductosMasVendidos.Select(x => x.CantidadVendida).DefaultIfEmpty(0).Max());
+
+    string NombreEstado(string estado) => estado.ToLowerInvariant() switch
+    {
+        "pendiente" => "Pendientes de ingreso",
+        "en_curso" => "En curso",
+        "en_checkout" => "En check-out",
+        "finalizada" => "Finalizadas",
+        "cancelada" => "Canceladas",
+        _ => estado.Replace("_", " ")
+    };
+}
+
+<style>
+    .reporte{background:#fff;border-radius:15px;padding:25px;box-shadow:0 4px 10px rgba(0,0,0,.10)}
+    .reporte-cabecera{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:22px}.reporte-cabecera h2{margin:0 0 5px;color:#292936}.reporte-cabecera p{margin:0;color:#687080}
+    .filtros{display:grid;grid-template-columns:minmax(190px,1fr) minmax(190px,1fr) auto auto;gap:14px;align-items:end;background:#faf8f8;border:1px solid #e4dada;border-radius:12px;padding:18px;margin-bottom:22px}.filtros label{font-weight:600}
+    .btn-reporte{border:0;border-radius:8px;padding:10px 16px;display:inline-flex;align-items:center;justify-content:center;gap:7px;text-decoration:none;font-weight:600;min-height:42px}.btn-filtrar{background:#464482;color:#fff}.btn-filtrar:hover{background:#36366b;color:#fff}.btn-secundario{background:#824B44;color:#fff}.btn-secundario:hover{background:#6e3f39;color:#fff}
+    .seccion-reporte{margin-top:28px}.seccion-reporte h3{font-size:21px;color:#363636;margin:0 0 5px}.seccion-reporte>p{color:#6c757d;margin:0 0 16px}
+    .resumen{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px}.indicador{border:1px solid #e4dada;border-radius:12px;padding:17px;background:#fafafa}.indicador-icono{display:inline-flex;width:38px;height:38px;align-items:center;justify-content:center;border-radius:9px;background:#eeeaf8;color:#464482;font-size:19px;margin-bottom:11px}.indicador span{display:block;color:#6c757d;font-size:14px}.indicador strong{display:block;color:#282836;font-size:25px;margin-top:3px}.indicador.destacado{background:#f6eeee;border-color:#dfc8c4}.indicador.destacado .indicador-icono{background:#824B44;color:#fff}.indicador.destacado strong{color:#824B44}
+    .dos-columnas{display:grid;grid-template-columns:1fr 1fr;gap:22px}.panel-reporte{border:1px solid #e0e1e5;border-radius:12px;padding:19px;background:#fbfbfc}.panel-reporte h4{font-size:18px;margin:0 0 17px;color:#363636}
+    .barra-fila+.barra-fila{margin-top:15px}.barra-datos{display:flex;justify-content:space-between;gap:10px;margin-bottom:6px}.barra-datos span:first-child{font-weight:600}.barra-fondo{height:10px;border-radius:99px;background:#e8e7ed;overflow:hidden}.barra-valor{height:100%;border-radius:99px;background:#464482;min-width:2px}.barra-valor.cafe{background:#824B44}
+    .tabla-reporte{margin:0}.tabla-reporte thead th{background:#212529;color:#fff;white-space:nowrap}.tabla-reporte td,.tabla-reporte th{vertical-align:middle;padding:11px}.sin-datos{color:#6c757d;background:#f7f7f8;border-radius:8px;padding:14px;margin:0}
+    .nota-periodo{display:flex;align-items:flex-start;gap:9px;background:#f1eff7;color:#4e4c70;border-radius:9px;padding:13px 15px;margin-top:18px}
+    @@media(max-width:900px){.filtros{grid-template-columns:1fr 1fr}.dos-columnas{grid-template-columns:1fr}}
+    @@media(max-width:575px){.reporte{padding:18px}.reporte-cabecera{flex-direction:column}.filtros{grid-template-columns:1fr}.btn-reporte{width:100%}}
+</style>
+
+<div class="reporte">
+    <div class="reporte-cabecera">
+        <div>
+            <h2>Reportes del hotel</h2>
+            <p>Resumen de reservaciones, ocupación y actividad del período seleccionado.</p>
+        </div>
+    </div>
+
+    @if (ViewBag.Mensaje != null)
+    {
+        <div class="alert alert-danger">@ViewBag.Mensaje</div>
+    }
+
+    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+    <form method="get" class="filtros">
+        <div>
+            <label asp-for="FechaInicio" class="form-label"></label>
+            <input asp-for="FechaInicio" class="form-control" type="date" />
+        </div>
+        <div>
+            <label asp-for="FechaFin" class="form-label"></label>
+            <input asp-for="FechaFin" class="form-control" type="date" />
+        </div>
+        <button type="submit" class="btn-reporte btn-filtrar"><i class="bi bi-funnel-fill"></i> Generar</button>
+        <a asp-action="Index" class="btn-reporte btn-secundario"><i class="bi bi-calendar-month"></i> Mes actual</a>
+    </form>
+
+    <section class="seccion-reporte">
+        <h3>Resumen general</h3>
+        <p>Información correspondiente del @Model.FechaInicio.ToString("dd/MM/yyyy") al @Model.FechaFin.ToString("dd/MM/yyyy").</p>
+        <div class="resumen">
+            <div class="indicador"><span class="indicador-icono"><i class="bi bi-calendar-check"></i></span><span>Reservaciones</span><strong>@Model.TotalReservas</strong></div>
+            <div class="indicador"><span class="indicador-icono"><i class="bi bi-people"></i></span><span>Personas registradas</span><strong>@Model.PersonasRegistradas</strong></div>
+            <div class="indicador destacado"><span class="indicador-icono"><i class="bi bi-door-open"></i></span><span>Noches reservadas</span><strong>@Model.NochesReservadas</strong></div>
+            <div class="indicador destacado"><span class="indicador-icono"><i class="bi bi-pie-chart"></i></span><span>Ocupación</span><strong>@Model.PorcentajeOcupacion.ToString("N1")%</strong></div>
+            <div class="indicador"><span class="indicador-icono"><i class="bi bi-check-circle"></i></span><span>Estadías finalizadas</span><strong>@Model.ReservasFinalizadas</strong></div>
+            <div class="indicador"><span class="indicador-icono"><i class="bi bi-x-circle"></i></span><span>Reservas canceladas</span><strong>@Model.ReservasCanceladas</strong></div>
+            @if (Model.EsAdministrador)
+            {
+                <div class="indicador"><span class="indicador-icono"><i class="bi bi-building-check"></i></span><span>Ingresos por hospedaje</span><strong>Q @Model.IngresosHospedaje.ToString("N2")</strong></div>
+                <div class="indicador"><span class="indicador-icono"><i class="bi bi-cart-check"></i></span><span>Ventas de productos y servicios</span><strong>Q @Model.IngresosPuntoVenta.ToString("N2")</strong></div>
+                <div class="indicador destacado"><span class="indicador-icono"><i class="bi bi-cash-stack"></i></span><span>Ingresos totales</span><strong>Q @Model.IngresosTotales.ToString("N2")</strong></div>
+                <div class="indicador"><span class="indicador-icono"><i class="bi bi-wallet2"></i></span><span>Saldo pendiente</span><strong>Q @Model.SaldoPendiente.ToString("N2")</strong></div>
+            }
+        </div>
+
+        <div class="nota-periodo">
+            <i class="bi bi-info-circle-fill"></i>
+            <span>En @((Model.FechaFin - Model.FechaInicio).Days + 1) días y con @Model.HabitacionesActivas habitaciones disponibles, hubo oportunidad de ocupar @Model.NochesDisponibles noches de habitación.</span>
+        </div>
+    </section>
+
+    <section class="seccion-reporte">
+        <h3>Reservas y ocupación</h3>
+        <p>Las reservas canceladas se muestran en su estado, pero no aumentan la ocupación.</p>
+        <div class="dos-columnas">
+            <div class="panel-reporte">
+                <h4>Reservaciones por estado</h4>
+                @if (Model.ReservasPorEstado.Count == 0)
+                {
+                    <p class="sin-datos">No hay reservaciones en este período.</p>
+                }
+                @foreach (var item in Model.ReservasPorEstado)
+                {
+                    decimal ancho = item.Cantidad * 100m / mayorEstado;
+                    <div class="barra-fila">
+                        <div class="barra-datos"><span>@NombreEstado(item.Estado)</span><strong>@item.Cantidad</strong></div>
+                        <div class="barra-fondo"><div class="barra-valor cafe" style="width:@ancho.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)%"></div></div>
+                    </div>
+                }
+            </div>
+            <div class="panel-reporte">
+                <h4>Habitaciones más utilizadas</h4>
+                @if (Model.HabitacionesMasUtilizadas.Count == 0)
+                {
+                    <p class="sin-datos">No hay habitaciones para mostrar.</p>
+                }
+                @foreach (var item in Model.HabitacionesMasUtilizadas)
+                {
+                    <div class="barra-fila">
+                        <div class="barra-datos"><span>@item.Habitacion</span><strong>@item.NochesReservadas noches</strong></div>
+                        <div class="barra-fondo"><div class="barra-valor" style="width:@item.PorcentajeUso.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)%"></div></div>
+                    </div>
+                }
+            </div>
+        </div>
+    </section>
+
+    @if (Model.EsAdministrador)
+    {
+        <section class="seccion-reporte">
+            <h3>Comportamiento de los huéspedes</h3>
+            <p>Información útil para reconocer huéspedes recurrentes, empresas habituales y fechas que requieren mayor preparación.</p>
+
+            <div class="dos-columnas">
+                <div class="panel-reporte">
+                    <h4>Clientes más frecuentes</h4>
+                    @if (Model.ClientesFrecuentes.Count == 0)
+                    {
+                        <p class="sin-datos">No hay noches reservadas por clientes en este período.</p>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-striped tabla-reporte">
+                                <thead><tr><th>Cliente</th><th>Noches reservadas</th><th>Última entrada</th></tr></thead>
+                                <tbody>
+                                @foreach (var item in Model.ClientesFrecuentes)
+                                {
+                                    <tr><td>@item.Cliente</td><td><strong>@item.NochesReservadas</strong></td><td>@item.UltimaEntrada.ToString("dd/MM/yyyy")</td></tr>
+                                }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+
+                <div class="panel-reporte">
+                    <h4>Empresas de procedencia más frecuentes</h4>
+                    @if (Model.EmpresasFrecuentes.Count == 0)
+                    {
+                        <p class="sin-datos">No hay empresas asociadas a las reservaciones de este período.</p>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-striped tabla-reporte">
+                                <thead><tr><th>Empresa</th><th>Noches reservadas</th><th>Clientes relacionados</th></tr></thead>
+                                <tbody>
+                                @foreach (var item in Model.EmpresasFrecuentes)
+                                {
+                                    <tr><td>@item.Empresa</td><td><strong>@item.NochesReservadas</strong></td><td>@item.Clientes</td></tr>
+                                }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="panel-reporte mt-4">
+                <h4>Fechas con más llegadas</h4>
+                @if (Model.FechasMayorActividad.Count == 0)
+                {
+                    <p class="sin-datos">No hubo llegadas en este período.</p>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped tabla-reporte">
+                            <thead><tr><th>Fecha</th><th>Reservaciones que ingresan</th><th>Personas esperadas</th></tr></thead>
+                            <tbody>
+                            @foreach (var item in Model.FechasMayorActividad)
+                            {
+                                <tr><td>@item.Fecha.ToString("dddd, dd/MM/yyyy")</td><td>@item.Llegadas</td><td>@item.Personas</td></tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </section>
+
+        <section class="seccion-reporte">
+            <h3>Productos y servicios más vendidos</h3>
+            <p>Clasificación basada en la cantidad de unidades registradas en el punto de venta.</p>
+            @if (Model.ProductosMasVendidos.Count == 0)
+            {
+                <p class="sin-datos">No se registraron ventas de productos o servicios en este período.</p>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped tabla-reporte">
+                        <thead><tr><th>Posición</th><th>Producto o servicio</th><th>Tipo</th><th>Cantidad vendida</th><th>Total</th></tr></thead>
+                        <tbody>
+                        @for (int i = 0; i < Model.ProductosMasVendidos.Count; i++)
+                        {
+                            var item = Model.ProductosMasVendidos[i];
+                            <tr>
+                                <td><strong>#@(i + 1)</strong></td><td>@item.Nombre</td><td>@item.Tipo</td>
+                                <td>
+                                    <div class="barra-datos"><strong>@item.CantidadVendida</strong></div>
+                                    <div class="barra-fondo"><div class="barra-valor cafe" style="width:@((item.CantidadVendida * 100m / mayorVenta).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%"></div></div>
+                                </td>
+                                <td>Q @item.TotalVendido.ToString("N2")</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+    }
+</div>

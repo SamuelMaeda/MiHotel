@@ -351,8 +351,7 @@
                     </span>
                 </a>
 
-                <a href="#" class="opcion-panel proximamente" aria-disabled="true" tabindex="-1">
-                    <span class="etiqueta-proximamente">Próximamente</span>
+                <a asp-controller="Reportes" asp-action="Index" class="opcion-panel">
                     <span class="opcion-icono oscuro"><i class="bi bi-bar-chart-fill"></i></span>
                     <span class="opcion-texto">
                         <span class="opcion-titulo">Reportes</span>
@@ -565,6 +564,11 @@
                 <a asp-controller="POS" asp-action="Index" class="opcion-panel principal">
                     <span class="opcion-icono"><i class="bi bi-cart-fill"></i></span>
                     <span class="opcion-texto"><span class="opcion-titulo">Punto de venta</span><span class="opcion-descripcion">Registra ventas de productos y servicios.</span></span>
+                </a>
+
+                <a asp-controller="Reportes" asp-action="Index" class="opcion-panel">
+                    <span class="opcion-icono oscuro"><i class="bi bi-bar-chart-fill"></i></span>
+                    <span class="opcion-texto"><span class="opcion-titulo">Reportes</span><span class="opcion-descripcion">Consulta reservaciones y ocupación del hotel.</span></span>
                 </a>
             </div>
         </section>
