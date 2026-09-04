@@ -26,7 +26,7 @@ string ordenActual = ViewBag.OrdenarPor ?? "fecha_hora";
             : "bi-sort-alpha-up";
     }
 
-
+    ViewData["SeccionOperativa"] = "historial-ventas";
 }
 
 <style>
@@ -66,39 +66,6 @@ string ordenActual = ViewBag.OrdenarPor ?? "fecha_hora";
         align-items: center;
         gap: 6px;
         font-weight: 600;
-    }
-
-    .table th,
-    .table td {
-        padding: 12px;
-        vertical-align: middle;
-    }
-
-    .table thead th {
-        font-size: 17px;
-        font-weight: 600;   
-    }
-
-    .table tbody td {
-        font-size: 17px;
-    }
-
-    .table {
-        margin-bottom: 0;
-    }
-
-        .table thead th,
-        .table tbody td {
-            line-height: 1.4;
-        }
-
-    .btn-detalle {
-        background-color: #464482;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        padding: 6px 10px;
-        cursor: pointer;
     }
 
     .fila-detalle {
@@ -141,17 +108,20 @@ string ordenActual = ViewBag.OrdenarPor ?? "fecha_hora";
 
 </style>
 
-<div class="tarjeta-contenido">
+<div class="tarjeta-contenido mh-page-shell">
 
 
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h3 class="m-0">
-            Historial de Ventas
-        </h3>
+        <div>
+            <h3 class="m-0">Historial de Ventas</h3>
+            <p class="text-muted mb-0 mt-1">Consulte las ventas registradas y los productos incluidos en cada movimiento.</p>
+        </div>
     </div>
 
+    <partial name="~/Views/Shared/_NavegacionOperativa.cshtml" />
+
     <!-- BUSCADOR -->
-    <form method="get" class="mb-4">
+    <form id="formBusquedaVentas" method="get" class="mb-4">
 
         <label class="form-label">
             Buscar venta
@@ -173,7 +143,7 @@ string ordenActual = ViewBag.OrdenarPor ?? "fecha_hora";
     <!-- TABLA -->
     <div class="table-responsive">
 
-        <table class="table table-bordered table-striped">
+        <table class="table table-bordered table-striped align-middle mh-table">
 
             <thead class="table-dark">
 
@@ -310,7 +280,9 @@ string ordenActual = ViewBag.OrdenarPor ?? "fecha_hora";
                             <td>
 
                                 <button type="button"
-                                        class="btn-detalle"
+                                        class="btn-detalle mh-icon-button mh-icon-view"
+                                        title="Ver productos de la venta"
+                                        aria-label="Ver productos de la venta"
                                         onclick="toggleDetalle(@v["id_movimiento"])">
 
                                     <i class="bi bi-eye"></i>
@@ -378,7 +350,7 @@ string ordenActual = ViewBag.OrdenarPor ?? "fecha_hora";
 
                 temporizador = setTimeout(function () {
 
-                    document.querySelector("form").submit();
+                    document.getElementById("formBusquedaVentas").submit();
 
                 }, 350);
 

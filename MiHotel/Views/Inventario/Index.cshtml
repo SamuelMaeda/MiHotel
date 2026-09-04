@@ -1,11 +1,11 @@
 ﻿@{
     ViewData["Title"] = "Inventario";
     var productos = ViewBag.Productos as System.Data.DataTable;
-    string busqueda = Context.Request.Query["busqueda"];
-    string ordenarPor = Context.Request.Query["ordenarPor"];
-    string direccion = Context.Request.Query["direccion"];
+    string busqueda = Context.Request.Query["busqueda"].ToString();
+    string ordenarPor = Context.Request.Query["ordenarPor"].ToString();
+    string direccion = Context.Request.Query["direccion"].ToString();
 
-    if (string.IsNullOrEmpty(ordenarPor)) ordenarPor = "nombre";
+    if (string.IsNullOrEmpty(ordenarPor)) ordenarPor = "nombre_proser";
     if (string.IsNullOrEmpty(direccion)) direccion = "asc";
 
     string SiguienteDireccion(string columna)
@@ -27,6 +27,7 @@
     }
 
     int total = productos != null ? productos.Rows.Count : 0;
+    ViewData["SeccionOperativa"] = "inventario";
 }
 
 <style>
@@ -35,14 +36,6 @@
         border-radius: 15px;
         padding: 25px;
         box-shadow: 0 4px 10px rgba(0,0,0,0.10);
-    }
-
-    .form-control-custom {
-        background-color: #f8f9fa;
-        border: 1px solid #dee2e6;
-        border-radius: 8px;
-        padding: 10px 12px;
-        width: 100%;
     }
 
     .encabezado-orden {
@@ -54,70 +47,23 @@
         font-weight: 600;
     }
 
-    .tabla-custom {
-        border-collapse: collapse;
-        width: 100%;
-    }
-
-        .tabla-custom thead {
-            background-color: #212529;
-            color: white;
-        }
-
-        .tabla-custom th {
-            padding: 12px;
-            text-align: left;
-        }
-
-        .tabla-custom td {
-            padding: 12px;
-        }
-
-        .tabla-custom th,
-        .tabla-custom td {
-            border: none !important;
-        }
-
-        .tabla-custom tbody tr:nth-child(odd) {
-            background-color: #ffffff;
-        }
-
-        .tabla-custom tbody tr:nth-child(even) {
-            background-color: #f2f2f2;
-        }
-
     .stock-bajo {
         color: red;
         font-weight: bold;
     }
 
-    .btn-aumentar-stock {
-        background-color: #198754;
-        color: white;
-        padding: 10px 16px;
-        border-radius: 8px;
-        text-decoration: none;
-        font-weight: 500;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 7px;
-    }
-
-        .btn-aumentar-stock:hover {
-            background-color: #157347;
-            color: white;
-        }
 </style>
 
-<div class="tarjeta-contenido">
+<div class="tarjeta-contenido mh-page-shell">
 
     <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-        <h3 class="m-0">Gestión de Inventario</h3>
-        <a asp-controller="Compras" asp-action="Crear" class="btn-aumentar-stock">
-            <i class="bi bi-box-arrow-in-down"></i> Aumentar existencias
-        </a>
+        <div>
+            <h3 class="m-0">Gestión de Inventario</h3>
+            <p class="text-muted mb-0 mt-1">Consulte las existencias actuales de productos disponibles.</p>
+        </div>
     </div>
+
+    <partial name="~/Views/Shared/_NavegacionOperativa.cshtml" />
 
     <form method="get" class="mb-3">
         <input type="hidden" name="ordenarPor" value="@ordenarPor" />
@@ -125,7 +71,7 @@
 
         <label>Buscar producto</label>
         <input type="text" name="busqueda" value="@busqueda"
-               class="form-control-custom"
+               class="form-control"
                placeholder="Buscar..." />
     </form>
 
@@ -134,8 +80,8 @@
     </div>
 
     <div class="table-responsive">
-        <table class="tabla-custom">
-            <thead>
+        <table class="table table-bordered table-striped align-middle mh-table">
+            <thead class="table-dark">
                 <tr>
                     <th>
                         <a asp-action="Index"
@@ -202,6 +148,12 @@
                 }
             </tbody>
         </table>
+    </div>
+
+    <div class="mh-bottom-actions">
+        <a asp-controller="Panel" asp-action="Index" class="mh-btn mh-btn-back">
+            <i class="bi bi-arrow-left-circle-fill" aria-hidden="true"></i> Volver al panel
+        </a>
     </div>
 
 </div>

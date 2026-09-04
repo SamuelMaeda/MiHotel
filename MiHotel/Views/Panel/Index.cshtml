@@ -327,19 +327,19 @@
                     </span>
                 </a>
 
+                <a asp-controller="CuentasPorPagar" asp-action="Index" class="opcion-panel">
+                    <span class="opcion-icono oscuro"><i class="bi bi-calendar2-check-fill"></i></span>
+                    <span class="opcion-texto">
+                        <span class="opcion-titulo">Cuentas por pagar</span>
+                        <span class="opcion-descripcion">Controla servicios mensuales, pagos y saldos acumulados.</span>
+                    </span>
+                </a>
+
                 <a asp-controller="Facturas" asp-action="Index" class="opcion-panel">
                     <span class="opcion-icono"><i class="bi bi-file-earmark-text-fill"></i></span>
                     <span class="opcion-texto">
                         <span class="opcion-titulo">Facturas pendientes</span>
                         <span class="opcion-descripcion">Emite fuera del sistema y registra las facturas pendientes.</span>
-                    </span>
-                </a>
-
-                <a asp-controller="Compras" asp-action="Crear" class="opcion-panel">
-                    <span class="opcion-icono"><i class="bi bi-box-arrow-in-down"></i></span>
-                    <span class="opcion-texto">
-                        <span class="opcion-titulo">Cuentas por pagar</span>
-                        <span class="opcion-descripcion">Registra ingresos de productos y aumenta existencias.</span>
                     </span>
                 </a>
 
@@ -373,6 +373,14 @@
                     <span class="opcion-texto">
                         <span class="opcion-titulo">Inventario</span>
                         <span class="opcion-descripcion">Consulta existencias y movimientos.</span>
+                    </span>
+                </a>
+
+                <a asp-controller="Compras" asp-action="Crear" class="opcion-panel">
+                    <span class="opcion-icono"><i class="bi bi-box-arrow-in-down"></i></span>
+                    <span class="opcion-texto">
+                        <span class="opcion-titulo">Compras</span>
+                        <span class="opcion-descripcion">Registra productos recibidos y actualiza las existencias.</span>
                     </span>
                 </a>
 

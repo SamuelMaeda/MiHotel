@@ -20,16 +20,14 @@
     .estado-registrada { background:#d9f2df; color:#17652b; }
     .estado-no_solicitada { background:#e8e8e8; color:#555; }
     .estado-anulada { background:#f7d7d9; color:#8f1d26; }
-    .btn-ver { background:#464482; color:#fff; border-radius:7px; padding:7px 11px; text-decoration:none; white-space:nowrap; }
-    .btn-ver:hover { color:#fff; background:#36366b; }
-    .acciones-factura { display:flex; flex-wrap:wrap; gap:7px; align-items:center; }
-    .btn-cancelar-solicitud { border:0; background:#842029; color:#fff; border-radius:7px; padding:7px 11px; white-space:nowrap; }
+    .acciones-factura { display:flex; flex-wrap:nowrap; gap:7px; align-items:center; }
+    .acciones-factura form { margin:0; }
 </style>
 
 <div class="contenedor-facturas">
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
         <div>
-            <h2 class="mb-1">Control de facturación</h2>
+            <h2 class="mb-1">Facturas pendientes</h2>
             <p class="text-muted mb-0">La habitación y la cuenta funcionan de forma independiente a esta bandeja administrativa.</p>
         </div>
         <a asp-controller="Panel" asp-action="Index" class="btn btn-secondary">Volver al panel</a>
@@ -51,10 +49,12 @@
         <div class="col-md-3 d-grid"><button class="btn btn-dark" type="submit"><i class="bi bi-search"></i> Buscar</button></div>
     </form>
 
+    <div class="mb-3"><strong>Total de registros:</strong> @Model.Registros.Count</div>
+
     <div class="table-responsive">
-        <table class="table table-bordered table-striped align-middle">
+        <table class="table table-bordered table-striped align-middle mh-table">
             <thead class="table-dark">
-                <tr><th>Reserva</th><th>Huésped</th><th>Estadía</th><th>Total</th><th>Decisión</th><th>Estado fiscal</th><th>Documentos</th><th></th></tr>
+                <tr><th>Reserva</th><th>Huésped</th><th>Estadía</th><th>Total</th><th>Decisión</th><th>Estado fiscal</th><th>Documentos</th><th data-no-sort="true">Acciones</th></tr>
             </thead>
             <tbody>
             @if (Model.Registros.Count == 0)
@@ -78,7 +78,10 @@
                         <td>@fila.CantidadDocumentos</td>
                         <td>
                             <div class="acciones-factura">
-                                <a asp-controller="Reservas" asp-action="Detalle" asp-route-id="@fila.IdReserva" class="btn-ver">Abrir expediente</a>
+                                <a asp-controller="Reservas" asp-action="Detalle" asp-route-id="@fila.IdReserva"
+                                   class="mh-icon-button mh-icon-view" title="Abrir expediente de la reservación" aria-label="Abrir expediente de la reservación">
+                                    <i class="bi bi-eye-fill" aria-hidden="true"></i>
+                                </a>
                                 @if (fila.EstadoFacturacion is "pendiente" or "anulada")
                                 {
                                     <form asp-controller="Facturas" asp-action="CancelarSolicitud" method="post"
@@ -87,7 +90,9 @@
                                         <input type="hidden" name="idReserva" value="@fila.IdReserva" />
                                         <input type="hidden" name="retorno" value="facturas" />
                                         <input type="hidden" name="busqueda" value="@Model.Busqueda" />
-                                        <button type="submit" class="btn-cancelar-solicitud">Cancelar solicitud</button>
+                                        <button type="submit" class="mh-icon-button mh-icon-cancel" title="Cancelar solicitud de factura" aria-label="Cancelar solicitud de factura">
+                                            <i class="bi bi-x-circle-fill" aria-hidden="true"></i>
+                                        </button>
                                     </form>
                                 }
                             </div>

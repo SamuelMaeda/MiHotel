@@ -4,6 +4,7 @@
     var productos = ViewBag.Productos as System.Data.DataTable;
     var clientes = ViewBag.Clientes as System.Data.DataTable;
     var reservas = ViewBag.Reservas as System.Data.DataTable;
+    ViewData["SeccionOperativa"] = "punto-venta";
 }
 
 <style>
@@ -186,7 +187,16 @@
 
 </style>
 
-<div class="pos-container">
+<div class="pos-container mh-page-shell">
+    <div class="mh-page-header">
+        <div>
+            <h3>Punto de Venta</h3>
+            <p>Registre productos y servicios consumidos por huéspedes o clientes.</p>
+        </div>
+    </div>
+
+    <partial name="~/Views/Shared/_NavegacionOperativa.cshtml" />
+
     @if (TempData["Exito"] != null)
     {
         <div class="mensaje-pos-exito">

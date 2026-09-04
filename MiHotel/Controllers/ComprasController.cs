@@ -352,7 +352,7 @@ namespace MiHotel.Controllers
                         (id_usuario,id_clipro,id_tipomov,id_formapago,id_reserva,fecha_hora,estado,observaciones)
                     VALUES
                         (@usuario,@proveedor,@tipo,NULL,NULL,CURRENT_TIMESTAMP,'activo',
-                         'Ingreso de existencias desde Cuentas por pagar');
+                         'Ingreso de existencias desde Compras');
                     SELECT LAST_INSERT_ID();", conexion, transaccion))
                 {
                     insertarMovimiento.Parameters.AddWithValue("@usuario", idUsuario);
@@ -389,6 +389,7 @@ namespace MiHotel.Controllers
 
                 transaccion.Commit();
                 TempData["Exito"] = "Existencias actualizadas correctamente.";
+                return RedirectToAction("Historial");
             }
             catch (Exception ex)
             {

@@ -1,6 +1,6 @@
 @using System.Text.Json
 @{
-    ViewData["Title"] = "Cuentas por pagar";
+    ViewData["Title"] = "Compras";
     var proveedores = ViewBag.Proveedores as System.Data.DataTable;
     var productos = ViewBag.Productos as System.Data.DataTable;
     bool hayProveedores = proveedores != null && proveedores.Rows.Count > 0;
@@ -21,6 +21,7 @@
     }
 
     string productosJson = JsonSerializer.Serialize(listaProductos);
+    ViewData["SeccionOperativa"] = "registrar-compra";
 }
 
 <style>
@@ -140,18 +141,17 @@
     }
 </style>
 
-<div class="tarjeta-contenido">
+<div class="tarjeta-contenido mh-page-shell">
         <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
             <div>
-                <h3 class="m-0">Cuentas por Pagar</h3>
+                <h3 class="m-0">Compras</h3>
                 <p class="text-muted mb-0 mt-1">Registre productos recibidos para aumentar sus existencias en inventario.</p>
             </div>
-            <a asp-action="Historial" class="btn-historial">
-                <i class="bi bi-clock-history"></i> Historial de compras
-            </a>
         </div>
 
-        <p class="nota mb-4">Nota: este apartado únicamente registra ingresos de productos. No administra deudas, vencimientos ni pagos pendientes a proveedores.</p>
+        <partial name="~/Views/Shared/_NavegacionOperativa.cshtml" />
+
+        <p class="nota mb-4">Este apartado registra las compras recibidas y actualiza las existencias del inventario.</p>
 
         @if (TempData["Exito"] != null)
         {
@@ -209,12 +209,12 @@
             </button>
 
             <div class="acciones-formulario">
-                <button type="submit" class="btn-guardar" @(!hayProveedores || !hayProductos ? "disabled" : null)>
-                    <i class="bi bi-box-arrow-in-down"></i> Registrar ingreso
-                </button>
-                <a asp-controller="Inventario" asp-action="Index" class="btn-volver">
-                    <i class="bi bi-arrow-left-circle"></i> Volver al inventario
+                <a asp-controller="Panel" asp-action="Index" class="btn-volver">
+                    <i class="bi bi-arrow-left-circle"></i> Volver al panel
                 </a>
+                <button type="submit" class="btn-guardar" @(!hayProveedores || !hayProductos ? "disabled" : null)>
+                    <i class="bi bi-box-arrow-in-down"></i> Registrar compra
+                </button>
             </div>
         </form>
 </div>

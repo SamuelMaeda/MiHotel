@@ -1,0 +1,81 @@
+@model MiHotel.Models.CuentaPorPagarMontosViewModel
+@using System.Globalization
+@{
+    ViewData["Title"] = "Montos variables";
+    var cultura = new CultureInfo("es-GT");
+    string Periodo(DateTime fecha)
+    {
+        string texto = fecha.ToString("MMMM yyyy", cultura);
+        return char.ToUpper(texto[0], cultura) + texto[1..];
+    }
+}
+
+<div class="tarjeta mh-page-shell mh-page-shell--form">
+    <div class="mh-page-header">
+        <div>
+            <h3>Montos variables: @Model.Nombre</h3>
+            <p>Ingrese el valor real indicado en el recibo de cada mes.</p>
+        </div>
+    </div>
+
+    @if (TempData["Mensaje"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Mensaje"]</div>
+    }
+    @if (TempData["Exito"] != null)
+    {
+        <div class="alert alert-success">@TempData["Exito"]</div>
+    }
+
+    <div class="alert alert-light border">
+        La cuenta no podrá marcarse como pagada mientras alguna mensualidad continúe sin importe.
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped align-middle mh-table">
+            <thead class="table-dark">
+                <tr>
+                    <th>Periodo</th>
+                    <th>Estado</th>
+                    <th data-no-sort="true">Monto del recibo</th>
+                    <th data-no-sort="true">Acción</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var periodo in Model.Periodos)
+                {
+                    <tr>
+                        <td><strong>@Periodo(periodo.Periodo)</strong></td>
+                        <td><span class="text-danger fw-semibold">Pendiente de monto</span></td>
+                        <td>
+                            <form id="form-periodo-@periodo.IdPeriodo" asp-action="DefinirMonto" method="post">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="idCuentaPorPagar" value="@Model.IdCuentaPorPagar" />
+                                <input type="hidden" name="idPeriodo" value="@periodo.IdPeriodo" />
+                                <div class="input-group">
+                                    <span class="input-group-text">Q</span>
+                                    <input type="number" name="monto" class="form-control"
+                                           min="0.01" step="0.01" required
+                                           aria-label="Monto de @Periodo(periodo.Periodo)" />
+                                </div>
+                            </form>
+                        </td>
+                        <td>
+                            <button type="submit" form="form-periodo-@periodo.IdPeriodo"
+                                    class="mh-icon-button mh-icon-positive"
+                                    title="Guardar monto del periodo" aria-label="Guardar monto del periodo">
+                                <i class="bi bi-floppy-fill" aria-hidden="true"></i>
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="mh-bottom-actions">
+        <a asp-action="Index" class="mh-btn mh-btn-back">
+            <i class="bi bi-arrow-left-circle-fill" aria-hidden="true"></i> Volver a cuentas por pagar
+        </a>
+    </div>
+</div>

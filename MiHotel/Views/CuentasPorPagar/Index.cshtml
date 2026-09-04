@@ -1,0 +1,266 @@
+@model MiHotel.Models.CuentasPorPagarIndexViewModel
+@{
+    ViewData["Title"] = "Cuentas por pagar";
+    string Dir(string columna) => Model.OrdenarPor == columna && Model.Direccion == "asc" ? "desc" : "asc";
+    string Icono(string columna) => Model.OrdenarPor != columna
+        ? "bi-arrow-down-up"
+        : Model.Direccion == "asc" ? "bi-sort-alpha-down" : "bi-sort-alpha-up";
+    string Fecha(DateTime? fecha) => fecha?.ToString("dd/MM/yyyy HH:mm") ?? "—";
+}
+
+<style>
+    .cxc-pagar-resumen {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+    }
+
+    .cxc-pagar-saldo {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 13px;
+        border-radius: 10px;
+        background: #f7efee;
+        border: 1px solid #ead6d2;
+        color: #824B44;
+        font-weight: 700;
+    }
+
+    .cxc-pagar-descripcion {
+        min-width: 240px;
+        white-space: normal;
+    }
+
+    .cxc-pagar-acciones {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        flex-wrap: nowrap;
+    }
+
+    .cxc-pagar-acciones form { margin: 0; }
+
+    .cxc-pagar-meses {
+        display: inline-flex;
+        min-width: 28px;
+        height: 28px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        padding: 0 8px;
+        background: #f7e2b0;
+        color: #805800;
+        font-weight: 700;
+    }
+</style>
+
+<div class="tarjeta mh-page-shell">
+    <div class="mh-page-header">
+        <div>
+            <h3>Cuentas por pagar</h3>
+            <p>Administre los pagos mensuales recurrentes y los saldos acumulados.</p>
+        </div>
+        <a asp-action="Crear" class="mh-btn mh-btn-primary">
+            <i class="bi bi-plus-circle-fill" aria-hidden="true"></i> Nueva cuenta por pagar
+        </a>
+    </div>
+
+    @if (ViewBag.Mensaje != null)
+    {
+        <div class="alert alert-danger">@ViewBag.Mensaje</div>
+    }
+    @if (TempData["Mensaje"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Mensaje"]</div>
+    }
+    @if (TempData["Exito"] != null)
+    {
+        <div class="alert alert-success">@TempData["Exito"]</div>
+    }
+
+    <nav class="tabs-vista" aria-label="Estados de cuentas por pagar">
+        <a asp-action="Index" asp-route-vista="por_pagar"
+           class="tab-vista @(Model.Vista == "por_pagar" ? "activa" : "")">
+            <i class="bi bi-hourglass-split" aria-hidden="true"></i> Por pagar
+        </a>
+        <a asp-action="Index" asp-route-vista="pagados"
+           class="tab-vista @(Model.Vista == "pagados" ? "activa" : "")">
+            <i class="bi bi-check-circle-fill" aria-hidden="true"></i> Pagados
+        </a>
+        <a asp-action="Index" asp-route-vista="desactivados"
+           class="tab-vista @(Model.Vista == "desactivados" ? "activa" : "")">
+            <i class="bi bi-x-circle-fill" aria-hidden="true"></i> Desactivados
+        </a>
+    </nav>
+
+    <form method="get" class="mb-3">
+        <input type="hidden" name="vista" value="@Model.Vista" />
+        <input type="hidden" name="ordenarPor" value="@Model.OrdenarPor" />
+        <input type="hidden" name="direccion" value="@Model.Direccion" />
+        <label class="form-label">Buscar cuenta</label>
+        <div class="input-group">
+            <input name="busqueda" value="@Model.Busqueda" class="form-control"
+                   placeholder="Buscar por nombre o descripción" />
+            <button type="submit" class="btn btn-dark">
+                <i class="bi bi-search" aria-hidden="true"></i> Buscar
+            </button>
+        </div>
+    </form>
+
+    <div class="cxc-pagar-resumen">
+        <strong>Total de registros: @Model.TotalRegistros</strong>
+        @if (Model.SaldoTotal > 0)
+        {
+            <span class="cxc-pagar-saldo">
+                <i class="bi bi-wallet2" aria-hidden="true"></i>
+                Saldo mostrado: Q @Model.SaldoTotal.ToString("N2")
+            </span>
+        }
+        @if (Model.PeriodosSinMontoTotal > 0)
+        {
+            <span class="cxc-pagar-saldo">
+                <i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>
+                @Model.PeriodosSinMontoTotal mensualidad(es) pendiente(s) de monto
+            </span>
+        }
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped align-middle mh-table">
+            <thead class="table-dark">
+                <tr>
+                    <th><a class="encabezado-orden" asp-route-vista="@Model.Vista" asp-route-busqueda="@Model.Busqueda" asp-route-ordenarPor="nombre" asp-route-direccion="@Dir("nombre")">Pago <i class="bi @Icono("nombre")"></i></a></th>
+                    <th><a class="encabezado-orden" asp-route-vista="@Model.Vista" asp-route-busqueda="@Model.Busqueda" asp-route-ordenarPor="descripcion" asp-route-direccion="@Dir("descripcion")">Descripción <i class="bi @Icono("descripcion")"></i></a></th>
+                    <th><a class="encabezado-orden" asp-route-vista="@Model.Vista" asp-route-busqueda="@Model.Busqueda" asp-route-ordenarPor="tipo" asp-route-direccion="@Dir("tipo")">Tipo <i class="bi @Icono("tipo")"></i></a></th>
+                    <th><a class="encabezado-orden" asp-route-vista="@Model.Vista" asp-route-busqueda="@Model.Busqueda" asp-route-ordenarPor="monto" asp-route-direccion="@Dir("monto")">Monto mensual <i class="bi @Icono("monto")"></i></a></th>
+                    <th><a class="encabezado-orden" asp-route-vista="@Model.Vista" asp-route-busqueda="@Model.Busqueda" asp-route-ordenarPor="vencimiento" asp-route-direccion="@Dir("vencimiento")">Día de pago <i class="bi @Icono("vencimiento")"></i></a></th>
+                    <th><a class="encabezado-orden" asp-route-vista="@Model.Vista" asp-route-busqueda="@Model.Busqueda" asp-route-ordenarPor="meses" asp-route-direccion="@Dir("meses")">Meses pendientes <i class="bi @Icono("meses")"></i></a></th>
+                    <th><a class="encabezado-orden" asp-route-vista="@Model.Vista" asp-route-busqueda="@Model.Busqueda" asp-route-ordenarPor="saldo" asp-route-direccion="@Dir("saldo")">Saldo pendiente <i class="bi @Icono("saldo")"></i></a></th>
+                    <th><a class="encabezado-orden" asp-route-vista="@Model.Vista" asp-route-busqueda="@Model.Busqueda" asp-route-ordenarPor="ultimo_pago" asp-route-direccion="@Dir("ultimo_pago")">Último pago <i class="bi @Icono("ultimo_pago")"></i></a></th>
+                    <th data-no-sort="true">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Registros.Count == 0)
+                {
+                    <tr>
+                        <td colspan="9" class="text-center text-muted py-4">
+                            @(Model.Vista == "por_pagar"
+                                ? "No hay pagos pendientes."
+                                : Model.Vista == "pagados"
+                                    ? "No hay cuentas pagadas durante el periodo actual."
+                                    : "No hay cuentas desactivadas.")
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var cuenta in Model.Registros)
+                    {
+                        <tr>
+                            <td><strong>@cuenta.Nombre</strong></td>
+                            <td class="cxc-pagar-descripcion">@(string.IsNullOrWhiteSpace(cuenta.Descripcion) ? "—" : cuenta.Descripcion)</td>
+                            <td>@(cuenta.TipoMonto == "variable" ? "Variable" : "Fijo")</td>
+                            <td>
+                                @if (cuenta.TipoMonto == "variable")
+                                {
+                                    <span class="text-muted">Según recibo</span>
+                                }
+                                else
+                                {
+                                    <span>Q @cuenta.MontoMensual?.ToString("N2")</span>
+                                }
+                            </td>
+                            <td>Día @cuenta.DiaVencimiento</td>
+                            <td>
+                                <span class="cxc-pagar-meses">@cuenta.MesesPendientes</span>
+                                @if (cuenta.PeriodosSinMonto > 0)
+                                {
+                                    <small class="d-block text-danger mt-1">@cuenta.PeriodosSinMonto sin monto</small>
+                                }
+                            </td>
+                            <td class="@(cuenta.SaldoPendiente > 0 ? "text-danger fw-bold" : "text-success fw-bold")">Q @cuenta.SaldoPendiente.ToString("N2")</td>
+                            <td>@Fecha(cuenta.FechaUltimoPago)</td>
+                            <td>
+                                <div class="cxc-pagar-acciones">
+                                    <a asp-action="Editar" asp-route-id="@cuenta.IdCuentaPorPagar"
+                                       class="mh-icon-button mh-icon-edit" title="Editar cuenta" aria-label="Editar cuenta">
+                                        <i class="bi bi-pencil-fill" aria-hidden="true"></i>
+                                    </a>
+
+                                    @if (cuenta.PeriodosSinMonto > 0)
+                                    {
+                                        <a asp-action="Montos" asp-route-id="@cuenta.IdCuentaPorPagar"
+                                           class="mh-icon-button mh-icon-positive" title="Ingresar montos mensuales" aria-label="Ingresar montos mensuales">
+                                            <i class="bi bi-calculator-fill" aria-hidden="true"></i>
+                                        </a>
+                                    }
+
+                                    @if (cuenta.SaldoPendiente > 0 && cuenta.PeriodosSinMonto == 0)
+                                    {
+                                        <form asp-action="Pagar" method="post"
+                                              onsubmit="return confirm('¿Confirma el pago completo de Q @cuenta.SaldoPendiente.ToString("N2")?');">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@cuenta.IdCuentaPorPagar" />
+                                            <input type="hidden" name="vista" value="@Model.Vista" />
+                                            <button type="submit" class="mh-icon-button mh-icon-positive"
+                                                    title="Registrar pago completo" aria-label="Registrar pago completo">
+                                                <i class="bi bi-cash-coin" aria-hidden="true"></i>
+                                            </button>
+                                        </form>
+                                    }
+
+                                    @if (cuenta.Activa)
+                                    {
+                                        <form asp-action="Desactivar" method="post"
+                                              onsubmit="return confirm('¿Desactivar esta cuenta? No generará cargos en los meses siguientes.');">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@cuenta.IdCuentaPorPagar" />
+                                            <button type="submit" class="mh-icon-button mh-icon-cancel"
+                                                    title="Desactivar cuenta" aria-label="Desactivar cuenta">
+                                                <i class="bi bi-x-circle-fill" aria-hidden="true"></i>
+                                            </button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <form asp-action="Activar" method="post"
+                                              onsubmit="return confirm('¿Activar nuevamente esta cuenta mensual?');">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@cuenta.IdCuentaPorPagar" />
+                                            <button type="submit" class="mh-icon-button mh-icon-positive"
+                                                    title="Activar cuenta" aria-label="Activar cuenta">
+                                                <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
+                                            </button>
+                                        </form>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (Model.TotalPaginas > 1)
+    {
+        <nav class="paginas" aria-label="Paginación">
+            @for (int i = 1; i <= Model.TotalPaginas; i++)
+            {
+                <a asp-route-vista="@Model.Vista" asp-route-busqueda="@Model.Busqueda"
+                   asp-route-ordenarPor="@Model.OrdenarPor" asp-route-direccion="@Model.Direccion"
+                   asp-route-pagina="@i" class="pagina @(i == Model.PaginaActual ? "activa" : "")">@i</a>
+            }
+        </nav>
+    }
+
+    <div class="mh-bottom-actions">
+        <a asp-controller="Panel" asp-action="Index" class="mh-btn mh-btn-back">
+            <i class="bi bi-arrow-left-circle-fill" aria-hidden="true"></i> Volver al panel
+        </a>
+    </div>
+</div>

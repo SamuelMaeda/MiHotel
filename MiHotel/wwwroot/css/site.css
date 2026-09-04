@@ -230,3 +230,343 @@ body {
 @media (prefers-reduced-motion: reduce) {
   *,*::before,*::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+/* =========================================================
+   ESTANDARIZACION GLOBAL DE VISTAS
+   Estas reglas normalizan los modulos heredados sin duplicar
+   el sistema visual dentro de cada archivo Razor.
+   ========================================================= */
+.contenido-principal {
+  width: 100%;
+  max-width: 100%;
+}
+
+.mh-auto-shell {
+  margin-inline: auto;
+}
+
+.mh-auto-shell.mh-page-shell--form {
+  width: min(100%, 1180px);
+}
+
+.mh-auto-shell > :first-child,
+.mh-auto-shell > style + :not(style) {
+  margin-top: 0;
+}
+
+.mh-page-header--auto {
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  gap: 18px !important;
+  flex-wrap: wrap;
+  margin-bottom: 22px !important;
+  padding-bottom: 17px !important;
+  border-bottom: 1px solid var(--mh-border) !important;
+}
+
+.mh-page-header--auto h1,
+.mh-page-header--auto h2,
+.mh-page-header--auto h3,
+.mh-page-header--auto h4 {
+  margin: 0 !important;
+  color: #292936;
+}
+
+.mh-page-header--auto p,
+.mh-page-header--auto .text-muted {
+  margin: 5px 0 0 !important;
+  color: #687080 !important;
+}
+
+.mh-page-shell .tabs,
+.mh-page-shell .tabs-vista,
+.mh-page-shell .filtros-facturas,
+.mh-page-shell .filtros-estado,
+.mh-page-shell .nav-pills {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 20px 0;
+}
+
+.mh-page-shell .tab,
+.mh-page-shell .tab-vista,
+.mh-page-shell .filtro-factura,
+.mh-page-shell .filtro-estado {
+  min-height: 42px;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: var(--mh-control-radius);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--mh-skin);
+  color: #363636;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color .15s ease, transform .15s ease;
+}
+
+.mh-page-shell .tab:hover,
+.mh-page-shell .tab-vista:hover,
+.mh-page-shell .filtro-factura:hover,
+.mh-page-shell .filtro-estado:hover {
+  color: #363636;
+  transform: translateY(-1px);
+}
+
+.mh-page-shell .tab.activa,
+.mh-page-shell .tab-vista.activa,
+.mh-page-shell .filtro-factura.activo,
+.mh-page-shell .filtro-estado.activo,
+.mh-page-shell .filtro-estado.activa {
+  background: var(--mh-brown);
+  color: #fff;
+}
+
+.mh-action-group {
+  display: flex !important;
+  align-items: center;
+  gap: 8px !important;
+  flex-wrap: wrap;
+}
+
+.mh-action-group > .mh-btn-back { order: 1; }
+.mh-action-group > .mh-btn-cancel,
+.mh-action-group > form:has(.mh-btn-cancel) { order: 2; }
+.mh-action-group > .mh-btn-primary,
+.mh-action-group > form:has(.mh-btn-primary) { order: 3; }
+
+.mh-global-bottom-actions {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.mh-page-shell form.mh-search-form {
+  width: 100%;
+  display: block !important;
+  margin: 18px 0 22px !important;
+  margin-inline: 0 !important;
+}
+
+.mh-search-label {
+  display: block;
+  margin-bottom: 7px;
+}
+
+.mh-search-row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.mh-search-row .mh-search-input {
+  width: 100%;
+  min-width: 0;
+}
+
+.mh-search-row .mh-search-button {
+  min-width: 118px;
+}
+
+.mh-page-shell .btn-crear,
+.mh-page-shell .btn-guardar,
+.mh-page-shell .btn-actualizar,
+.mh-page-shell .btn-calcular,
+.mh-page-shell .btn-volver,
+.mh-page-shell .btn-regresar,
+.mh-page-shell .btn-cancelar:not(.btn-icono),
+.mh-page-shell .btn-editar:not(.btn-icono),
+.mh-page-shell .btn-empresa {
+  min-height: 42px;
+  border: 1px solid transparent !important;
+  border-radius: var(--mh-control-radius) !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px !important;
+  color: #fff !important;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none !important;
+}
+
+.mh-page-shell .btn-icono,
+.mh-page-shell .acciones .btn-icono,
+.mh-page-shell .acciones-contenedor .btn-icono {
+  width: 38px !important;
+  min-width: 38px;
+  height: 38px !important;
+  min-height: 38px;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 9px !important;
+}
+
+.mh-page-shell .acciones,
+.mh-page-shell .acciones-contenedor {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: nowrap;
+}
+
+.mh-page-shell .table-responsive,
+.mh-page-shell .tabla-scroll {
+  margin-top: 8px;
+  border-radius: 9px;
+}
+
+.mh-page-shell table.mh-table {
+  width: 100%;
+  margin-bottom: 0;
+  color: #292936;
+}
+
+.mh-page-shell table.mh-table > thead > tr > th {
+  padding: .58rem .65rem !important;
+  background: #212529 !important;
+  color: #fff !important;
+  vertical-align: middle;
+}
+
+.mh-page-shell table.mh-table > tbody > tr > td {
+  padding: .52rem .65rem !important;
+  vertical-align: middle;
+}
+
+.mh-page-shell table.mh-table > tbody > tr:hover > td {
+  background: #f5efee;
+}
+
+.mh-page-shell table.mh-table th:last-child,
+.mh-page-shell table.mh-table td:last-child:has(.btn-icono),
+.mh-page-shell table.mh-table td:last-child:has(.mh-icon-button) {
+  white-space: nowrap;
+}
+
+.mh-page-shell .encabezado-orden {
+  color: inherit !important;
+  text-decoration: none !important;
+  display: inline-flex !important;
+  align-items: center;
+  gap: 7px;
+  font-weight: 600;
+}
+
+.mh-page-shell .paginacion,
+.mh-page-shell .paginas {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+
+.mh-page-shell .pagina,
+.mh-page-shell .pagina-link {
+  padding: 7px 11px;
+  border-radius: 7px;
+  background: var(--mh-skin);
+  color: #363636;
+  text-decoration: none;
+}
+
+.mh-page-shell .pagina.activa,
+.mh-page-shell .pagina-link.activa {
+  background: var(--mh-blue);
+  color: #fff;
+  font-weight: 700;
+}
+
+.mh-page-shell .card,
+.mh-page-shell .dato,
+.mh-page-shell .detalle-item,
+.mh-page-shell .info-item,
+.mh-page-shell .resumen-item {
+  border-color: var(--mh-border);
+  border-radius: 10px;
+}
+
+.mh-page-shell fieldset,
+.mh-page-shell .bloque-formulario,
+.mh-page-shell .formulario-seccion {
+  border-color: var(--mh-border);
+  border-radius: 11px;
+}
+
+.mh-page-shell textarea.form-control {
+  min-height: 96px;
+}
+
+.mh-page-shell .input-group > .btn {
+  min-height: 42px;
+}
+
+.modal-content {
+  border: 1px solid var(--mh-border);
+  border-radius: var(--mh-radius);
+  box-shadow: var(--mh-shadow-hover);
+}
+
+.modal-header {
+  border-bottom-color: var(--mh-border);
+}
+
+.modal-footer {
+  gap: 8px;
+  border-top-color: var(--mh-border);
+}
+
+.mh-standard-login .btn-login {
+  min-height: 44px;
+  border: 0;
+  border-radius: var(--mh-control-radius);
+  background: var(--mh-blue) !important;
+  color: #fff;
+  font-weight: 600;
+}
+
+.mh-standard-login .btn-login:hover {
+  background: var(--mh-blue-hover) !important;
+}
+
+@media (max-width: 992px) {
+  .mh-page-shell table.mh-table > thead > tr > th,
+  .mh-page-shell table.mh-table > tbody > tr > td {
+    padding: .48rem .55rem !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .mh-page-header--auto {
+    flex-direction: column;
+  }
+
+  .mh-page-header--auto > .mh-btn,
+  .mh-page-header--auto > div + .mh-btn {
+    width: 100%;
+  }
+
+  .mh-action-group {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .mh-action-group > .mh-btn,
+  .mh-action-group > form,
+  .mh-action-group > form > .mh-btn {
+    width: 100%;
+  }
+
+  .mh-search-row {
+    grid-template-columns: 1fr;
+  }
+
+  .mh-search-row .mh-search-button {
+    width: 100%;
+  }
+}

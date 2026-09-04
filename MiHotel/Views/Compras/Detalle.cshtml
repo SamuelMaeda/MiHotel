@@ -10,6 +10,7 @@
             totalUnidades += Convert.ToInt32(fila["cantidad"]);
         }
     }
+    ViewData["SeccionOperativa"] = "historial-compras";
 }
 
 <style>
@@ -22,11 +23,13 @@
     .btn-volver:hover { background-color:#6e3f39;color:white; }
 </style>
 
-<div class="tarjeta-contenido">
+<div class="tarjeta-contenido mh-page-shell">
     <div>
         <h3 class="m-0">Detalle de la Compra #@Model["id_movimiento"]</h3>
         <p class="text-muted mb-0 mt-1">Productos y cantidades que se agregaron al inventario.</p>
     </div>
+
+    <partial name="~/Views/Shared/_NavegacionOperativa.cshtml" />
 
     <div class="resumen">
         <div class="resumen-item"><div class="resumen-label">Proveedor</div><div class="resumen-valor">@Model["proveedor"]</div></div>
@@ -54,5 +57,7 @@
         </table>
     </div>
 
-    <a asp-action="Historial" class="btn-volver"><i class="bi bi-arrow-left-circle"></i> Volver al historial</a>
+    <div class="mh-bottom-actions">
+        <a asp-action="Historial" class="btn-volver"><i class="bi bi-arrow-left-circle"></i> Volver al historial</a>
+    </div>
 </div>

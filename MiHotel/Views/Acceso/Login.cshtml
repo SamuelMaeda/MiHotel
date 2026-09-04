@@ -15,41 +15,54 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Login - @nombreEmpresa</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap-icons/bootstrap-icons.min.css" />
     <style>
         body {
-            background-color: #693D2F;
+            background-color: #E6D3D0;
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
+            padding: 20px;
         }
 
         .contenedor-login {
-            background-color: #DEDEDE;
+            background-color: #fff;
+            border: 1px solid rgba(130,75,68,.10);
             border-radius: 16px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            box-shadow: 0 8px 22px rgba(71,71,71,.14);
             padding: 30px;
             width: 100%;
             max-width: 420px;
+            animation: entradaLogin .28s ease-out both;
         }
 
         .titulo-login {
-            color: #824B44;
+            color: #292936;
             font-weight: bold;
             text-align: center;
             margin-bottom: 20px;
         }
 
         .btn-login {
-            background-color: #824B44;
-            border-color: #824B44;
+            min-height: 44px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background-color: #464482;
+            border-color: #464482;
             color: white;
+            font-weight: 600;
+            transition: transform .16s ease, box-shadow .16s ease, background-color .16s ease;
         }
 
             .btn-login:hover {
-                background-color: #6d3d37;
-                border-color: #6d3d37;
+                background-color: #36366b;
+                border-color: #36366b;
                 color: white;
+                transform: translateY(-2px);
+                box-shadow: 0 5px 11px rgba(71,71,71,.18);
             }
 
         .mensaje-error {
@@ -64,6 +77,20 @@
             max-width: 140px;
             width: 100%;
             height: auto;
+        }
+
+        .form-control:focus {
+            border-color: #464482;
+            box-shadow: 0 0 0 .2rem rgba(70,68,130,.14);
+        }
+
+        @@keyframes entradaLogin {
+            from { opacity: 0; transform: translateY(7px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @@media (prefers-reduced-motion: reduce) {
+            .contenedor-login, .btn-login { animation: none; transition: none; }
         }
 
     </style>
@@ -96,7 +123,7 @@
             </div>
 
             <div class="d-grid">
-                <button type="submit" class="btn btn-login">Ingresar</button>
+                <button type="submit" class="btn btn-login"><i class="bi bi-box-arrow-in-right" aria-hidden="true"></i> Ingresar</button>
             </div>
         </form>
     </div>

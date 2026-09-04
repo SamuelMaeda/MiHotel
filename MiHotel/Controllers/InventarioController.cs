@@ -22,7 +22,10 @@ namespace MiHotel.Controllers
             return null;
         }
 
-        public IActionResult Index(string busqueda = "")
+        public IActionResult Index(
+            string busqueda = "",
+            string ordenarPor = "nombre_proser",
+            string direccion = "asc")
         {
             var acceso = ValidarSesion();
             if (acceso != null) return acceso;
@@ -30,7 +33,22 @@ namespace MiHotel.Controllers
             using var conexion = _conexionBD.ObtenerConexion();
             conexion.Open();
 
-            string sql = @"
+            var columnasPermitidas = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["nombre_proser"] = "p.nombre_proser",
+                ["nombre_subcategoria"] = "s.nombre_subcategoria",
+                ["precio"] = "p.precio",
+                ["stock"] = "p.stock"
+            };
+
+            if (!columnasPermitidas.TryGetValue(ordenarPor, out string? columnaOrden))
+            {
+                ordenarPor = "nombre_proser";
+                columnaOrden = columnasPermitidas[ordenarPor];
+            }
+            direccion = direccion.Equals("desc", StringComparison.OrdinalIgnoreCase) ? "desc" : "asc";
+
+            string sql = $@"
             SELECT 
                 p.id_proser,
                 p.nombre_proser,
@@ -48,7 +66,7 @@ namespace MiHotel.Controllers
             )
             AND LOWER(te.estado) = 'activo'
             AND p.nombre_proser LIKE @busqueda
-            ORDER BY p.nombre_proser ASC";
+            ORDER BY {columnaOrden} {direccion}, p.nombre_proser ASC";
 
             using var cmd = new MySqlCommand(sql, conexion);
             cmd.Parameters.AddWithValue("@busqueda", "%" + busqueda + "%");
@@ -58,6 +76,8 @@ namespace MiHotel.Controllers
             da.Fill(dt);
 
             ViewBag.Productos = dt;
+            ViewBag.OrdenarPor = ordenarPor;
+            ViewBag.Direccion = direccion;
 
             return View();
         }

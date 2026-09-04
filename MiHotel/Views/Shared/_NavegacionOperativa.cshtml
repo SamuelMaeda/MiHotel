@@ -1,0 +1,43 @@
+@{
+    string seccionActiva = ViewData["SeccionOperativa"]?.ToString() ?? "";
+    string rolActual = Context.Session.GetString("NombreRol")?.Trim().ToLowerInvariant() ?? "";
+    bool esAdministrador = rolActual == "admin";
+}
+
+<nav class="tabs-vista" aria-label="Navegación de inventario, compras y ventas">
+    <a asp-controller="Inventario"
+       asp-action="Index"
+       class="tab-vista @(seccionActiva == "inventario" ? "activa" : "")"
+       aria-current="@(seccionActiva == "inventario" ? "page" : null)">
+        <i class="bi bi-boxes" aria-hidden="true"></i> Inventario
+    </a>
+
+    @if (esAdministrador)
+    {
+        <a asp-controller="Compras"
+           asp-action="Crear"
+           class="tab-vista @(seccionActiva == "registrar-compra" ? "activa" : "")"
+           aria-current="@(seccionActiva == "registrar-compra" ? "page" : null)">
+            <i class="bi bi-box-arrow-in-down" aria-hidden="true"></i> Registrar compra
+        </a>
+        <a asp-controller="Compras"
+           asp-action="Historial"
+           class="tab-vista @(seccionActiva == "historial-compras" ? "activa" : "")"
+           aria-current="@(seccionActiva == "historial-compras" ? "page" : null)">
+            <i class="bi bi-clock-history" aria-hidden="true"></i> Historial de compras
+        </a>
+    }
+
+    <a asp-controller="POS"
+       asp-action="Index"
+       class="tab-vista @(seccionActiva == "punto-venta" ? "activa" : "")"
+       aria-current="@(seccionActiva == "punto-venta" ? "page" : null)">
+        <i class="bi bi-cart-fill" aria-hidden="true"></i> Punto de venta
+    </a>
+    <a asp-controller="HistorialVentas"
+       asp-action="Index"
+       class="tab-vista @(seccionActiva == "historial-ventas" ? "activa" : "")"
+       aria-current="@(seccionActiva == "historial-ventas" ? "page" : null)">
+        <i class="bi bi-receipt-cutoff" aria-hidden="true"></i> Historial de ventas
+    </a>
+</nav>
