@@ -39,7 +39,8 @@
     </div>
     <div class="col-12 col-lg-6 mb-3">
         <label asp-for="IdEmpresaCliente" class="form-label">Empresa de procedencia <span class="texto-opcional">(Opcional)</span></label>
-        <select asp-for="IdEmpresaCliente" asp-items="ViewBag.EmpresasCliente" class="form-select">
+        <select asp-for="IdEmpresaCliente" asp-items="ViewBag.EmpresasCliente" class="form-select"
+                data-mh-autocomplete data-mh-search-placeholder="Escriba para buscar una empresa..." data-mh-empty-text="Puede dejar el campo sin empresa.">
             <option value="">Sin empresa</option>
         </select>
         <span asp-validation-for="IdEmpresaCliente" class="text-danger"></span>

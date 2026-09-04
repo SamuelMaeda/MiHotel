@@ -75,7 +75,8 @@
         <div class="row">
             <div class="col-md-6 mb-3">
                 <label asp-for="IdClipro" class="form-label">Cliente</label>
-                <select asp-for="IdClipro" class="form-select">
+                <select asp-for="IdClipro" class="form-select" data-mh-autocomplete
+                        data-mh-search-placeholder="Escriba para buscar un cliente...">
                     <option value="">Seleccione un cliente</option>
                     @if (clientes != null)
                     {

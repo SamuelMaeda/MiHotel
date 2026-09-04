@@ -176,7 +176,8 @@
             <div class="row">
                 <div class="col-md-6 mb-4">
                     <label for="idProveedor" class="form-label">Proveedor</label>
-                    <select id="idProveedor" name="idProveedor" class="form-select" required>
+                    <select id="idProveedor" name="idProveedor" class="form-select" required data-mh-autocomplete
+                            data-mh-search-placeholder="Escriba para buscar un proveedor...">
                         <option value="">Seleccione un proveedor</option>
                         @if (proveedores != null)
                         {
@@ -245,7 +246,8 @@
         const fila = document.createElement("tr");
         fila.innerHTML = `
             <td>
-                <select name="idProducto" class="form-select producto" required>
+                <select name="idProducto" class="form-select producto" required data-mh-autocomplete
+                        data-mh-search-placeholder="Escriba para buscar un producto...">
                     <option value="">Seleccione un producto</option>
                     ${opcionesProductos()}
                 </select>

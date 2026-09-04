@@ -502,6 +502,64 @@ body {
   min-height: 96px;
 }
 
+.mh-autocomplete {
+  position: relative;
+  width: 100%;
+}
+
+.mh-autocomplete-input {
+  padding-right: 42px;
+}
+
+.mh-autocomplete-icon {
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  color: #6c757d;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.mh-autocomplete-source {
+  display: none !important;
+}
+
+.mh-autocomplete-list {
+  position: fixed;
+  z-index: 1090;
+  max-height: 270px;
+  overflow-y: auto;
+  border: 1px solid #ced4da;
+  border-radius: var(--mh-control-radius);
+  background: #fff;
+  box-shadow: 0 8px 18px rgba(71, 71, 71, .16);
+}
+
+.mh-autocomplete-option {
+  width: 100%;
+  padding: 10px 13px;
+  border: 0;
+  border-bottom: 1px solid #eee8e7;
+  background: #fff;
+  color: #292936;
+  text-align: left;
+}
+
+.mh-autocomplete-option:last-child {
+  border-bottom: 0;
+}
+
+.mh-autocomplete-option:hover,
+.mh-autocomplete-option.activo {
+  background: #f3e9e7;
+  color: var(--mh-brown);
+}
+
+.mh-autocomplete-empty {
+  padding: 10px 13px;
+  color: #6c757d;
+}
+
 .mh-page-shell .input-group > .btn {
   min-height: 42px;
 }

@@ -124,7 +124,8 @@
         let fila = `
         <tr>
             <td>
-                <select name="idProducto" class="form-control-custom" onchange="actualizar(this)" required>
+                <select name="idProducto" class="form-control-custom" onchange="actualizar(this)" required data-mh-autocomplete
+                        data-mh-search-placeholder="Escriba para buscar un producto...">
                     <option value="">Seleccione</option>
                     ${productos.map(p => `<option value="${p.id}" data-stock="${p.stock}" data-precio="${p.precio}">${p.nombre}</option>`).join('')}
                 </select>

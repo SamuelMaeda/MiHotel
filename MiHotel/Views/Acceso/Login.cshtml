@@ -18,7 +18,7 @@
     <link rel="stylesheet" href="~/lib/bootstrap-icons/bootstrap-icons.min.css" />
     <style>
         body {
-            background-color: #E6D3D0;
+            background-color: #824B44;
             min-height: 100vh;
             display: flex;
             justify-content: center;
@@ -84,6 +84,33 @@
             box-shadow: 0 0 0 .2rem rgba(70,68,130,.14);
         }
 
+        .campo-clave {
+            position: relative;
+        }
+
+        .campo-clave .form-control {
+            padding-right: 48px;
+        }
+
+        .alternar-clave {
+            position: absolute;
+            top: 50%;
+            right: 7px;
+            width: 36px;
+            height: 36px;
+            border: 0;
+            border-radius: 7px;
+            background: transparent;
+            color: #474747;
+            transform: translateY(-50%);
+        }
+
+        .alternar-clave:hover,
+        .alternar-clave:focus-visible {
+            background: #f3e9e7;
+            color: #824B44;
+        }
+
         @@keyframes entradaLogin {
             from { opacity: 0; transform: translateY(7px); }
             to { opacity: 1; transform: translateY(0); }
@@ -118,7 +145,12 @@
 
             <div class="mb-3">
                 <label asp-for="Clave" class="form-label">Clave</label>
-                <input asp-for="Clave" class="form-control" type="password" />
+                <div class="campo-clave">
+                    <input asp-for="Clave" class="form-control" type="password" />
+                    <button type="button" id="alternarClave" class="alternar-clave" title="Mostrar contraseña" aria-label="Mostrar contraseña" aria-pressed="false">
+                        <i class="bi bi-eye-fill" aria-hidden="true"></i>
+                    </button>
+                </div>
                 <span asp-validation-for="Clave" class="text-danger"></span>
             </div>
 
@@ -130,5 +162,17 @@
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.getElementById("alternarClave")?.addEventListener("click", function () {
+            const campo = document.getElementById("Clave");
+            const mostrar = campo.type === "password";
+            campo.type = mostrar ? "text" : "password";
+            this.title = mostrar ? "Ocultar contraseña" : "Mostrar contraseña";
+            this.setAttribute("aria-label", this.title);
+            this.setAttribute("aria-pressed", mostrar ? "true" : "false");
+            this.querySelector("i").className = `bi ${mostrar ? "bi-eye-slash-fill" : "bi-eye-fill"}`;
+            campo.focus();
+        });
+    </script>
 </body>
 </html>

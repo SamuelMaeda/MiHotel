@@ -3,6 +3,7 @@
 
 document.addEventListener("DOMContentLoaded", function () {
     estandarizarVistaActual();
+    inicializarAutocompletados(document);
 
     // Las explicaciones emergentes se reservan para acciones sin texto visible.
     const selectorAyudaIcono = ".mh-icon-button[title], .btn-icono[title], .btn-close[title], .ampliar-factura[title], .mh-status-indicator[title]";
@@ -70,7 +71,237 @@ document.addEventListener("DOMContentLoaded", function () {
             });
         });
     });
+
+    const observadorAutocompletados = new MutationObserver(function (mutaciones) {
+        mutaciones.forEach(function (mutacion) {
+            mutacion.addedNodes.forEach(function (nodo) {
+                if (nodo.nodeType === Node.ELEMENT_NODE) {
+                    inicializarAutocompletados(nodo);
+                }
+            });
+            mutacion.removedNodes.forEach(function (nodo) {
+                if (nodo.nodeType !== Node.ELEMENT_NODE) return;
+                const selectoresEliminados = [];
+                if (nodo.matches?.("select[data-mh-autocomplete]")) selectoresEliminados.push(nodo);
+                nodo.querySelectorAll?.("select[data-mh-autocomplete]").forEach(selector => selectoresEliminados.push(selector));
+                selectoresEliminados.forEach(selector => selector._mhAutocompleteLista?.remove());
+            });
+        });
+    });
+    observadorAutocompletados.observe(document.body, { childList: true, subtree: true });
 });
+
+let consecutivoAutocomplete = 0;
+
+function inicializarAutocompletados(raiz) {
+    const selectores = [];
+    if (raiz.matches?.("select[data-mh-autocomplete]")) selectores.push(raiz);
+    raiz.querySelectorAll?.("select[data-mh-autocomplete]").forEach(selector => selectores.push(selector));
+    selectores.forEach(inicializarAutocomplete);
+}
+
+function inicializarAutocomplete(selector) {
+    if (selector.dataset.mhAutocompleteInicializado === "true") return;
+    selector.dataset.mhAutocompleteInicializado = "true";
+
+    const opciones = Array.from(selector.options)
+        .filter(opcion => opcion.value && !opcion.disabled)
+        .map(opcion => ({
+            value: opcion.value,
+            texto: opcion.textContent.trim(),
+            busqueda: normalizarTextoAutocomplete(opcion.textContent)
+        }));
+    const requerido = selector.required || selector.hasAttribute("data-val-required");
+    const identificador = selector.id || `mhAutocomplete${++consecutivoAutocomplete}`;
+    const textoVacio = selector.dataset.mhEmptyText || "Sin selección";
+    const placeholder = selector.dataset.mhSearchPlaceholder || "Escriba para buscar...";
+
+    const contenedor = document.createElement("div");
+    contenedor.className = "mh-autocomplete";
+
+    const entrada = document.createElement("input");
+    entrada.type = "text";
+    entrada.id = `${identificador}Busqueda`;
+    entrada.className = "form-control mh-autocomplete-input";
+    entrada.placeholder = placeholder;
+    entrada.autocomplete = "off";
+    entrada.required = requerido;
+    entrada.setAttribute("role", "combobox");
+    entrada.setAttribute("aria-autocomplete", "list");
+    entrada.setAttribute("aria-expanded", "false");
+
+    const icono = document.createElement("i");
+    icono.className = "bi bi-search mh-autocomplete-icon";
+    icono.setAttribute("aria-hidden", "true");
+
+    const lista = document.createElement("div");
+    lista.id = `${identificador}Sugerencias`;
+    lista.className = "mh-autocomplete-list";
+    lista.setAttribute("role", "listbox");
+    lista.hidden = true;
+    entrada.setAttribute("aria-controls", lista.id);
+
+    selector.parentNode.insertBefore(contenedor, selector);
+    contenedor.appendChild(entrada);
+    contenedor.appendChild(icono);
+    document.body.appendChild(lista);
+    selector._mhAutocompleteLista = lista;
+    selector.classList.add("mh-autocomplete-source");
+    selector.required = false;
+    selector.tabIndex = -1;
+    selector.setAttribute("aria-hidden", "true");
+
+    if (selector.id) {
+        document.querySelectorAll(`label[for="${selector.id}"]`).forEach(etiqueta => {
+            etiqueta.setAttribute("for", entrada.id);
+        });
+    }
+
+    let indiceActivo = -1;
+    let resultadosActuales = [];
+
+    function opcionSeleccionada() {
+        return selector.selectedOptions[0]?.value ? selector.selectedOptions[0] : null;
+    }
+
+    function sincronizarEntrada() {
+        const opcion = opcionSeleccionada();
+        entrada.value = opcion?.textContent.trim() || "";
+        entrada.dataset.valorSeleccionado = opcion?.value || "";
+        entrada.setCustomValidity("");
+    }
+
+    function posicionarLista() {
+        const rectangulo = entrada.getBoundingClientRect();
+        lista.style.left = `${rectangulo.left}px`;
+        lista.style.top = `${rectangulo.bottom + 4}px`;
+        lista.style.width = `${rectangulo.width}px`;
+    }
+
+    function cerrarLista() {
+        lista.hidden = true;
+        entrada.setAttribute("aria-expanded", "false");
+        indiceActivo = -1;
+    }
+
+    function marcarActivo(indice) {
+        const elementos = lista.querySelectorAll(".mh-autocomplete-option");
+        elementos.forEach(elemento => elemento.classList.remove("activo"));
+        indiceActivo = indice;
+        const activo = elementos[indiceActivo];
+        if (activo) {
+            activo.classList.add("activo");
+            activo.scrollIntoView({ block: "nearest" });
+        }
+    }
+
+    function seleccionar(opcion) {
+        selector.value = opcion.value;
+        entrada.value = opcion.texto;
+        entrada.dataset.valorSeleccionado = opcion.value;
+        entrada.setCustomValidity("");
+        selector.dispatchEvent(new Event("change", { bubbles: true }));
+        cerrarLista();
+    }
+
+    function mostrarResultados() {
+        const termino = normalizarTextoAutocomplete(entrada.value);
+        resultadosActuales = opciones
+            .filter(opcion => !termino || opcion.busqueda.includes(termino))
+            .slice(0, 10);
+        lista.replaceChildren();
+        indiceActivo = -1;
+
+        if (resultadosActuales.length === 0) {
+            const vacio = document.createElement("div");
+            vacio.className = "mh-autocomplete-empty";
+            vacio.textContent = "No se encontraron coincidencias.";
+            lista.appendChild(vacio);
+        } else {
+            resultadosActuales.forEach(function (opcion, indice) {
+                const boton = document.createElement("button");
+                boton.type = "button";
+                boton.className = "mh-autocomplete-option";
+                boton.setAttribute("role", "option");
+                boton.textContent = opcion.texto;
+                boton.addEventListener("mousedown", evento => evento.preventDefault());
+                boton.addEventListener("click", () => seleccionar(opcion));
+                boton.addEventListener("mousemove", () => marcarActivo(indice));
+                lista.appendChild(boton);
+            });
+        }
+
+        posicionarLista();
+        lista.hidden = false;
+        entrada.setAttribute("aria-expanded", "true");
+    }
+
+    function validarSeleccion() {
+        const tieneTexto = Boolean(entrada.value.trim());
+        const esValido = Boolean(selector.value) || (!requerido && !tieneTexto);
+        entrada.setCustomValidity(esValido
+            ? ""
+            : tieneTexto
+                ? "Seleccione una opción de la lista de coincidencias."
+                : `Seleccione una opción. ${textoVacio}`);
+        return esValido;
+    }
+
+    entrada.addEventListener("focus", mostrarResultados);
+    entrada.addEventListener("input", function () {
+        const seleccionAnterior = selector.value;
+        const opcionActual = opcionSeleccionada();
+        if (!opcionActual || normalizarTextoAutocomplete(entrada.value) !== normalizarTextoAutocomplete(opcionActual.textContent)) {
+            selector.value = "";
+            entrada.dataset.valorSeleccionado = "";
+            if (seleccionAnterior) selector.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+        entrada.setCustomValidity("");
+        mostrarResultados();
+    });
+    entrada.addEventListener("keydown", function (evento) {
+        if (evento.key === "ArrowDown") {
+            evento.preventDefault();
+            if (lista.hidden) mostrarResultados();
+            marcarActivo(Math.min(indiceActivo + 1, resultadosActuales.length - 1));
+        } else if (evento.key === "ArrowUp") {
+            evento.preventDefault();
+            marcarActivo(Math.max(indiceActivo - 1, 0));
+        } else if (evento.key === "Enter" && indiceActivo >= 0) {
+            evento.preventDefault();
+            seleccionar(resultadosActuales[indiceActivo]);
+        } else if (evento.key === "Escape") {
+            cerrarLista();
+        }
+    });
+    entrada.addEventListener("blur", function () {
+        validarSeleccion();
+        window.setTimeout(cerrarLista, 120);
+    });
+    selector.addEventListener("change", sincronizarEntrada);
+    selector.form?.addEventListener("submit", function (evento) {
+        if (!selector.isConnected) return;
+        if (!validarSeleccion()) {
+            evento.preventDefault();
+            entrada.reportValidity();
+        }
+    });
+    window.addEventListener("resize", () => !lista.hidden && posicionarLista());
+    window.addEventListener("scroll", () => !lista.hidden && posicionarLista(), true);
+    document.addEventListener("mousedown", function (evento) {
+        if (!contenedor.contains(evento.target) && !lista.contains(evento.target)) cerrarLista();
+    });
+
+    sincronizarEntrada();
+}
+
+function normalizarTextoAutocomplete(texto) {
+    return (texto || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLocaleLowerCase("es")
+        .trim();
+}
 
 function estandarizarVistaActual() {
     const principal = document.querySelector("main");
