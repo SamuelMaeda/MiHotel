@@ -1,8 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using MiHotel.Data;
+using MiHotel.Filtros;
 
 namespace MiHotel.Controllers
 {
+    [AutorizarRoles("admin")]
     public class PruebaController : Controller
     {
         private readonly ConexionBD _conexionBD;

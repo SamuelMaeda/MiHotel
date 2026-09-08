@@ -3,6 +3,7 @@
 @{
     ViewData["Title"] = "Detalle de la Habitación";
     string Mostrar(string? valor) => string.IsNullOrWhiteSpace(valor) ? "-" : valor;
+    bool puedeGestionar = PermisosUsuario.TienePermiso("gestionar_habitaciones");
     string estadoNormalizado = Model.Estado.Trim().ToLowerInvariant();
     string claseEstado = estadoNormalizado switch
     {
@@ -75,7 +76,10 @@
         }
 
         <div class="acciones">
-            <a asp-action="Editar" asp-route-id="@Model.IdProser" class="btn-accion btn-editar-detalle">Editar habitación</a>
+            @if (puedeGestionar)
+            {
+                <a asp-action="Editar" asp-route-id="@Model.IdProser" class="btn-accion btn-editar-detalle"><i class="bi bi-pencil-fill"></i> Editar habitación</a>
+            }
             <a asp-action="Index" class="btn-accion btn-volver">Volver al listado</a>
         </div>
     </div>

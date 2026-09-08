@@ -2,9 +2,11 @@ using Microsoft.AspNetCore.Mvc;
 using MiHotel.Data;
 using MiHotel.Models;
 using MySql.Data.MySqlClient;
+using MiHotel.Filtros;
 
 namespace MiHotel.Controllers
 {
+    [AutorizarPermiso("gestionar_cxp")]
     public class CuentasPorPagarController : Controller
     {
         private readonly ConexionBD _conexionBD;
@@ -20,8 +22,7 @@ namespace MiHotel.Controllers
             if (string.IsNullOrWhiteSpace(HttpContext.Session.GetString("IdUsuario")))
                 return RedirectToAction("Login", "Acceso");
 
-            string rol = HttpContext.Session.GetString("NombreRol")?.Trim().ToLowerInvariant() ?? "";
-            return rol == "admin" ? null : RedirectToAction("Index", "Panel");
+            return null;
         }
 
         private int ObtenerIdUsuario()

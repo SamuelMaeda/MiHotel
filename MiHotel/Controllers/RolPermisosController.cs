@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using MiHotel.Data;
 using MiHotel.Models;
+using MiHotel.Filtros;
 using MySql.Data.MySqlClient;
 using System.Data;
 
@@ -9,6 +10,7 @@ namespace MiHotel.Controllers
     // ===============================
     // CONTROLADOR DE ROL PERMISO
     // ===============================
+    [AutorizarPermiso("gestionar_permisos")]
     public class RolPermisosController : Controller
     {
         private readonly ConexionBD _conexionBD;
@@ -39,11 +41,6 @@ namespace MiHotel.Controllers
             if (!SesionActiva())
             {
                 return RedirectToAction("Login", "Acceso");
-            }
-
-            if (!EsAdmin())
-            {
-                return RedirectToAction("Index", "Panel");
             }
 
             return null;
@@ -90,7 +87,7 @@ namespace MiHotel.Controllers
 
                 using (MySqlCommand cmdCount = new MySqlCommand(sqlCount, conexion))
                 {
-                    cmdCount.Parameters.AddWithValue("@estado", verActivos ? 1 : 0);
+                    cmdCount.Parameters.AddWithValue("@estado", verActivos ? "activo" : "inactivo");
                     cmdCount.Parameters.AddWithValue("@busqueda", busqueda ?? "");
                     cmdCount.Parameters.AddWithValue("@busquedaLike", $"%{busqueda}%");
 
@@ -108,7 +105,7 @@ namespace MiHotel.Controllers
                         id_rol,
                         nombre_rol,
                         CASE
-                            WHEN estado = 1 THEN 'Activo'
+                            WHEN LOWER(estado) = 'activo' THEN 'Activo'
                             ELSE 'Inactivo'
                         END AS estado
                     FROM rol
@@ -123,7 +120,7 @@ namespace MiHotel.Controllers
 
                 using (MySqlCommand cmd = new MySqlCommand(sql, conexion))
                 {
-                    cmd.Parameters.AddWithValue("@estado", verActivos ? 1 : 0);
+                    cmd.Parameters.AddWithValue("@estado", verActivos ? "activo" : "inactivo");
                     cmd.Parameters.AddWithValue("@busqueda", busqueda ?? "");
                     cmd.Parameters.AddWithValue("@busquedaLike", $"%{busqueda}%");
                     cmd.Parameters.AddWithValue("@limite", registrosPorPagina);

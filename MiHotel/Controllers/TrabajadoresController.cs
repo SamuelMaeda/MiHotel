@@ -3,9 +3,11 @@ using MiHotel.Data;
 using MiHotel.Models;
 using MySql.Data.MySqlClient;
 using System.Data;
+using MiHotel.Filtros;
 
 namespace MiHotel.Controllers
 {
+    [AutorizarPermiso("ver_trabajadores")]
     public class TrabajadoresController : Controller
     {
         private readonly ConexionBD _conexionBD;
@@ -21,8 +23,7 @@ namespace MiHotel.Controllers
             if (string.IsNullOrEmpty(HttpContext.Session.GetString("IdUsuario")))
                 return RedirectToAction("Login", "Acceso");
 
-            string rol = HttpContext.Session.GetString("NombreRol")?.Trim().ToLower() ?? "";
-            return rol is "admin" or "recepcionista" ? null : RedirectToAction("Index", "Panel");
+            return null;
         }
 
         private static string NormalizarTelefono(string telefono) => telefono.Replace(" ", "").Trim();
@@ -106,6 +107,7 @@ namespace MiHotel.Controllers
         }
 
         [HttpGet]
+        [AutorizarPermiso("gestionar_trabajadores")]
         public IActionResult Crear()
         {
             IActionResult? acceso = ValidarAcceso();
@@ -114,6 +116,7 @@ namespace MiHotel.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [AutorizarPermiso("gestionar_trabajadores")]
         public IActionResult Crear(TrabajadorViewModel modelo)
         {
             IActionResult? acceso = ValidarAcceso();
@@ -144,6 +147,7 @@ namespace MiHotel.Controllers
         }
 
         [HttpGet]
+        [AutorizarPermiso("gestionar_trabajadores")]
         public IActionResult Editar(int id)
         {
             IActionResult? acceso = ValidarAcceso();
@@ -181,6 +185,7 @@ namespace MiHotel.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [AutorizarPermiso("gestionar_trabajadores")]
         public IActionResult Editar(TrabajadorViewModel modelo)
         {
             IActionResult? acceso = ValidarAcceso();
@@ -217,6 +222,7 @@ namespace MiHotel.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [AutorizarPermiso("gestionar_trabajadores")]
         public IActionResult CambiarEstado(int id, string vista = "activos", string busqueda = "", string ordenarPor = "nombre", string direccion = "asc", int pagina = 1)
         {
             IActionResult? acceso = ValidarAcceso();

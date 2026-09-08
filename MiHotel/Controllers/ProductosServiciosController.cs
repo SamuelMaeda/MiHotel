@@ -3,9 +3,11 @@ using MiHotel.Data;
 using MiHotel.Models;
 using MySql.Data.MySqlClient;
 using System.Data;
+using MiHotel.Filtros;
 
 namespace MiHotel.Controllers
 {
+    [AutorizarPermiso("gestionar_productos_servicios")]
     public class ProductosServiciosController : Controller
     {
         private readonly ConexionBD _conexionBD;

@@ -5,11 +5,13 @@
 using Microsoft.AspNetCore.Mvc;
 using MiHotel.Data;
 using MiHotel.Models;
+using MiHotel.Filtros;
 using MySql.Data.MySqlClient;
 using System.Data;
 
 namespace MiHotel.Controllers
 {
+    [AutorizarPermiso("gestionar_roles")]
     public class RolesController : Controller
     {
         private readonly ConexionBD _conexionBD;
@@ -43,12 +45,6 @@ namespace MiHotel.Controllers
             if (!TieneSesionActiva())
             {
                 return RedirectToAction("Login", "Acceso");
-            }
-
-            if (!EsAdmin())
-            {
-                TempData["Mensaje"] = "No tiene permisos para acceder al módulo de roles.";
-                return RedirectToAction("Index", "Panel");
             }
 
             return null;

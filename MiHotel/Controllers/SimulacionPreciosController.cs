@@ -2,9 +2,11 @@ using Microsoft.AspNetCore.Mvc;
 using MiHotel.Data;
 using MiHotel.Models;
 using MySql.Data.MySqlClient;
+using MiHotel.Filtros;
 
 namespace MiHotel.Controllers
 {
+    [AutorizarPermiso("usar_simulacion_precios")]
     public class SimulacionPreciosController : Controller
     {
         private readonly ConexionBD _conexionBD;
@@ -19,14 +21,6 @@ namespace MiHotel.Controllers
             if (string.IsNullOrWhiteSpace(HttpContext.Session.GetString("IdUsuario")))
             {
                 return RedirectToAction("Login", "Acceso");
-            }
-
-            string rol = HttpContext.Session.GetString("NombreRol")?.Trim().ToLower() ?? "";
-
-            if (rol != "admin")
-            {
-                TempData["Mensaje"] = "Solo los administradores pueden utilizar la simulación de precios.";
-                return RedirectToAction("Index", "Panel");
             }
 
             return null;

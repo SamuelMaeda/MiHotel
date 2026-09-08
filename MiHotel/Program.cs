@@ -3,31 +3,38 @@
 // ===============================
 
 using MiHotel.Data;
+using MiHotel.Infrastructure;
 using MiHotel.Models.Configuracion;
 using MiHotel.Services;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using System.Net;
 
 var builder = WebApplication.CreateBuilder(args);
+var rutasSistema = RutasSistema.Crear(builder.Environment);
+rutasSistema.CrearDirectorios();
 
 // Una instalación local no debe depender de permisos para escribir en el
 // registro de eventos de Windows. La consola permite diagnosticar el sistema
 // incluso cuando se ejecuta con una cuenta estándar del hotel.
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
+builder.Logging.AddProvider(new ArchivoLoggerProvider(rutasSistema.Registros));
 
 // ===============================
 // RUTA DEL ARCHIVO DE CONFIGURACION
 // ===============================
 
-string rutaConfig = Path.Combine(builder.Environment.ContentRootPath, "Config", "config.json");
+string rutaConfig = Path.Combine(rutasSistema.Configuracion, "config.json");
+string rutaBaseDatos = Path.Combine(rutasSistema.Configuracion, "database.json");
 
 // ===============================
 // VALIDACION DE EXISTENCIA DEL ARCHIVO
 // ===============================
 
-if (!File.Exists(rutaConfig))
+bool faltaConfiguracionEmpresa = !File.Exists(rutaConfig);
+bool faltaConfiguracionBaseDatos = !builder.Environment.IsDevelopment() && !File.Exists(rutaBaseDatos);
+
+if (faltaConfiguracionEmpresa || faltaConfiguracionBaseDatos)
 {
     var appError = builder.Build();
 
@@ -75,7 +82,7 @@ if (!File.Exists(rutaConfig))
             <body>
                 <div class='contenedor'>
                     <h1>De momento no es posible acceder al sistema</h1>
-                    <p>No se encontr� el archivo de configuraci�n requerido.</p>
+                    <p>No se encontró la configuración requerida para iniciar MiHotel.</p>
                     <p>Contacte al administrador del sistema.</p>
                 </div>
             </body>
@@ -97,6 +104,12 @@ builder.Configuration.AddJsonFile(
     reloadOnChange: true
 );
 
+builder.Configuration.AddJsonFile(
+    path: rutaBaseDatos,
+    optional: builder.Environment.IsDevelopment(),
+    reloadOnChange: true
+);
+
 // ===============================
 // REGISTRO DE LA CONFIGURACION EN MEMORIA
 // ===============================
@@ -109,33 +122,46 @@ builder.Services.Configure<ConfigSistema>(
 // SERVICIOS DEL SISTEMA
 // ===============================
 
-// No existen cookies persistentes ni enlaces públicos que deban sobrevivir al
-// reinicio. Se registra antes de MVC para que todos los componentes usen el
-// mismo proveedor temporal y cierren las sesiones anteriores limpiamente.
-builder.Services
-    .AddDataProtection()
-    .UseEphemeralDataProtectionProvider();
+// Las claves permanecen en la carpeta de datos controlada por MiHotel. Así se
+// evitan dependencias del perfil de Windows y las sesiones sobreviven reinicios.
+// El instalador limitará los permisos de esta carpeta a la cuenta que ejecute la app.
+builder.Services.AddDataProtection()
+    .SetApplicationName("MiHotel")
+    .PersistKeysToFileSystem(new DirectoryInfo(rutasSistema.ClavesProteccion));
 
 builder.Services.AddControllersWithViews();
+builder.Services.AddHttpContextAccessor();
 
+builder.Services.AddSingleton(rutasSistema);
 builder.Services.AddScoped<ConexionBD>();
 builder.Services.AddScoped<DisponibilidadService>();
 builder.Services.AddScoped<FacturacionService>();
+builder.Services.AddScoped<PermisosUsuarioService>();
+builder.Services.AddScoped<DatabaseMigrationService>();
+builder.Services.AddSingleton<SuspensionMonitorService>();
+builder.Services.AddHostedService(servicios => servicios.GetRequiredService<SuspensionMonitorService>());
 
 builder.Services.AddSession(options =>
 {
-    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    // La jornada del hotel no debe interrumpirse por falta de actividad. La
+    // sesión se conserva mientras MiHotel y el equipo continúen funcionando.
+    options.IdleTimeout = TimeSpan.FromDays(3650);
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
     options.Cookie.SameSite = SameSiteMode.Strict;
     options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    options.Cookie.Name = ".MiHotel.Session";
+    options.Cookie.MaxAge = TimeSpan.FromDays(3650);
 });
 
-builder.Services.Replace(
-    ServiceDescriptor.Singleton<IDataProtectionProvider>(
-        new EphemeralDataProtectionProvider()));
-
 var app = builder.Build();
+
+// Una base existente se actualiza antes de aceptar operaciones. Si una migración
+// falla, el proceso no inicia y el instalador/servicio puede detectarlo en el log.
+using (IServiceScope scope = app.Services.CreateScope())
+{
+    scope.ServiceProvider.GetRequiredService<DatabaseMigrationService>().AplicarPendientes();
+}
 
 // ===============================
 // CONFIGURACION DEL PIPELINE HTTP
@@ -151,6 +177,35 @@ app.UseStaticFiles();
 app.UseRouting();
 
 app.UseSession();
+
+// Al reanudarse el equipo después de una suspensión se invalida la sesión.
+// Esto no depende de la actividad del usuario: el monitor observa una pausa
+// del proceso completo y cambia la generación de sesiones aceptada.
+app.Use(async (context, next) =>
+{
+    var monitorSuspension = context.RequestServices.GetRequiredService<SuspensionMonitorService>();
+    string? idUsuario = context.Session.GetString("IdUsuario");
+
+    if (!string.IsNullOrWhiteSpace(idUsuario))
+    {
+        int generacionActual = monitorSuspension.GeneracionActual;
+        int? generacionSesion = context.Session.GetInt32("GeneracionSesion");
+
+        if (generacionSesion.HasValue && generacionSesion.Value != generacionActual)
+        {
+            context.Session.Clear();
+            context.Response.Redirect("/Acceso/Login");
+            return;
+        }
+
+        if (!generacionSesion.HasValue)
+        {
+            context.Session.SetInt32("GeneracionSesion", generacionActual);
+        }
+    }
+
+    await next();
+});
 
 // El sistema se ejecuta únicamente en la computadora local. Aunque un perfil
 // se configure accidentalmente para escuchar en la red, las solicitudes de
@@ -177,8 +232,9 @@ app.Use(async (context, next) =>
     bool esLogin = ruta.StartsWithSegments("/Acceso/Login");
     bool esRutaInicial = ruta == "/";
     bool esError = ruta.StartsWithSegments("/Home/Error");
+    bool esEstado = ruta.StartsWithSegments("/estado");
 
-    if (!esLogin && !esRutaInicial && !esError)
+    if (!esLogin && !esRutaInicial && !esError && !esEstado)
     {
         string? idUsuario = context.Session.GetString("IdUsuario");
         string rol = context.Session.GetString("NombreRol")?.Trim().ToLower() ?? "";
@@ -195,6 +251,18 @@ app.Use(async (context, next) =>
 });
 
 app.UseAuthorization();
+
+app.MapGet("/estado", (ConexionBD conexionBD) =>
+{
+    bool disponible = conexionBD.Comprobar(out string mensaje);
+    return Results.Json(new
+    {
+        aplicacion = "MiHotel",
+        estado = disponible ? "disponible" : "sin_conexion",
+        baseDatos = mensaje,
+        version = typeof(Program).Assembly.GetName().Version?.ToString() ?? "sin_version"
+    }, statusCode: disponible ? StatusCodes.Status200OK : StatusCodes.Status503ServiceUnavailable);
+});
 
 app.MapControllerRoute(
     name: "default",

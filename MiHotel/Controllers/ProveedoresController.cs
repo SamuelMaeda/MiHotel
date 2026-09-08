@@ -5,9 +5,11 @@ using MiHotel.Data;
 using MiHotel.Models;
 using MySql.Data.MySqlClient;
 using System.Data;
+using MiHotel.Filtros;
 
 namespace MiHotel.Controllers
 {
+    [AutorizarPermiso("gestionar_proveedores")]
     public class ProveedoresController : Controller
     {
         private readonly ConexionBD _conexionBD;
@@ -167,9 +169,9 @@ namespace MiHotel.Controllers
             var m = new EditarCliente
             {
                 IdClipro = id,
-                Nombre = dr["nombre"].ToString(),
+                Nombre = dr["nombre"]?.ToString() ?? string.Empty,
                 Nit = dr["nit"]?.ToString(),
-                Telefono = dr["telefono"].ToString(),
+                Telefono = dr["telefono"]?.ToString() ?? string.Empty,
                 Correo = dr["correo"]?.ToString(),
                 Direccion = dr["direccion"]?.ToString(),
                 NombreEmpresa = dr["nombre_empresa"]?.ToString()
@@ -248,13 +250,13 @@ namespace MiHotel.Controllers
             var m = new ClienteDetalleViewModel
             {
                 IdClipro = id,
-                Nombre = dr["nombre"].ToString(),
+                Nombre = dr["nombre"]?.ToString() ?? string.Empty,
                 Nit = dr["nit"]?.ToString(),
-                Telefono = dr["telefono"].ToString(),
+                Telefono = dr["telefono"]?.ToString() ?? string.Empty,
                 Correo = dr["correo"]?.ToString(),
                 Direccion = dr["direccion"]?.ToString(),
                 NombreEmpresa = dr["nombre_empresa"]?.ToString(),
-                Estado = dr["estado"].ToString()
+                Estado = dr["estado"]?.ToString() ?? string.Empty
             };
 
             return View(m);
@@ -270,7 +272,7 @@ namespace MiHotel.Controllers
             string estado = new MySqlCommand(
                 "SELECT estado FROM clipro WHERE id_clipro=@id", conexion)
             { Parameters = { new("@id", id) } }
-            .ExecuteScalar()?.ToString();
+            .ExecuteScalar()?.ToString() ?? string.Empty;
 
             string nuevo = estado == "activo" ? "inactivo" : "activo";
 

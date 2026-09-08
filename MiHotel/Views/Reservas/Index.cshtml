@@ -13,6 +13,12 @@
     int reservasPendientesVencidas = ViewBag.ReservasPendientesVencidas ?? 0;
     bool mostrarHoras = vista is "finalizada" or "pendientes_factura";
     bool mostrarLimpieza = vista is "pendiente" or "en_curso";
+    bool puedeCrear = PermisosUsuario.TienePermiso("crear_reserva");
+    bool puedeEditar = PermisosUsuario.TienePermiso("editar_reserva");
+    bool puedeCancelar = PermisosUsuario.TienePermiso("cancelar_reserva");
+    bool puedeCheckIn = PermisosUsuario.TienePermiso("checkin");
+    bool puedeCheckout = PermisosUsuario.TienePermiso("checkout");
+    bool puedeFacturar = PermisosUsuario.TienePermiso("facturar");
     int? reservaReembolsoPendiente = TempData["ReservaReembolsoPendiente"] == null
         ? null
         : Convert.ToInt32(TempData["ReservaReembolsoPendiente"]);
@@ -228,9 +234,12 @@
             <h3>Gestión de Reservas</h3>
             <p>Consulta y administra las estadías registradas en el hotel.</p>
         </div>
-        <a asp-controller="Reservas" asp-action="Crear" class="btn-crear mh-btn mh-btn-primary" title="Crear una nueva reservación">
-            <i class="bi bi-calendar-plus-fill"></i> Nueva reserva
-        </a>
+        @if (puedeCrear)
+        {
+            <a asp-controller="Reservas" asp-action="Crear" class="btn-crear mh-btn mh-btn-primary" title="Crear una nueva reservación">
+                <i class="bi bi-calendar-plus-fill"></i> Nueva reserva
+            </a>
+        }
     </div>
 
     <div class="tabs-vista">
@@ -466,7 +475,7 @@
                                         <i class="bi bi-eye-fill"></i>
                                     </a>
 
-                                    @if (vista == "pendientes_factura" && (estadoFacturacion is "pendiente" or "anulada"))
+                                    @if (puedeFacturar && vista == "pendientes_factura" && (estadoFacturacion is "pendiente" or "anulada"))
                                     {
                                         <form asp-controller="Facturas" asp-action="CancelarSolicitud" method="post" class="form-accion"
                                               onsubmit="return confirm('¿Confirma que el huésped ya no necesita factura? La reservación saldrá de Facturas pendientes.');">
@@ -481,14 +490,14 @@
                                     }
 
 
-                                    @if (estado == "pendiente")
+                                    @if (puedeEditar && estado == "pendiente")
                                     {
                                         <a asp-controller="Reservas" asp-action="Editar" asp-route-id="@fila["id_reserva"]" class="btn-icono btn-editar mh-icon-button mh-icon-edit" title="Editar esta reserva" aria-label="Editar esta reserva">
                                             <i class="bi bi-pencil-fill"></i>
                                         </a>
                                     }
 
-                                    @if (fechaIngresoHoy)
+                                    @if (puedeCheckIn && fechaIngresoHoy)
                                     {
                                         <form asp-controller="Reservas" asp-action="CheckIn" asp-route-id="@fila["id_reserva"]" method="post" class="form-accion">
                                             @Html.AntiForgeryToken()
@@ -498,7 +507,7 @@
                                         </form>
                                     }
 
-                                    @if (estado == "en_curso")
+                                    @if (puedeCheckout && estado == "en_curso")
                                     {
                                         <form asp-controller="Reservas" asp-action="IniciarCheckout" asp-route-id="@fila["id_reserva"]" method="post" class="form-accion">
                                             @Html.AntiForgeryToken()
@@ -508,14 +517,14 @@
                                         </form>
                                     }
 
-                                    @if (estado == "en_checkout")
+                                    @if (puedeCheckout && estado == "en_checkout")
                                     {
                                         <a asp-controller="Reservas" asp-action="Checkout" asp-route-id="@fila["id_reserva"]" class="btn-icono btn-checkout mh-icon-button mh-icon-positive" title="Continuar el check-out de esta estadía" aria-label="Continuar el check-out de esta estadía">
                                             <i class="bi bi-cash-coin"></i>
                                         </a>
                                     }
 
-                                    @if (estado == "pendiente")
+                                    @if (puedeCancelar && estado == "pendiente")
                                     {
                                         <form asp-controller="Reservas" asp-action="Cancelar" asp-route-id="@fila["id_reserva"]" method="post" class="form-accion">
                                             @Html.AntiForgeryToken()

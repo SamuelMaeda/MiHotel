@@ -162,6 +162,8 @@
                                 <td>@habitacion.TipoHabitacion</td>
                                 <td>Q @habitacion.Precio.ToString("N2")</td>
                                 <td>
+                                    @if (PermisosUsuario.TienePermiso("crear_reserva"))
+                                    {
                                     <a asp-controller="Reservas"
                                        asp-action="Crear"
                                        asp-route-idHabitacion="@habitacion.IdHabitacion"
@@ -170,6 +172,7 @@
                                        class="btn-reservar">
                                         Reservar
                                     </a>
+                                    }
                                 </td>
                             </tr>
                         }

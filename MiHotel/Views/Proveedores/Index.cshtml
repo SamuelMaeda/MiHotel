@@ -23,25 +23,6 @@
         return telefono;
     }
 
-    string SiguienteDireccion(string columna)
-    {
-        if (ordenarPor == columna && direccion == "asc")
-        {
-            return "desc";
-        }
-
-        return "asc";
-    }
-
-    string IconoOrden(string columna)
-    {
-        if (ordenarPor != columna)
-        {
-            return "bi-arrow-down-up";
-        }
-
-        return direccion == "asc" ? "bi-sort-alpha-down" : "bi-sort-alpha-up";
-    }
 }
 
 <style>

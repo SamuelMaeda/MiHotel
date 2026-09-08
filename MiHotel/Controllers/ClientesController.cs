@@ -5,9 +5,11 @@ using MiHotel.Models;
 using MySql.Data.MySqlClient;
 using SkiaSharp;
 using System.Data;
+using MiHotel.Filtros;
 
 namespace MiHotel.Controllers
 {
+    [AutorizarPermiso("ver_clientes")]
     public class ClientesController : Controller
     {
         private readonly ConexionBD _conexionBD;
@@ -27,12 +29,6 @@ namespace MiHotel.Controllers
             if (string.IsNullOrEmpty(HttpContext.Session.GetString("IdUsuario")))
             {
                 return RedirectToAction("Login", "Acceso");
-            }
-
-            string rol = ObtenerRol();
-            if (rol != "admin" && rol != "recepcionista")
-            {
-                return RedirectToAction("Index", "Panel");
             }
 
             return null;
@@ -308,6 +304,7 @@ namespace MiHotel.Controllers
 
         [HttpGet]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        [AutorizarPermiso("registrar_cliente")]
         public IActionResult Crear(string? returnUrl = null)
         {
             IActionResult? acceso = ValidarAcceso();
@@ -320,6 +317,7 @@ namespace MiHotel.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        [AutorizarPermiso("registrar_cliente")]
         public IActionResult Crear(ClienteAdmin modelo, string? returnUrl = null)
         {
             IActionResult? acceso = ValidarAcceso();
@@ -415,6 +413,7 @@ namespace MiHotel.Controllers
 
         [HttpGet]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        [AutorizarPermiso("editar_clientes")]
         public IActionResult Editar(int id)
         {
             IActionResult? acceso = ValidarAcceso();
@@ -468,6 +467,7 @@ namespace MiHotel.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        [AutorizarPermiso("editar_clientes")]
         public IActionResult Editar(EditarCliente modelo)
         {
             IActionResult? acceso = ValidarAcceso();
@@ -660,6 +660,7 @@ namespace MiHotel.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [AutorizarPermiso("editar_clientes")]
         public IActionResult EliminarDocumentoDpi(int id, string tipo)
         {
             IActionResult? acceso = ValidarAcceso();
@@ -677,6 +678,7 @@ namespace MiHotel.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [AutorizarPermiso("editar_clientes")]
         public IActionResult CambiarEstado(int id, string busqueda = "", string ordenarPor = "nombre", string direccion = "asc", string vista = "activos", int pagina = 1)
         {
             IActionResult? acceso = ValidarAcceso();

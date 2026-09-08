@@ -3,9 +3,11 @@ using MySql.Data.MySqlClient;
 using MiHotel.Data;
 using System.Text.Json;
 using System.Data;
+using MiHotel.Filtros;
 
 namespace MiHotel.Controllers
 {
+    [AutorizarPermiso("registrar_venta")]
     public class POSController : Controller
     {
         private readonly ConexionBD _conexionBD;

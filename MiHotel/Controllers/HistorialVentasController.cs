@@ -2,9 +2,11 @@
 using MiHotel.Data;
 using MySql.Data.MySqlClient;
 using System.Data;
+using MiHotel.Filtros;
 
 namespace MiHotel.Controllers
 {
+    [AutorizarPermiso("ver_historial_ventas")]
     public class HistorialVentasController : Controller
     {
         private readonly ConexionBD _conexionBD;

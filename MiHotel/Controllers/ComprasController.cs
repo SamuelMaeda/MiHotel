@@ -2,9 +2,11 @@ using Microsoft.AspNetCore.Mvc;
 using MiHotel.Data;
 using MySql.Data.MySqlClient;
 using System.Data;
+using MiHotel.Filtros;
 
 namespace MiHotel.Controllers
 {
+    [AutorizarPermiso("gestionar_compras")]
     public class ComprasController : Controller
     {
         private readonly ConexionBD _conexionBD;
@@ -19,8 +21,7 @@ namespace MiHotel.Controllers
             if (string.IsNullOrEmpty(HttpContext.Session.GetString("IdUsuario")))
                 return RedirectToAction("Login", "Acceso");
 
-            string rol = HttpContext.Session.GetString("NombreRol")?.Trim().ToLower() ?? "";
-            return rol == "admin" ? null : RedirectToAction("Index", "Panel");
+            return null;
         }
 
         private void CargarCatalogos()

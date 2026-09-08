@@ -2,10 +2,12 @@
 using MiHotel.Data;
 using MiHotel.Models;
 using MiHotel.Services;
+using MiHotel.Filtros;
 using MySql.Data.MySqlClient;
 
 namespace MiHotel.Controllers
 {
+    [AutorizarPermiso("ver_disponibilidad_habitaciones")]
     public class DisponibilidadController : Controller
     {
         private readonly ConexionBD _conexionBD;

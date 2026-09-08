@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using MiHotel.Data;
 using MiHotel.Models;
 using MiHotel.Services;
+using MiHotel.Filtros;
 using MySql.Data.MySqlClient;
 using System.Data;
 
@@ -67,14 +68,6 @@ namespace MiHotel.Controllers
         {
             IActionResult? acceso = ValidarSesion();
             if (acceso != null) return acceso;
-
-            string rol = ObtenerNombreRolSesion();
-
-            if (rol != "admin" && rol != "recepcionista")
-            {
-                TempData["Mensaje"] = "No tiene acceso a esa opción.";
-                return RedirectToAction("Index", "Panel");
-            }
 
             return null;
         }
@@ -733,6 +726,7 @@ namespace MiHotel.Controllers
         //
 
         [HttpGet]
+        [AutorizarPermiso("ver_reservas")]
         public IActionResult BuscarPorCodigo()
         {
             return View();
@@ -740,6 +734,7 @@ namespace MiHotel.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [AutorizarPermiso("ver_reservas")]
         public IActionResult BuscarPorCodigo(string codigo)
         {
             if (string.IsNullOrWhiteSpace(codigo))
@@ -1247,6 +1242,7 @@ namespace MiHotel.Controllers
         // ============================================================
 
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        [AutorizarPermiso("ver_reservas")]
         public IActionResult Index(
             string busqueda = "",
             string ordenarPor = "fecha_entrada",
@@ -1459,6 +1455,7 @@ namespace MiHotel.Controllers
         [HttpGet]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         [NonAction]
+        [AutorizarPermiso("ver_reservas_propias")]
         public IActionResult MisReservas(int pagina = 1)
         {
             IActionResult? acceso = ValidarAccesoSoloCliente();
@@ -1545,6 +1542,7 @@ namespace MiHotel.Controllers
         [HttpGet]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         [NonAction]
+        [AutorizarPermiso("ver_reservas_propias")]
         public IActionResult MiReservaDetalle(int id)
         {
             IActionResult? acceso = ValidarAccesoSoloCliente();
@@ -1595,6 +1593,7 @@ namespace MiHotel.Controllers
         [ValidateAntiForgeryToken]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         [NonAction]
+        [AutorizarPermiso("ver_reservas_propias")]
         public IActionResult CancelarMiReserva(int id)
         {
             IActionResult? acceso = ValidarAccesoSoloCliente();
@@ -1673,6 +1672,7 @@ namespace MiHotel.Controllers
 
         [HttpGet]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        [AutorizarPermiso("ver_reservas")]
         public IActionResult Detalle(int id)
         {
             IActionResult? acceso = ValidarAccesoSoloAdministrativo();
@@ -1725,6 +1725,7 @@ namespace MiHotel.Controllers
         [ValidateAntiForgeryToken]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         [NonAction]
+        [AutorizarPermiso("facturar")]
         public IActionResult SubirFactura(int id, IFormFile? facturaPdf)
         {
             IActionResult? acceso = ValidarAccesoSoloAdministrativo();
@@ -1849,6 +1850,7 @@ namespace MiHotel.Controllers
         [HttpGet]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         [NonAction]
+        [AutorizarPermiso("ver_facturas")]
         public IActionResult FacturaPdf(int id, bool descargar = false)
         {
             IActionResult? acceso = ValidarAccesoSoloAdministrativo();
@@ -1910,6 +1912,7 @@ namespace MiHotel.Controllers
         [ValidateAntiForgeryToken]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         [NonAction]
+        [AutorizarPermiso("anular_factura")]
         public IActionResult EliminarFactura(int id)
         {
             IActionResult? acceso = ValidarAccesoSoloAdministrativo();
@@ -2018,6 +2021,7 @@ namespace MiHotel.Controllers
 
         [HttpGet]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        [AutorizarPermiso("crear_reserva")]
         public IActionResult Crear(
             int? idHabitacion = null,
             int? idClipro = null,
@@ -2105,6 +2109,7 @@ namespace MiHotel.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        [AutorizarPermiso("crear_reserva")]
         public IActionResult Crear(ReservaFormViewModel modelo, string? tokenFlujoCliente = null)
         {
             IActionResult? acceso = ValidarSesion();
@@ -2396,6 +2401,7 @@ namespace MiHotel.Controllers
 
         [HttpGet]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        [AutorizarPermiso("editar_reserva")]
         public IActionResult Editar(int id)
         {
             IActionResult? acceso = ValidarAccesoSoloAdministrativo();
@@ -2474,6 +2480,7 @@ namespace MiHotel.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        [AutorizarPermiso("editar_reserva")]
         public IActionResult Editar(ReservaFormViewModel modelo)
         {
             IActionResult? acceso = ValidarAccesoSoloAdministrativo();
@@ -2918,6 +2925,7 @@ namespace MiHotel.Controllers
 
         [HttpGet]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        [AutorizarPermiso("checkout")]
         public IActionResult Checkout(int id)
         {
             IActionResult? acceso = ValidarAccesoSoloAdministrativo();
@@ -2956,6 +2964,7 @@ namespace MiHotel.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [AutorizarPermiso("checkout")]
         public IActionResult IniciarCheckout(int id)
         {
             IActionResult? acceso = ValidarAccesoSoloAdministrativo();
@@ -2996,6 +3005,7 @@ namespace MiHotel.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [AutorizarPermiso("checkin")]
         public IActionResult CheckIn(int id)
         {
             IActionResult? acceso = ValidarAccesoSoloAdministrativo();
@@ -3096,6 +3106,7 @@ namespace MiHotel.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [AutorizarPermiso("checkout")]
         public IActionResult RegresarEnCurso(int id)
         {
             IActionResult? acceso = ValidarAccesoSoloAdministrativo();
@@ -3136,6 +3147,7 @@ namespace MiHotel.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [AutorizarPermiso("checkout")]
         public IActionResult FinalizarEstadia(
             int id,
             bool autorizarSaldoPendiente = false,
@@ -3807,6 +3819,7 @@ namespace MiHotel.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        [AutorizarPermiso("cancelar_reserva")]
         public IActionResult Cancelar(int id, bool registrarReembolso = false)
         {
             IActionResult? acceso = ValidarAccesoSoloAdministrativo();

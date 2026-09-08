@@ -254,6 +254,8 @@
             </div>
 
             <div class="opciones-panel">
+                @if (PermisosUsuario.TienePermiso("ver_reservas"))
+                {
                 <a asp-controller="Reservas" asp-action="Index" class="opcion-panel principal">
                     <span class="opcion-icono cafe"><i class="bi bi-calendar-check-fill"></i></span>
                     <span class="opcion-texto">
@@ -261,7 +263,10 @@
                         <span class="opcion-descripcion">Consulta y administra las reservaciones.</span>
                     </span>
                 </a>
+                }
 
+                @if (PermisosUsuario.TienePermiso("ver_disponibilidad_habitaciones"))
+                {
                 <a asp-controller="Disponibilidad" asp-action="Index" class="opcion-panel">
                     <span class="opcion-icono"><i class="bi bi-calendar2-week-fill"></i></span>
                     <span class="opcion-texto">
@@ -285,7 +290,10 @@
                         <span class="opcion-descripcion">Consulta pendientes y trabajos completados.</span>
                     </span>
                 </a>
+                }
 
+                @if (PermisosUsuario.TienePermiso("ver_reservas"))
+                {
                 <a asp-controller="Reservas" asp-action="BuscarPorCodigo" class="opcion-panel">
                     <span class="opcion-icono"><i class="bi bi-search"></i></span>
                     <span class="opcion-texto">
@@ -293,6 +301,7 @@
                         <span class="opcion-descripcion">Localiza rápidamente una reservación.</span>
                     </span>
                 </a>
+                }
             </div>
         </section>
 
@@ -508,107 +517,78 @@
             </div>
         </section>
     }
-    else if (nombreRol.ToLower() == "recepcionista")
-    {
-        <section class="grupo-panel">
-            <div class="grupo-encabezado">
-                <i class="bi bi-building"></i>
-                <h3>Operación del hotel</h3>
-            </div>
-
-            <div class="opciones-panel">
-                <a asp-controller="Reservas" asp-action="Index" class="opcion-panel principal">
-                    <span class="opcion-icono cafe"><i class="bi bi-calendar-check-fill"></i></span>
-                    <span class="opcion-texto"><span class="opcion-titulo">Reservas</span><span class="opcion-descripcion">Consulta y administra las reservaciones.</span></span>
-                </a>
-
-                <a asp-controller="Disponibilidad" asp-action="Index" class="opcion-panel">
-                    <span class="opcion-icono"><i class="bi bi-calendar2-week-fill"></i></span>
-                    <span class="opcion-texto"><span class="opcion-titulo">Disponibilidad</span><span class="opcion-descripcion">Revisa las habitaciones disponibles y comienza nuevas reservas.</span></span>
-                </a>
-
-                <a asp-controller="Reservas" asp-action="BuscarPorCodigo" class="opcion-panel">
-                    <span class="opcion-icono oscuro"><i class="bi bi-search"></i></span>
-                    <span class="opcion-texto"><span class="opcion-titulo">Buscar reserva por código</span><span class="opcion-descripcion">Localiza rápidamente una reservación para darle seguimiento.</span></span>
-                </a>
-
-                <a asp-controller="Habitaciones" asp-action="Index" class="opcion-panel">
-                    <span class="opcion-icono"><i class="bi bi-door-open-fill"></i></span>
-                    <span class="opcion-texto"><span class="opcion-titulo">Habitaciones</span><span class="opcion-descripcion">Consulta las habitaciones del hotel.</span></span>
-                </a>
-                <a asp-controller="Mantenimientos" asp-action="Index" class="opcion-panel">
-                    <span class="opcion-icono cafe"><i class="bi bi-tools"></i></span>
-                    <span class="opcion-texto"><span class="opcion-titulo">Mantenimientos</span><span class="opcion-descripcion">Consulta pendientes y trabajos completados.</span></span>
-                </a>
-            </div>
-        </section>
-
-        <section class="grupo-panel">
-            <div class="grupo-encabezado"><i class="bi bi-people-fill"></i><h3>Clientes</h3></div>
-            <div class="opciones-panel">
-                <a asp-controller="Clientes" asp-action="Index" class="opcion-panel">
-                    <span class="opcion-icono cafe"><i class="bi bi-person-lines-fill"></i></span>
-                    <span class="opcion-texto"><span class="opcion-titulo">Clientes</span><span class="opcion-descripcion">Consulta y administra los huéspedes.</span></span>
-                </a>
-                <a asp-controller="EmpresasClientes" asp-action="Index" class="opcion-panel">
-                    <span class="opcion-icono"><i class="bi bi-buildings-fill"></i></span>
-                    <span class="opcion-texto"><span class="opcion-titulo">Empresas de procedencia</span><span class="opcion-descripcion">Organiza las empresas de los huéspedes.</span></span>
-                </a>
-                <a asp-controller="Trabajadores" asp-action="Index" class="opcion-panel">
-                    <span class="opcion-icono oscuro"><i class="bi bi-person-vcard-fill"></i></span>
-                    <span class="opcion-texto"><span class="opcion-titulo">Trabajadores</span><span class="opcion-descripcion">Consulta los contactos de trabajadores.</span></span>
-                </a>
-            </div>
-        </section>
-
-        <section class="grupo-panel">
-            <div class="grupo-encabezado"><i class="bi bi-cash-coin"></i><h3>Cobros y ventas</h3></div>
-            <div class="opciones-panel">
-                <a asp-controller="CuentasPorCobrar" asp-action="Index" class="opcion-panel principal">
-                    <span class="opcion-icono cafe"><i class="bi bi-wallet2"></i></span>
-                    <span class="opcion-texto"><span class="opcion-titulo">Cuentas por cobrar</span><span class="opcion-descripcion">Consulta saldos y registra los pagos de los huéspedes.</span></span>
-                </a>
-
-                <a asp-controller="POS" asp-action="Index" class="opcion-panel principal">
-                    <span class="opcion-icono"><i class="bi bi-cart-fill"></i></span>
-                    <span class="opcion-texto"><span class="opcion-titulo">Punto de venta</span><span class="opcion-descripcion">Registra ventas de productos y servicios.</span></span>
-                </a>
-
-                <a asp-controller="Reportes" asp-action="Index" class="opcion-panel">
-                    <span class="opcion-icono oscuro"><i class="bi bi-bar-chart-fill"></i></span>
-                    <span class="opcion-texto"><span class="opcion-titulo">Reportes</span><span class="opcion-descripcion">Consulta reservaciones y ocupación del hotel.</span></span>
-                </a>
-            </div>
-        </section>
-    }
-    else if (nombreRol.ToLower() == "camarero")
-    {
-        <section class="grupo-panel">
-            <div class="grupo-encabezado"><i class="bi bi-cup-hot-fill"></i><h3>Restaurante y ventas</h3></div>
-            <div class="opciones-panel">
-                <a href="#" class="opcion-panel proximamente" aria-disabled="true" tabindex="-1">
-                    <span class="etiqueta-proximamente">Próximamente</span>
-                    <span class="opcion-icono cafe"><i class="bi bi-cart-fill"></i></span>
-                    <span class="opcion-texto"><span class="opcion-titulo">Punto de venta</span><span class="opcion-descripcion">Registra las ventas del restaurante.</span></span>
-                </a>
-                <a href="#" class="opcion-panel proximamente" aria-disabled="true" tabindex="-1">
-                    <span class="etiqueta-proximamente">Próximamente</span>
-                    <span class="opcion-icono"><i class="bi bi-cup-straw"></i></span>
-                    <span class="opcion-texto"><span class="opcion-titulo">Restaurante</span><span class="opcion-descripcion">Administra la atención del restaurante.</span></span>
-                </a>
-                <a href="#" class="opcion-panel proximamente" aria-disabled="true" tabindex="-1">
-                    <span class="etiqueta-proximamente">Próximamente</span>
-                    <span class="opcion-icono oscuro"><i class="bi bi-receipt"></i></span>
-                    <span class="opcion-texto"><span class="opcion-titulo">Consumos</span><span class="opcion-descripcion">Consulta los consumos registrados.</span></span>
-                </a>
-            </div>
-        </section>
-    }
     else
     {
-        <div class="panel-sin-opciones">
-            <i class="bi bi-info-circle-fill me-2"></i>
-            No hay opciones configuradas para este rol.
-        </div>
+        @if (PermisosUsuario.TieneAlguno("ver_reservas", "ver_disponibilidad_habitaciones", "ver_habitaciones", "gestionar_mantenimientos"))
+        {
+            <section class="grupo-panel">
+                <div class="grupo-encabezado"><i class="bi bi-building"></i><h3>Operación del hotel</h3></div>
+                <div class="opciones-panel">
+                    @if (PermisosUsuario.TienePermiso("ver_reservas")) { <a asp-controller="Reservas" asp-action="Index" class="opcion-panel principal"><span class="opcion-icono cafe"><i class="bi bi-calendar-check-fill"></i></span><span class="opcion-texto"><span class="opcion-titulo">Reservas</span><span class="opcion-descripcion">Consulta y administra las reservaciones.</span></span></a> }
+                    @if (PermisosUsuario.TienePermiso("ver_disponibilidad_habitaciones")) { <a asp-controller="Disponibilidad" asp-action="Index" class="opcion-panel"><span class="opcion-icono"><i class="bi bi-calendar2-week-fill"></i></span><span class="opcion-texto"><span class="opcion-titulo">Disponibilidad</span><span class="opcion-descripcion">Revisa las habitaciones disponibles.</span></span></a> }
+                    @if (PermisosUsuario.TienePermiso("ver_habitaciones")) { <a asp-controller="Habitaciones" asp-action="Index" class="opcion-panel"><span class="opcion-icono oscuro"><i class="bi bi-door-open-fill"></i></span><span class="opcion-texto"><span class="opcion-titulo">Habitaciones</span><span class="opcion-descripcion">Consulta las habitaciones del hotel.</span></span></a> }
+                    @if (PermisosUsuario.TienePermiso("gestionar_mantenimientos")) { <a asp-controller="Mantenimientos" asp-action="Index" class="opcion-panel"><span class="opcion-icono cafe"><i class="bi bi-tools"></i></span><span class="opcion-texto"><span class="opcion-titulo">Mantenimientos</span><span class="opcion-descripcion">Consulta y registra trabajos de mantenimiento.</span></span></a> }
+                </div>
+            </section>
+        }
+        @if (PermisosUsuario.TieneAlguno("ver_clientes", "gestionar_empresas_clientes", "ver_trabajadores"))
+        {
+            <section class="grupo-panel">
+                <div class="grupo-encabezado"><i class="bi bi-people-fill"></i><h3>Clientes y personal</h3></div>
+                <div class="opciones-panel">
+                    @if (PermisosUsuario.TienePermiso("ver_clientes")) { <a asp-controller="Clientes" asp-action="Index" class="opcion-panel"><span class="opcion-icono cafe"><i class="bi bi-person-lines-fill"></i></span><span class="opcion-texto"><span class="opcion-titulo">Clientes</span><span class="opcion-descripcion">Consulta y administra los huéspedes.</span></span></a> }
+                    @if (PermisosUsuario.TienePermiso("gestionar_empresas_clientes")) { <a asp-controller="EmpresasClientes" asp-action="Index" class="opcion-panel"><span class="opcion-icono"><i class="bi bi-buildings-fill"></i></span><span class="opcion-texto"><span class="opcion-titulo">Empresas de procedencia</span><span class="opcion-descripcion">Administra las empresas de los huéspedes.</span></span></a> }
+                    @if (PermisosUsuario.TienePermiso("ver_trabajadores")) { <a asp-controller="Trabajadores" asp-action="Index" class="opcion-panel"><span class="opcion-icono oscuro"><i class="bi bi-person-vcard-fill"></i></span><span class="opcion-texto"><span class="opcion-titulo">Trabajadores</span><span class="opcion-descripcion">Consulta los contactos del personal.</span></span></a> }
+                </div>
+            </section>
+        }
+        @if (PermisosUsuario.TieneAlguno("gestionar_cxc", "registrar_venta", "ver_historial_ventas", "ver_facturas", "ver_reportes", "gestionar_cxp"))
+        {
+            <section class="grupo-panel">
+                <div class="grupo-encabezado"><i class="bi bi-cash-coin"></i><h3>Cobros y finanzas</h3></div>
+                <div class="opciones-panel">
+                    @if (PermisosUsuario.TienePermiso("gestionar_cxc")) { <a asp-controller="CuentasPorCobrar" asp-action="Index" class="opcion-panel principal"><span class="opcion-icono cafe"><i class="bi bi-wallet2"></i></span><span class="opcion-texto"><span class="opcion-titulo">Cuentas por cobrar</span><span class="opcion-descripcion">Consulta saldos y registra pagos.</span></span></a> }
+                    @if (PermisosUsuario.TienePermiso("registrar_venta")) { <a asp-controller="POS" asp-action="Index" class="opcion-panel"><span class="opcion-icono"><i class="bi bi-cart-fill"></i></span><span class="opcion-texto"><span class="opcion-titulo">Punto de venta</span><span class="opcion-descripcion">Registra ventas y consumos.</span></span></a> }
+                    @if (PermisosUsuario.TienePermiso("ver_historial_ventas")) { <a asp-controller="HistorialVentas" asp-action="Index" class="opcion-panel"><span class="opcion-icono oscuro"><i class="bi bi-receipt-cutoff"></i></span><span class="opcion-texto"><span class="opcion-titulo">Historial de ventas</span><span class="opcion-descripcion">Consulta las ventas registradas.</span></span></a> }
+                    @if (PermisosUsuario.TienePermiso("ver_facturas")) { <a asp-controller="Facturas" asp-action="Index" class="opcion-panel"><span class="opcion-icono cafe"><i class="bi bi-file-earmark-pdf-fill"></i></span><span class="opcion-texto"><span class="opcion-titulo">Facturas pendientes</span><span class="opcion-descripcion">Consulta solicitudes y documentos.</span></span></a> }
+                    @if (PermisosUsuario.TienePermiso("gestionar_cxp")) { <a asp-controller="CuentasPorPagar" asp-action="Index" class="opcion-panel"><span class="opcion-icono"><i class="bi bi-calendar2-check-fill"></i></span><span class="opcion-texto"><span class="opcion-titulo">Cuentas por pagar</span><span class="opcion-descripcion">Administra obligaciones periódicas.</span></span></a> }
+                    @if (PermisosUsuario.TienePermiso("ver_reportes")) { <a asp-controller="Reportes" asp-action="Index" class="opcion-panel"><span class="opcion-icono oscuro"><i class="bi bi-bar-chart-fill"></i></span><span class="opcion-texto"><span class="opcion-titulo">Reportes</span><span class="opcion-descripcion">Consulta indicadores operativos.</span></span></a> }
+                </div>
+            </section>
+        }
+        @if (PermisosUsuario.TieneAlguno("gestionar_inventario", "gestionar_compras", "gestionar_proveedores", "gestionar_productos_servicios", "gestionar_catalogos"))
+        {
+            <section class="grupo-panel">
+                <div class="grupo-encabezado"><i class="bi bi-box-seam-fill"></i><h3>Inventario y compras</h3></div>
+                <div class="opciones-panel">
+                    @if (PermisosUsuario.TienePermiso("gestionar_inventario")) { <a asp-controller="Inventario" asp-action="Index" class="opcion-panel"><span class="opcion-icono cafe"><i class="bi bi-boxes"></i></span><span class="opcion-texto"><span class="opcion-titulo">Inventario</span><span class="opcion-descripcion">Consulta y administra existencias.</span></span></a> }
+                    @if (PermisosUsuario.TienePermiso("gestionar_compras")) { <a asp-controller="Compras" asp-action="Crear" class="opcion-panel"><span class="opcion-icono"><i class="bi bi-box-arrow-in-down"></i></span><span class="opcion-texto"><span class="opcion-titulo">Compras</span><span class="opcion-descripcion">Registra y consulta compras.</span></span></a> }
+                    @if (PermisosUsuario.TienePermiso("gestionar_productos_servicios")) { <a asp-controller="ProductosServicios" asp-action="Index" class="opcion-panel"><span class="opcion-icono oscuro"><i class="bi bi-box-seam-fill"></i></span><span class="opcion-texto"><span class="opcion-titulo">Productos y servicios</span><span class="opcion-descripcion">Administra el catálogo comercial.</span></span></a> }
+                    @if (PermisosUsuario.TienePermiso("gestionar_proveedores")) { <a asp-controller="Proveedores" asp-action="Index" class="opcion-panel"><span class="opcion-icono cafe"><i class="bi bi-truck"></i></span><span class="opcion-texto"><span class="opcion-titulo">Proveedores</span><span class="opcion-descripcion">Administra proveedores.</span></span></a> }
+                    @if (PermisosUsuario.TienePermiso("gestionar_catalogos")) { <a asp-controller="Categorias" asp-action="Index" class="opcion-panel"><span class="opcion-icono"><i class="bi bi-tags-fill"></i></span><span class="opcion-texto"><span class="opcion-titulo">Catálogos</span><span class="opcion-descripcion">Administra categorías, subcategorías y marcas.</span></span></a> }
+                </div>
+            </section>
+        }
+        @if (PermisosUsuario.TieneAlguno("ver_usuarios", "gestionar_roles", "gestionar_permisos", "gestionar_configuracion", "usar_simulacion_precios"))
+        {
+            <section class="grupo-panel">
+                <div class="grupo-encabezado"><i class="bi bi-gear-fill"></i><h3>Administración</h3></div>
+                <div class="opciones-panel">
+                    @if (PermisosUsuario.TienePermiso("ver_usuarios")) { <a asp-controller="Usuarios" asp-action="Index" class="opcion-panel"><span class="opcion-icono cafe"><i class="bi bi-person-gear"></i></span><span class="opcion-texto"><span class="opcion-titulo">Usuarios</span><span class="opcion-descripcion">Consulta usuarios del sistema.</span></span></a> }
+                    @if (PermisosUsuario.TienePermiso("gestionar_roles")) { <a asp-controller="Roles" asp-action="Index" class="opcion-panel"><span class="opcion-icono"><i class="bi bi-people-fill"></i></span><span class="opcion-texto"><span class="opcion-titulo">Roles</span><span class="opcion-descripcion">Administra los roles.</span></span></a> }
+                    @if (PermisosUsuario.TienePermiso("gestionar_permisos"))
+                    {
+                        <a asp-controller="Permisos" asp-action="Index" class="opcion-panel"><span class="opcion-icono oscuro"><i class="bi bi-shield-lock-fill"></i></span><span class="opcion-texto"><span class="opcion-titulo">Permisos</span><span class="opcion-descripcion">Administra el catálogo de permisos.</span></span></a>
+                        <a asp-controller="RolPermisos" asp-action="Index" class="opcion-panel"><span class="opcion-icono cafe"><i class="bi bi-key-fill"></i></span><span class="opcion-texto"><span class="opcion-titulo">Asignación de permisos</span><span class="opcion-descripcion">Configura el acceso de cada rol.</span></span></a>
+                    }
+                    @if (PermisosUsuario.TienePermiso("gestionar_configuracion")) { <a asp-controller="Configuraciones" asp-action="Index" class="opcion-panel"><span class="opcion-icono cafe"><i class="bi bi-sliders"></i></span><span class="opcion-texto"><span class="opcion-titulo">Configuraciones</span><span class="opcion-descripcion">Modifica recargos e impuestos.</span></span></a> }
+                    @if (PermisosUsuario.TienePermiso("usar_simulacion_precios")) { <a asp-controller="SimulacionPrecios" asp-action="Index" class="opcion-panel"><span class="opcion-icono"><i class="bi bi-graph-up-arrow"></i></span><span class="opcion-texto"><span class="opcion-titulo">Simulación de precios</span><span class="opcion-descripcion">Compara escenarios de tarifas.</span></span></a> }
+                </div>
+            </section>
+        }
+        @if (!PermisosUsuario.TieneAlguno("ver_reservas", "ver_disponibilidad_habitaciones", "ver_habitaciones", "gestionar_mantenimientos", "ver_clientes", "gestionar_empresas_clientes", "ver_trabajadores", "gestionar_cxc", "registrar_venta", "ver_historial_ventas", "ver_facturas", "ver_reportes", "gestionar_cxp", "gestionar_inventario", "gestionar_compras", "gestionar_proveedores", "gestionar_productos_servicios", "gestionar_catalogos", "ver_usuarios", "gestionar_roles", "gestionar_permisos", "gestionar_configuracion", "usar_simulacion_precios"))
+        {
+            <div class="panel-sin-opciones"><i class="bi bi-info-circle-fill me-2"></i>No hay opciones configuradas para este rol.</div>
+        }
     }
 </div>

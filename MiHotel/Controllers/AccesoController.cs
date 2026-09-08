@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using MiHotel.Data;
 using MiHotel.Models;
 using MiHotel.Models.Configuracion;
+using MiHotel.Services;
 using MiHotel.Utilidades;
 using MySql.Data.MySqlClient;
 
@@ -12,13 +13,16 @@ namespace MiHotel.Controllers
     {
         private readonly ConexionBD _conexionBD;
         private readonly ConfigSistema _configSistema;
+        private readonly SuspensionMonitorService _monitorSuspension;
 
         public AccesoController(
             ConexionBD conexionBD,
-            IOptions<ConfigSistema> opcionesConfig)
+            IOptions<ConfigSistema> opcionesConfig,
+            SuspensionMonitorService monitorSuspension)
         {
             _conexionBD = conexionBD;
             _configSistema = opcionesConfig.Value;
+            _monitorSuspension = monitorSuspension;
         }
 
         private void CargarDatosConfiguracion()
@@ -67,23 +71,29 @@ namespace MiHotel.Controllers
                         r.nombre_rol
                     FROM usuario u
                     INNER JOIN rol r ON u.id_rol = r.id_rol
-                    WHERE u.correo = @correo
+                    WHERE LOWER(u.correo) = LOWER(@identificador)
+                       OR LOWER(u.nombre_usuario) = LOWER(@identificador)
+                    ORDER BY CASE WHEN LOWER(u.correo) = LOWER(@identificador) THEN 0 ELSE 1 END
                     LIMIT 1;";
 
                 using var comando = new MySqlCommand(consulta, conexion);
-                comando.Parameters.AddWithValue("@correo", modelo.Correo.Trim());
+                comando.Parameters.AddWithValue("@identificador", modelo.Identificador.Trim());
 
                 using var lector = comando.ExecuteReader();
 
                 if (!lector.Read())
                 {
-                    ViewBag.Mensaje = "Correo o clave incorrectos.";
+                    ViewBag.Mensaje = "Usuario, correo o clave incorrectos.";
                     return View(modelo);
                 }
 
+                int idUsuario = Convert.ToInt32(lector["id_usuario"]);
+                string nombreUsuario = lector["nombre_usuario"]?.ToString() ?? "";
+                int idRol = Convert.ToInt32(lector["id_rol"]);
+                string nombreRol = lector["nombre_rol"]?.ToString() ?? "";
                 string claveBd = lector["clave"]?.ToString() ?? "";
                 string estado = lector["estado"]?.ToString()?.Trim().ToLower() ?? "";
-                string claveIngresadaHash = SeguridadHelper.ObtenerSha256(modelo.Clave);
+                lector.Close();
 
                 if (estado != "activo")
                 {
@@ -91,16 +101,26 @@ namespace MiHotel.Controllers
                     return View(modelo);
                 }
 
-                if (claveBd != claveIngresadaHash)
+                if (!SeguridadHelper.VerificarClave(modelo.Clave, claveBd, out bool actualizarHash))
                 {
-                    ViewBag.Mensaje = "Correo o clave incorrectos.";
+                    ViewBag.Mensaje = "Usuario, correo o clave incorrectos.";
                     return View(modelo);
                 }
 
-                HttpContext.Session.SetString("IdUsuario", lector["id_usuario"]?.ToString() ?? "");
-                HttpContext.Session.SetString("NombreUsuario", lector["nombre_usuario"]?.ToString() ?? "");
-                HttpContext.Session.SetString("IdRol", lector["id_rol"]?.ToString() ?? "");
-                HttpContext.Session.SetString("NombreRol", lector["nombre_rol"]?.ToString() ?? "");
+                if (actualizarHash)
+                {
+                    using var actualizarClave = new MySqlCommand(
+                        "UPDATE usuario SET clave=@clave WHERE id_usuario=@id;", conexion);
+                    actualizarClave.Parameters.AddWithValue("@clave", SeguridadHelper.CrearHashClave(modelo.Clave));
+                    actualizarClave.Parameters.AddWithValue("@id", idUsuario);
+                    actualizarClave.ExecuteNonQuery();
+                }
+
+                HttpContext.Session.SetString("IdUsuario", idUsuario.ToString());
+                HttpContext.Session.SetString("NombreUsuario", nombreUsuario);
+                HttpContext.Session.SetString("IdRol", idRol.ToString());
+                HttpContext.Session.SetString("NombreRol", nombreRol);
+                HttpContext.Session.SetInt32("GeneracionSesion", _monitorSuspension.GeneracionActual);
 
                 return RedirectToAction("Index", "Panel");
             }

@@ -10,6 +10,7 @@
     int paginaActual = ViewBag.PaginaActual ?? 1;
     int totalPaginas = ViewBag.TotalPaginas ?? 1;
     int totalRegistros = ViewBag.TotalRegistros ?? 0;
+    bool puedeGestionar = PermisosUsuario.TienePermiso("gestionar_habitaciones");
 
     string SiguienteDireccion(string columna)
     {
@@ -261,9 +262,12 @@
     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
         <h3 class="m-0">Gestión de Habitaciones</h3>
 
-        <a asp-controller="Habitaciones" asp-action="Crear" class="btn-crear">
-            Nueva Habitación
-        </a>
+        @if (puedeGestionar)
+        {
+            <a asp-controller="Habitaciones" asp-action="Crear" class="btn-crear">
+                <i class="bi bi-plus-square-fill" aria-hidden="true"></i> Nueva Habitación
+            </a>
+        }
     </div>
 
     <div class="tabs-vista">
@@ -476,15 +480,17 @@
                                     <i class="bi bi-eye-fill"></i>
                                 </a>
 
-                                <a asp-controller="Habitaciones"
-                                   asp-action="Editar"
-                                   asp-route-id="@fila["id_proser"]"
-                                   class="btn-icono btn-editar"
-                                   title="Editar habitación">
-                                    <i class="bi bi-pencil-fill"></i>
-                                </a>
+                                @if (puedeGestionar)
+                                {
+                                    <a asp-controller="Habitaciones"
+                                       asp-action="Editar"
+                                       asp-route-id="@fila["id_proser"]"
+                                       class="btn-icono btn-editar"
+                                       title="Editar habitación">
+                                        <i class="bi bi-pencil-fill"></i>
+                                    </a>
 
-                                        <div class="dropdown d-inline dropdown-habitacion">
+                                    <div class="dropdown d-inline dropdown-habitacion">
                                             <button class="btn-icono btn-estado"
                                                     type="button"
                                                     data-bs-toggle="dropdown"
@@ -543,7 +549,8 @@
                                                     <button type="submit" class="btn-estado-opcion">Renta</button>
                                                 </form>
                                             </div>
-                                        </div>
+                                    </div>
+                                }
                                     </div>
                                 </td>
                             </tr>

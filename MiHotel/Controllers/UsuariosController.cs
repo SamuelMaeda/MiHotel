@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using MiHotel.Data;
 using MiHotel.Models;
 using MiHotel.Utilidades;
+using MiHotel.Filtros;
 using MySql.Data.MySqlClient;
 using System.Data;
 
@@ -343,24 +344,28 @@ namespace MiHotel.Controllers
                     return View(modelo);
                 }
 
-                string verificarCorreo = @"
+                string verificarIdentificador = @"
                     SELECT COUNT(*)
                     FROM usuario
-                    WHERE correo = @correo;";
+                    WHERE LOWER(correo) = LOWER(@correo)
+                       OR LOWER(nombre_usuario) = LOWER(@nombre)
+                       OR LOWER(correo) = LOWER(@nombre)
+                       OR LOWER(nombre_usuario) = LOWER(@correo);";
 
-                using var comandoVerificar = new MySqlCommand(verificarCorreo, conexion);
+                using var comandoVerificar = new MySqlCommand(verificarIdentificador, conexion);
                 comandoVerificar.Parameters.AddWithValue("@correo", modelo.Correo);
+                comandoVerificar.Parameters.AddWithValue("@nombre", modelo.Nombre);
 
                 int existe = Convert.ToInt32(comandoVerificar.ExecuteScalar());
 
                 if (existe > 0)
                 {
-                    ViewBag.Mensaje = "El correo ya está registrado.";
+                    ViewBag.Mensaje = "El correo o nombre de usuario ya está siendo utilizado.";
                     modelo.Telefono = FormatearTelefono(modelo.Telefono);
                     return View(modelo);
                 }
 
-                string claveHash = SeguridadHelper.ObtenerSha256(modelo.Clave);
+                string claveHash = SeguridadHelper.CrearHashClave(modelo.Clave);
 
                 string insertar = @"
                     INSERT INTO usuario
@@ -500,21 +505,27 @@ namespace MiHotel.Controllers
                     return View(modelo);
                 }
 
-                string verificarCorreo = @"
+                string verificarIdentificador = @"
                     SELECT COUNT(*)
                     FROM usuario
-                    WHERE correo = @correo
-                    AND id_usuario <> @id_usuario;";
+                    WHERE id_usuario <> @id_usuario
+                      AND (
+                           LOWER(correo) = LOWER(@correo)
+                        OR LOWER(nombre_usuario) = LOWER(@nombre)
+                        OR LOWER(correo) = LOWER(@nombre)
+                        OR LOWER(nombre_usuario) = LOWER(@correo)
+                      );";
 
-                using var comandoVerificar = new MySqlCommand(verificarCorreo, conexion);
+                using var comandoVerificar = new MySqlCommand(verificarIdentificador, conexion);
                 comandoVerificar.Parameters.AddWithValue("@correo", modelo.Correo);
+                comandoVerificar.Parameters.AddWithValue("@nombre", modelo.Nombre);
                 comandoVerificar.Parameters.AddWithValue("@id_usuario", modelo.IdUsuario);
 
                 int existe = Convert.ToInt32(comandoVerificar.ExecuteScalar());
 
                 if (existe > 0)
                 {
-                    ViewBag.Mensaje = "El correo ya está registrado por otro usuario.";
+                    ViewBag.Mensaje = "El correo o nombre de usuario ya está siendo utilizado por otro usuario.";
                     modelo.Telefono = FormatearTelefono(modelo.Telefono);
                     return View(modelo);
                 }
@@ -689,7 +700,7 @@ namespace MiHotel.Controllers
                 using var conexion = _conexionBD.ObtenerConexion();
                 conexion.Open();
 
-                string claveHash = SeguridadHelper.ObtenerSha256(modelo.NuevaClave);
+                string claveHash = SeguridadHelper.CrearHashClave(modelo.NuevaClave);
 
                 string actualizar = @"
                     UPDATE usuario

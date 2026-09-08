@@ -2,6 +2,34 @@
 
 @{
     ViewData["Title"] = "Gestionar Permisos";
+    string EtiquetaPermiso(string nombre)
+    {
+        string texto = nombre.Replace("_", " ");
+        return texto.Length == 0 ? texto : char.ToUpper(texto[0]) + texto[1..];
+    }
+
+    string AreaPermiso(string nombre) => nombre switch
+    {
+        "ver_reservas" or "crear_reserva" or "editar_reserva" or "cancelar_reserva" or
+        "checkin" or "checkout" or "gestionar_reservas" or "registrar_checkin" or
+        "registrar_checkout" => "Reservas",
+        "ver_clientes" or "registrar_cliente" or "editar_clientes" or
+        "gestionar_empresas_clientes" => "Clientes",
+        "ver_habitaciones" or "gestionar_habitaciones" or
+        "ver_disponibilidad_habitaciones" or "gestionar_mantenimientos" => "Operación del hotel",
+        "registrar_venta" or "ver_historial_ventas" or "registrar_consumo" or
+        "gestionar_cxc" or "cobrar_cuenta" or "gestionar_cxp" => "Ventas y finanzas",
+        "facturar" or "ver_facturas" or "anular_factura" => "Facturación",
+        "gestionar_inventario" or "gestionar_compras" or "gestionar_proveedores" or
+        "gestionar_productos_servicios" or "gestionar_catalogos" or
+        "ver_disponibilidad_productos" or "ver_menu" => "Inventario y compras",
+        "ver_reportes" or "usar_simulacion_precios" => "Análisis",
+        "ver_trabajadores" or "gestionar_trabajadores" => "Trabajadores",
+        "crear_usuario" or "editar_usuario" or "eliminar_usuario" or "ver_usuarios" or
+        "cambiar_estado_usuario" or "resetear_clave_usuario" or "gestionar_roles" or
+        "gestionar_permisos" or "gestionar_configuracion" => "Administración",
+        _ => "Otros"
+    };
 }
 
 <style>
@@ -123,6 +151,7 @@
                 <thead>
                     <tr>
                         <th style="width: 90px;">Asignar</th>
+                        <th>Área</th>
                         <th>Permiso</th>
                         <th>Descripción</th>
                     </tr>
@@ -131,7 +160,7 @@
                     @if (Model.Permisos == null || Model.Permisos.Count == 0)
                     {
                         <tr>
-                            <td colspan="3" class="text-center">
+                            <td colspan="4" class="text-center">
                                 No hay permisos activos disponibles.
                             </td>
                         </tr>
@@ -147,8 +176,10 @@
                                     <input asp-for="Permisos[i].NombrePermiso" type="hidden" />
                                     <input asp-for="Permisos[i].Descripcion" type="hidden" />
                                 </td>
+                                <td><span class="descripcion-secundaria">@AreaPermiso(Model.Permisos[i].NombrePermiso)</span></td>
                                 <td>
-                                    <strong>@Model.Permisos[i].NombrePermiso</strong>
+                                    <strong>@EtiquetaPermiso(Model.Permisos[i].NombrePermiso)</strong>
+                                    <small class="d-block text-muted">@Model.Permisos[i].NombrePermiso</small>
                                 </td>
                                 <td>
                                     @if (string.IsNullOrWhiteSpace(Model.Permisos[i].Descripcion))

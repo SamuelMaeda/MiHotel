@@ -1,1 +1,4 @@
-﻿Config/config.json
+Config/config.json
+Config/database.json
+App_Data/
+Publicacion/

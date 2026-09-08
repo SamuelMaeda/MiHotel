@@ -11,11 +11,16 @@ namespace MiHotel.Controllers
     {
         private readonly ConexionBD _conexionBD;
         private readonly FacturacionService _facturacionService;
+        private readonly PermisosUsuarioService _permisosUsuario;
 
-        public FacturasController(ConexionBD conexionBD, FacturacionService facturacionService)
+        public FacturasController(
+            ConexionBD conexionBD,
+            FacturacionService facturacionService,
+            PermisosUsuarioService permisosUsuario)
         {
             _conexionBD = conexionBD;
             _facturacionService = facturacionService;
+            _permisosUsuario = permisosUsuario;
         }
 
         private bool TieneSesion() => !string.IsNullOrWhiteSpace(HttpContext.Session.GetString("IdUsuario"));
@@ -45,11 +50,19 @@ namespace MiHotel.Controllers
             return Forbid();
         }
 
+        private IActionResult? ValidarPermiso(string permiso)
+        {
+            if (!TieneSesion()) return RedirectToAction("Login", "Acceso");
+            if (_permisosUsuario.TienePermiso(permiso)) return null;
+            TempData["Mensaje"] = "No tiene el permiso necesario para realizar esta acción.";
+            return RedirectToAction("Index", "Panel");
+        }
+
         [HttpGet]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public IActionResult Index(string vista = "pendientes", string busqueda = "")
         {
-            IActionResult? acceso = ValidarAdministrador();
+            IActionResult? acceso = ValidarPermiso("ver_facturas");
             if (acceso != null) return acceso;
 
             vista = vista?.Trim().ToLower() ?? "pendientes";
@@ -132,7 +145,7 @@ namespace MiHotel.Controllers
         [ValidateAntiForgeryToken]
         public IActionResult Solicitar(int idReserva, string? detalle = null)
         {
-            IActionResult? acceso = ValidarAdministrador();
+            IActionResult? acceso = ValidarPermiso("facturar");
             if (acceso != null) return acceso;
 
             try
@@ -159,7 +172,7 @@ namespace MiHotel.Controllers
         [ValidateAntiForgeryToken]
         public IActionResult CancelarSolicitud(int idReserva, string retorno = "facturas", string busqueda = "")
         {
-            IActionResult? acceso = ValidarAdministrador();
+            IActionResult? acceso = ValidarPermiso("facturar");
             if (acceso != null) return acceso;
 
             IActionResult Redireccionar() => retorno == "reservas"
@@ -241,7 +254,7 @@ namespace MiHotel.Controllers
             int[]? idsReservasSeleccionadas,
             IFormFile? facturaPdf)
         {
-            IActionResult? acceso = ValidarAdministrador();
+            IActionResult? acceso = ValidarPermiso("facturar");
             if (acceso != null) return acceso;
 
             nitReceptor = nitReceptor?.Trim() ?? "";
@@ -402,7 +415,7 @@ namespace MiHotel.Controllers
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public IActionResult DocumentoPdf(long id, bool descargar = false)
         {
-            IActionResult? acceso = ValidarPersonal();
+            IActionResult? acceso = ValidarPermiso("ver_facturas");
             if (acceso != null) return acceso;
 
             using var conexion = _conexionBD.ObtenerConexion();
@@ -423,7 +436,7 @@ namespace MiHotel.Controllers
         [ValidateAntiForgeryToken]
         public IActionResult Anular(long idDocumentoFiscal, int idReservaRetorno, string motivo)
         {
-            IActionResult? acceso = ValidarAdministrador();
+            IActionResult? acceso = ValidarPermiso("anular_factura");
             if (acceso != null) return acceso;
             motivo = motivo?.Trim() ?? "";
             if (string.IsNullOrWhiteSpace(motivo) || motivo.Length > 255)

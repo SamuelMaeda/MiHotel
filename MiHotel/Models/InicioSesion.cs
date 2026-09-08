@@ -9,12 +9,12 @@ namespace MiHotel.Models
     public class InicioSesion
     {
         // ===============================
-        // CORREO ELECTRONICO
+        // CORREO ELECTRONICO O NOMBRE DE USUARIO
         // ===============================
 
-        [Required(ErrorMessage = "El correo es obligatorio.")]
-        [EmailAddress(ErrorMessage = "Debe ingresar un correo válido.")]
-        public string Correo { get; set; } = string.Empty;
+        [Required(ErrorMessage = "El correo o nombre de usuario es obligatorio.")]
+        [Display(Name = "Correo o nombre de usuario")]
+        public string Identificador { get; set; } = string.Empty;
 
         // ===============================
         // CONTRASEÑA

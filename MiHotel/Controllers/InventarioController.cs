@@ -2,9 +2,11 @@
 using MySql.Data.MySqlClient;
 using MiHotel.Data;
 using System.Data;
+using MiHotel.Filtros;
 
 namespace MiHotel.Controllers
 {
+    [AutorizarPermiso("gestionar_inventario")]
     public class InventarioController : Controller
     {
         private readonly ConexionBD _conexionBD;

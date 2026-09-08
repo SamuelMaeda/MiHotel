@@ -1,6 +1,6 @@
 ﻿@{
     ViewData["Title"] = "Nueva Subcategoría";
-    var categorias = ViewBag.Categorias as System.Data.DataTable;
+    var categorias = ViewBag.Categorias as System.Data.DataTable ?? new System.Data.DataTable();
 }
 
 <style>

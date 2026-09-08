@@ -8,9 +8,11 @@ using MiHotel.Models;
 using MySql.Data.MySqlClient;
 using SkiaSharp;
 using System.Data;
+using MiHotel.Filtros;
 
 namespace MiHotel.Controllers
 {
+    [AutorizarPermiso("ver_habitaciones")]
     public class HabitacionesController : Controller
     {
         private readonly ConexionBD _conexionBD;
@@ -356,6 +358,7 @@ namespace MiHotel.Controllers
         }
 
         [HttpGet]
+        [AutorizarPermiso("gestionar_habitaciones")]
         public IActionResult Crear()
         {
             IActionResult? acceso = ValidarSesion();
@@ -368,6 +371,7 @@ namespace MiHotel.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [RequestSizeLimit(65 * 1024 * 1024)]
+        [AutorizarPermiso("gestionar_habitaciones")]
         public IActionResult Crear(HabitacionFormViewModel modelo)
         {
             IActionResult? acceso = ValidarSesion();
@@ -451,6 +455,7 @@ namespace MiHotel.Controllers
 
         // EDITAR (sin precio)
         [HttpGet]
+        [AutorizarPermiso("gestionar_habitaciones")]
         public IActionResult Editar(int id)
         {
             IActionResult? acceso = ValidarSesion();
@@ -485,7 +490,7 @@ namespace MiHotel.Controllers
             HabitacionFormViewModel modelo = new HabitacionFormViewModel
             {
                 IdProser = Convert.ToInt32(lector["id_proser"]),
-                NumeroHabitacion = lector["codigo"].ToString(),
+                NumeroHabitacion = lector["codigo"]?.ToString() ?? string.Empty,
                 IdSubcategoria = Convert.ToInt32(lector["id_subcategoria"]),
                 IdTipoEstado = Convert.ToInt32(lector["id_tipoestado"]),
                 Descripcion = lector["descripcion"]?.ToString()
@@ -537,6 +542,7 @@ namespace MiHotel.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [RequestSizeLimit(65 * 1024 * 1024)]
+        [AutorizarPermiso("gestionar_habitaciones")]
         public IActionResult Editar(HabitacionFormViewModel modelo)
         {
             IActionResult? acceso = ValidarSesion();
@@ -625,6 +631,7 @@ namespace MiHotel.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [AutorizarPermiso("gestionar_habitaciones")]
         public IActionResult EliminarFotografia(int id, int idHabitacion)
         {
             IActionResult? acceso = ValidarSesion();

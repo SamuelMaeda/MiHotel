@@ -114,15 +114,6 @@ namespace MiHotel.Controllers
                 return true;
             }
 
-            // Consultar cuentas y registrar cobros son funciones operativas
-            // indispensables de recepción. Se conservan como acceso base del
-            // rol aunque la asignación configurable de permisos esté incompleta.
-            if (EsRecepcionista()
-                && nombrePermiso is "gestionar_cxc" or "cobrar_cuenta")
-            {
-                return true;
-            }
-
             string? idRolSesion = HttpContext.Session.GetString("IdRol");
 
             if (string.IsNullOrWhiteSpace(idRolSesion))

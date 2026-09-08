@@ -1,0 +1,5 @@
+{
+  "ConnectionStrings": {
+    "ConexionHotel": "Server=localhost;Port=3306;Database=hotel;User ID=mihotel_app;Password=CAMBIAR_DURANTE_LA_INSTALACION;SslMode=Disabled;AllowPublicKeyRetrieval=True"
+  }
+}

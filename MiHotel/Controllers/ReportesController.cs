@@ -2,9 +2,11 @@ using Microsoft.AspNetCore.Mvc;
 using MiHotel.Data;
 using MiHotel.Models;
 using MySql.Data.MySqlClient;
+using MiHotel.Filtros;
 
 namespace MiHotel.Controllers
 {
+    [AutorizarPermiso("ver_reportes")]
     public class ReportesController : Controller
     {
         private readonly ConexionBD _conexionBD;
@@ -22,12 +24,6 @@ namespace MiHotel.Controllers
 
             string rol = HttpContext.Session.GetString("NombreRol")?.Trim().ToLower() ?? "";
             esAdministrador = rol == "admin";
-
-            if (!esAdministrador && rol != "recepcionista")
-            {
-                TempData["Mensaje"] = "No tiene acceso al módulo de reportes.";
-                return RedirectToAction("Index", "Panel");
-            }
 
             return null;
         }

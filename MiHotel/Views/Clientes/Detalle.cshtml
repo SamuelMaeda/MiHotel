@@ -26,5 +26,5 @@
  else{<div class="table-responsive"><table class="table table-sm table-hover align-middle"><thead><tr><th>Reserva</th><th>Fechas</th><th>Habitación</th><th>Estadía</th><th>Facturación</th><th></th></tr></thead><tbody>
  @foreach(var reserva in Model.Reservas){<tr><td>#@reserva.IdReserva@if(reserva.IdReservaGrupo.HasValue){<small class="d-block text-muted">Grupo #@reserva.IdReservaGrupo</small>}</td><td>@reserva.FechaEntrada.ToString("dd/MM/yyyy") - @reserva.FechaSalida.ToString("dd/MM/yyyy")</td><td>@reserva.Habitacion</td><td>@reserva.Estado.Replace("_"," ")</td><td>@reserva.EstadoFacturacion.Replace("_"," ")</td><td><a asp-controller="Reservas" asp-action="Detalle" asp-route-id="@reserva.IdReserva" class="btn btn-sm btn-outline-primary">Abrir expediente</a></td></tr>}
  </tbody></table></div>}
- <div class="acciones"><a asp-action="Editar" asp-route-id="@Model.IdClipro" class="btn-accion editar">Editar cliente</a><a asp-action="Index" class="btn-accion volver">Volver al listado</a></div>
+ <div class="acciones">@if(PermisosUsuario.TienePermiso("editar_clientes")){<a asp-action="Editar" asp-route-id="@Model.IdClipro" class="btn-accion editar">Editar cliente</a>}<a asp-action="Index" class="btn-accion volver">Volver al listado</a></div>
 </div></div>

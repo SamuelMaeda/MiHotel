@@ -1,18 +1,22 @@
 @{
     string seccionActiva = ViewData["SeccionOperativa"]?.ToString() ?? "";
-    string rolActual = Context.Session.GetString("NombreRol")?.Trim().ToLowerInvariant() ?? "";
-    bool esAdministrador = rolActual == "admin";
+    bool puedeInventario = PermisosUsuario.TienePermiso("gestionar_inventario");
+    bool puedeCompras = PermisosUsuario.TienePermiso("gestionar_compras");
+    bool puedeVender = PermisosUsuario.TienePermiso("registrar_venta");
+    bool puedeHistorialVentas = PermisosUsuario.TienePermiso("ver_historial_ventas");
 }
 
 <nav class="tabs-vista" aria-label="Navegación de inventario, compras y ventas">
-    <a asp-controller="Inventario"
-       asp-action="Index"
-       class="tab-vista @(seccionActiva == "inventario" ? "activa" : "")"
-       aria-current="@(seccionActiva == "inventario" ? "page" : null)">
-        <i class="bi bi-boxes" aria-hidden="true"></i> Inventario
-    </a>
-
-    @if (esAdministrador)
+    @if (puedeInventario)
+    {
+        <a asp-controller="Inventario"
+           asp-action="Index"
+           class="tab-vista @(seccionActiva == "inventario" ? "activa" : "")"
+           aria-current="@(seccionActiva == "inventario" ? "page" : null)">
+            <i class="bi bi-boxes" aria-hidden="true"></i> Inventario
+        </a>
+    }
+    @if (puedeCompras)
     {
         <a asp-controller="Compras"
            asp-action="Crear"
@@ -28,16 +32,22 @@
         </a>
     }
 
+    @if (puedeVender)
+    {
     <a asp-controller="POS"
        asp-action="Index"
        class="tab-vista @(seccionActiva == "punto-venta" ? "activa" : "")"
        aria-current="@(seccionActiva == "punto-venta" ? "page" : null)">
         <i class="bi bi-cart-fill" aria-hidden="true"></i> Punto de venta
     </a>
+    }
+    @if (puedeHistorialVentas)
+    {
     <a asp-controller="HistorialVentas"
        asp-action="Index"
        class="tab-vista @(seccionActiva == "historial-ventas" ? "activa" : "")"
        aria-current="@(seccionActiva == "historial-ventas" ? "page" : null)">
         <i class="bi bi-receipt-cutoff" aria-hidden="true"></i> Historial de ventas
     </a>
+    }
 </nav>

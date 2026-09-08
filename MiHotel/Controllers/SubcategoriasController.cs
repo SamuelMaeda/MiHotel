@@ -4,9 +4,11 @@ using Microsoft.AspNetCore.Mvc;
 using MiHotel.Data;
 using MySql.Data.MySqlClient;
 using System.Data;
+using MiHotel.Filtros;
 
 namespace MiHotel.Controllers
 {
+    [AutorizarPermiso("gestionar_catalogos")]
     public class SubcategoriasController : Controller
     {
         private readonly ConexionBD _conexionBD;
@@ -230,7 +232,7 @@ namespace MiHotel.Controllers
                 "SELECT estado FROM subcategoria WHERE id_subcategoria = @id", conexion)
             {
                 Parameters = { new MySqlParameter("@id", id) }
-            }.ExecuteScalar()?.ToString();
+            }.ExecuteScalar()?.ToString() ?? string.Empty;
 
             string nuevoEstado = estadoActual == "activo" ? "inactivo" : "activo";
 

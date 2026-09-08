@@ -1,6 +1,6 @@
 ﻿@{
     ViewData["Title"] = "Editar Subcategoría";
-    var categorias = ViewBag.Categorias as System.Data.DataTable;
+    var categorias = ViewBag.Categorias as System.Data.DataTable ?? new System.Data.DataTable();
 }
 
 <style>
@@ -110,7 +110,7 @@
                 {
                     if ((int)fila["id_categoria"] == (int)ViewBag.IdCategoria)
                     {
-                        categoriaNombre = fila["nombre_categoria"].ToString().ToLower();
+                        categoriaNombre = fila["nombre_categoria"]?.ToString()?.ToLowerInvariant() ?? string.Empty;
                         break;
                     }
                 }

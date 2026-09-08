@@ -1,6 +1,7 @@
 @model MiHotel.Models.FacturasIndexViewModel
 @{
     ViewData["Title"] = "Facturas pendientes";
+    bool puedeGestionarFacturas = PermisosUsuario.TienePermiso("facturar");
     string EtiquetaEstado(string estado) => estado switch
     {
         "pendiente" => "Pendiente",
@@ -82,7 +83,7 @@
                                    class="mh-icon-button mh-icon-view" title="Abrir expediente de la reservación" aria-label="Abrir expediente de la reservación">
                                     <i class="bi bi-eye-fill" aria-hidden="true"></i>
                                 </a>
-                                @if (fila.EstadoFacturacion is "pendiente" or "anulada")
+                                @if (puedeGestionarFacturas && (fila.EstadoFacturacion is "pendiente" or "anulada"))
                                 {
                                     <form asp-controller="Facturas" asp-action="CancelarSolicitud" method="post"
                                           onsubmit="return confirm('¿Confirma que el huésped ya no necesita factura? La reservación saldrá de Facturas pendientes.');">

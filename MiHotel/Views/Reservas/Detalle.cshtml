@@ -2,6 +2,8 @@
 
 @{
     ViewData["Title"] = "Detalle de Reserva";
+    bool puedeGestionarFactura = PermisosUsuario.TienePermiso("facturar");
+    bool puedeAnularFactura = PermisosUsuario.TienePermiso("anular_factura");
 
     string MostrarTexto(string? valor)
     {
@@ -398,7 +400,7 @@
                 <h5 class="mb-1">Facturas de la reservación</h5>
                 <span class="text-muted">Estado: <strong>@Model.EstadoFacturacion.Replace("_", " ")</strong></span>
             </div>
-            @if (Model.EsAdministrador && Model.EstadoFacturacion is "sin_definir" or "no_solicitada")
+            @if (puedeGestionarFactura && Model.EstadoFacturacion is "sin_definir" or "no_solicitada")
             {
                 <form asp-controller="Facturas" asp-action="Solicitar" method="post">
                     @Html.AntiForgeryToken()
@@ -442,7 +444,7 @@
                         <a asp-controller="Facturas" asp-action="DocumentoPdf" asp-route-id="@documento.IdDocumentoFiscal" target="_blank" rel="noopener" class="btn-factura btn-factura-ver mh-btn mh-btn-neutral" title="Abrir la factura en una pestaña nueva"><i class="bi bi-file-earmark-pdf-fill"></i> Ver PDF</a>
                         <a asp-controller="Facturas" asp-action="DocumentoPdf" asp-route-id="@documento.IdDocumentoFiscal" asp-route-descargar="true" class="btn-factura btn-factura-descargar mh-btn mh-btn-primary" title="Descargar esta factura en formato PDF"><i class="bi bi-download"></i> Descargar</a>
                     </div>
-                    @if (Model.EsAdministrador && documento.Estado == "vigente")
+                    @if (puedeAnularFactura && documento.Estado == "vigente")
                     {
                         <form asp-controller="Facturas" asp-action="Anular" method="post" class="row g-2 mt-2" onsubmit="return confirm('¿Confirma la anulación? El documento se conservará en el historial.');">
                             @Html.AntiForgeryToken()
@@ -463,7 +465,7 @@
             }
         }
 
-        @if (Model.EsAdministrador)
+        @if (puedeGestionarFactura)
         {
             <hr />
             <h5>Registrar nueva factura</h5>
@@ -502,30 +504,33 @@
                 <div class="col-12"><button type="submit" class="btn-factura btn-factura-ver mh-btn mh-btn-primary" title="Guardar la factura adjunta"><i class="bi bi-file-earmark-check-fill"></i> Guardar factura</button></div>
             </form>
 
-            <hr />
-            <h5>Historial de auditoría</h5>
-            @if (Model.HistorialFacturacion.Count == 0)
+            @if (Model.EsAdministrador)
             {
-                <p class="text-muted mb-0">Todavía no hay movimientos de facturación registrados.</p>
-            }
-            else
-            {
-                <div class="table-responsive">
-                    <table class="table table-sm table-bordered align-middle mb-0 mh-table" data-mh-sortable>
-                        <thead><tr><th>Fecha</th><th>Hora</th><th>Usuario</th><th>Detalle</th></tr></thead>
-                        <tbody>
-                        @foreach (var movimiento in Model.HistorialFacturacion)
-                        {
-                            <tr>
-                                <td>@movimiento.FechaHora.ToString("dd/MM/yyyy")</td>
-                                <td>@movimiento.FechaHora.ToString("HH:mm")</td>
-                                <td>@movimiento.Usuario</td>
-                                <td>@(movimiento.Detalle ?? "-")</td>
-                            </tr>
-                        }
-                        </tbody>
-                    </table>
-                </div>
+                <hr />
+                <h5>Historial de auditoría</h5>
+                @if (Model.HistorialFacturacion.Count == 0)
+                {
+                    <p class="text-muted mb-0">Todavía no hay movimientos de facturación registrados.</p>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered align-middle mb-0 mh-table" data-mh-sortable>
+                            <thead><tr><th>Fecha</th><th>Hora</th><th>Usuario</th><th>Detalle</th></tr></thead>
+                            <tbody>
+                            @foreach (var movimiento in Model.HistorialFacturacion)
+                            {
+                                <tr>
+                                    <td>@movimiento.FechaHora.ToString("dd/MM/yyyy")</td>
+                                    <td>@movimiento.FechaHora.ToString("HH:mm")</td>
+                                    <td>@movimiento.Usuario</td>
+                                    <td>@(movimiento.Detalle ?? "-")</td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                }
             }
         }
     </section>

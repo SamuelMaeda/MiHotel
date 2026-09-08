@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using MiHotel.Data;
 using MiHotel.Models;
+using MiHotel.Filtros;
 using MySql.Data.MySqlClient;
 using System.Data;
 
@@ -9,6 +10,7 @@ namespace MiHotel.Controllers
     // ===============================
     // CONTROLADOR DE PERMISOS
     // ===============================
+    [AutorizarPermiso("gestionar_permisos")]
     public class PermisosController : Controller
     {
         private readonly ConexionBD _conexionBD;
@@ -39,11 +41,6 @@ namespace MiHotel.Controllers
             if (!SesionActiva())
             {
                 return RedirectToAction("Login", "Acceso");
-            }
-
-            if (!EsAdmin())
-            {
-                return RedirectToAction("Index", "Panel");
             }
 
             return null;

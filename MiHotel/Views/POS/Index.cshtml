@@ -1,9 +1,9 @@
 ﻿@{
     ViewData["Title"] = "Punto de Venta";
 
-    var productos = ViewBag.Productos as System.Data.DataTable;
-    var clientes = ViewBag.Clientes as System.Data.DataTable;
-    var reservas = ViewBag.Reservas as System.Data.DataTable;
+    var productos = ViewBag.Productos as System.Data.DataTable ?? new System.Data.DataTable();
+    var clientes = ViewBag.Clientes as System.Data.DataTable ?? new System.Data.DataTable();
+    var reservas = ViewBag.Reservas as System.Data.DataTable ?? new System.Data.DataTable();
     ViewData["SeccionOperativa"] = "punto-venta";
 }
 
